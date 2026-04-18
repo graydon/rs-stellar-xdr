@@ -3,6 +3,12 @@ mod generated;
 mod ledgerkey;
 pub use generated::*;
 
+#[cfg(feature = "buf_read")]
+#[allow(clippy::empty_line_after_doc_comments)]
+mod generated_refs;
+#[cfg(feature = "buf_read")]
+pub use generated_refs::*;
+
 mod default;
 mod jsonschema;
 mod str;

@@ -45,6 +45,7 @@ std = ["alloc", "dep:sha2"]
 alloc = ["dep:hex", "dep:stellar-strkey", "escape-bytes/alloc", "dep:ethnum"]
 curr = []
 next = []
+buf_read = []
 
 # Features dependent on optional dependencies.
 base64 = ["std", "dep:base64"]

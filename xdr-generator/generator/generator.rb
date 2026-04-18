@@ -11,12 +11,24 @@ class Generator < Xdrgen::Generators::Base
 
     @types = build_type_list(@top)
     @type_field_types = build_type_field_types(@top)
+    @xdr_fixed_size_cache = {}
+    @xdr_fixed_size_computing = Set.new
 
     render_top_matter(out)
     render_lib(out)
     render_definitions(out, @top)
     render_enum_of_all_types(out, @types)
     out.break
+
+    # Generate zero-copy buffer reference types.
+    @already_rendered_ref = []
+    ref_path = "#{@namespace}_refs.rs"
+    ref_out = @output.open(ref_path)
+    render_ref_top_matter(ref_out)
+    render_ref_lib(ref_out)
+    render_definitions_ref(ref_out, @top)
+    render_enum_of_all_types_ref(ref_out, @types)
+    ref_out.break
   end
 
   private
@@ -90,6 +102,9 @@ class Generator < Xdrgen::Generators::Base
   def render_lib(out)
     header = IO.read(__dir__ + "/header.rs")
     out.puts(header)
+    out.break
+    header_refs = IO.read(__dir__ + "/header_refs.rs")
+    out.puts(header_refs)
     out.break
   end
 
@@ -1277,6 +1292,1023 @@ class Generator < Xdrgen::Generators::Base
     when 'Error' then 'SError'
     else name
     end
+  end
+
+  # ---------------------------------------------------------------------------
+  # Fixed-size determination
+  # ---------------------------------------------------------------------------
+
+  # Returns the fixed XDR byte size for a type, or nil if variable.
+  # Memoized and cycle-safe (cycles => nil => variable).
+  def xdr_fixed_size_of_type(type)
+    case type
+    when AST::Typespecs::Bool then 4
+    when AST::Typespecs::Int then 4
+    when AST::Typespecs::UnsignedInt then 4
+    when AST::Typespecs::Hyper then 8
+    when AST::Typespecs::UnsignedHyper then 8
+    when AST::Typespecs::Float then 4
+    when AST::Typespecs::Double then 8
+    when AST::Typespecs::String then nil  # variable
+    when AST::Typespecs::Opaque
+      if type.fixed?
+        n = type.size.to_i
+        n + ((4 - (n % 4)) % 4)
+      else
+        nil  # variable
+      end
+    when AST::Typespecs::Simple, AST::Definitions::Base, AST::Concerns::NestedDefinition
+      if type.respond_to?(:resolved_type) && AST::Definitions::Typedef === type.resolved_type && is_builtin_type(type.resolved_type.type)
+        xdr_fixed_size_of_type(type.resolved_type.type)
+      elsif type.respond_to?(:resolved_type) && type.resolved_type
+        xdr_fixed_size_of_defn(type.resolved_type)
+      else
+        nil
+      end
+    else
+      nil
+    end
+  end
+
+  # Returns the fixed XDR byte size of a field (accounts for sub_type: :simple, :optional, :array, :var_array).
+  def xdr_fixed_size_of_field(type)
+    case type.sub_type
+    when :simple
+      xdr_fixed_size_of_type(type)
+    when :optional
+      nil  # optional is always variable (4 bytes flag + conditionally T)
+    when :array
+      elem_size = xdr_fixed_size_of_type(type)
+      return nil if elem_size.nil?
+      is_named, size = type.array_size
+      size = size.to_i
+      elem_size * size
+    when :var_array
+      nil  # variable
+    else
+      nil
+    end
+  end
+
+  # Returns the fixed XDR byte size of a definition (Struct, Enum, Union, Typedef), or nil.
+  def xdr_fixed_size_of_defn(defn)
+    n = name(defn)
+    return @xdr_fixed_size_cache[n] if @xdr_fixed_size_cache.key?(n)
+    return nil if @xdr_fixed_size_computing.include?(n)  # cycle
+
+    @xdr_fixed_size_computing.add(n)
+    result = case defn
+    when AST::Definitions::Enum
+      4
+    when AST::Definitions::Struct
+      total = 0
+      defn.members.each do |m|
+        s = xdr_fixed_size_of_field(m.declaration.type)
+        if s.nil?
+          total = nil
+          break
+        end
+        total += s
+      end
+      total
+    when AST::Definitions::Union
+      # discriminant is always 4 bytes (i32 or enum).
+      # For the union to be fixed-size, all arms must have the same size.
+      arm_sizes = []
+      union_cases(defn) do |case_name, arm|
+        if arm.void?
+          arm_sizes << 0
+        else
+          s = xdr_fixed_size_of_field(arm.type)
+          if s.nil?
+            arm_sizes = nil
+            break
+          end
+          arm_sizes << s
+        end
+      end
+      if arm_sizes && arm_sizes.uniq.length == 1
+        4 + arm_sizes.first  # discriminant + arm
+      else
+        nil
+      end
+    when AST::Definitions::Typedef
+      if is_builtin_type(defn.type)
+        xdr_fixed_size_of_type(defn.type)
+      else
+        xdr_fixed_size_of_field(defn.type)
+      end
+    else
+      nil
+    end
+    @xdr_fixed_size_computing.delete(n)
+    @xdr_fixed_size_cache[n] = result
+    result
+  end
+
+  def is_fixed_size_defn(defn)
+    !xdr_fixed_size_of_defn(defn).nil?
+  end
+
+  # ---------------------------------------------------------------------------
+  # Skip code generation — emit Rust code that advances `pos` past one field.
+  # `pos` is the name of a `u32` variable in scope.
+  # ---------------------------------------------------------------------------
+
+  # Returns Rust code (as a string) that, given a `pos` variable holding the
+  # current offset, advances `pos` past one instance of the given field type.
+  # For fixed-size fields this is a constant addition. For variable-size it
+  # reads length prefixes.
+  def skip_field_rust(type, pos)
+    case type.sub_type
+    when :simple
+      skip_simple_rust(type, pos)
+    when :optional
+      inner_skip = skip_simple_rust(type, pos) # reuse inner logic
+      # Option: 4-byte flag, then conditionally T.
+      "{ #{pos} = #{pos}.checked_add(skip_option(buf, #{pos}, |buf, off| { let mut p = off; #{skip_simple_rust_inline(type, 'p')}; Ok(p.checked_sub(off).ok_or(Error::Invalid)?) })?).ok_or(Error::LengthExceedsMax)?; }"
+    when :array
+      elem_size = xdr_fixed_size_of_type(type)
+      is_named, size = type.array_size
+      size_val = is_named ? "#{name @top.find_definition(size)} as u32" : size.to_s
+      if elem_size
+        total = is_named ? nil : elem_size * size.to_i
+        if total
+          "{ #{pos} = #{pos}.checked_add(#{total}).ok_or(Error::LengthExceedsMax)?; }"
+        else
+          "{ #{pos} = #{pos}.checked_add((#{size_val}).checked_mul(#{elem_size}).ok_or(Error::LengthExceedsMax)?).ok_or(Error::LengthExceedsMax)?; }"
+        end
+      else
+        # Variable-size elements
+        "{ for _ in 0..#{size_val} { #{skip_simple_rust_inline(type, pos)} } }"
+      end
+    when :var_array
+      base_ref = base_reference(type)
+      max = type.decl.resolved_size || "u32::MAX"
+      if base_ref == 'u8' || AST::Typespecs::String === type || AST::Typespecs::Opaque === type
+        "{ #{pos} = #{pos}.checked_add(skip_var_opaque(buf, #{pos}, #{max})?).ok_or(Error::LengthExceedsMax)?; }"
+      else
+        elem_size = xdr_fixed_size_of_type(type)
+        if elem_size
+          "{ #{pos} = #{pos}.checked_add(skip_vec_fixed(buf, #{pos}, #{elem_size}, #{max})?).ok_or(Error::LengthExceedsMax)?; }"
+        else
+          "{ #{pos} = #{pos}.checked_add(skip_vec_var(buf, #{pos}, #{max}, |buf, off| { let mut p = off; #{skip_simple_rust_inline(type, 'p')}; Ok(p.checked_sub(off).ok_or(Error::Invalid)?) })?).ok_or(Error::LengthExceedsMax)?; }"
+        end
+      end
+    else
+      raise "Unknown sub_type: #{type.sub_type}"
+    end
+  end
+
+  # Skip a simple (non-optional, non-array) type.
+  def skip_simple_rust(type, pos)
+    fs = xdr_fixed_size_of_type(type)
+    if fs
+      "{ #{pos} = #{pos}.checked_add(#{fs}).ok_or(Error::LengthExceedsMax)?; }"
+    else
+      skip_simple_rust_variable(type, pos)
+    end
+  end
+
+  # Inline skip for simple types: produces statements (no braces wrapping)
+  # suitable for embedding in closures. Mutates `pos` in place.
+  def skip_simple_rust_inline(type, pos)
+    fs = xdr_fixed_size_of_type(type)
+    if fs
+      "#{pos} = #{pos}.checked_add(#{fs}).ok_or(Error::LengthExceedsMax)?;"
+    else
+      skip_simple_rust_variable_inline(type, pos)
+    end
+  end
+
+  # Skip a variable-size simple type. Generates Rust to call the appropriate
+  # generated `skip_xdr_<type>` function.
+  def skip_simple_rust_variable(type, pos)
+    base_ref = base_reference(type)
+    case type
+    when AST::Typespecs::String
+      max = type.decl.resolved_size || "u32::MAX"
+      "{ #{pos} = #{pos}.checked_add(skip_var_opaque(buf, #{pos}, #{max})?).ok_or(Error::LengthExceedsMax)?; }"
+    when AST::Typespecs::Opaque
+      if !type.fixed?
+        max = type.decl.resolved_size || "u32::MAX"
+        "{ #{pos} = #{pos}.checked_add(skip_var_opaque(buf, #{pos}, #{max})?).ok_or(Error::LengthExceedsMax)?; }"
+      else
+        n = type.size.to_i
+        total = n + ((4 - (n % 4)) % 4)
+        "{ #{pos} = #{pos}.checked_add(#{total}).ok_or(Error::LengthExceedsMax)?; }"
+      end
+    else
+      # Named type — call its generated validate/skip function.
+      "{ let l = #{base_ref}::xdr_ref_validate(buf, #{pos}, &mut RefLimits::none())?; #{pos} = #{pos}.checked_add(l).ok_or(Error::LengthExceedsMax)?; }"
+    end
+  end
+
+  def skip_simple_rust_variable_inline(type, pos)
+    skip_simple_rust_variable(type, pos).sub(/^\{ /, '').sub(/ \}$/, '')
+  end
+
+  # ---------------------------------------------------------------------------
+  # Validate code generation — emit Rust code that validates a type at `pos`
+  # and returns the byte length consumed. Used in validate functions for
+  # struct fields and union arms.
+  # ---------------------------------------------------------------------------
+
+  # Generate Rust code to validate a field at `pos`, advancing `pos` past it.
+  # Uses `limits` (a RefLimits) for depth-limited validation.
+  def validate_field_rust(parent_defn, type, pos, limits)
+    case type.sub_type
+    when :simple
+      validate_simple_rust(parent_defn, type, pos, limits)
+    when :optional
+      inner_validate = validate_simple_rust_inner(parent_defn, type, pos, limits)
+      "{ let flag = read_u32_at(buf, #{pos})?; match flag { 0 => { #{pos} = #{pos}.checked_add(4).ok_or(Error::LengthExceedsMax)?; } 1 => { #{pos} = #{pos}.checked_add(4).ok_or(Error::LengthExceedsMax)?; #{inner_validate}; } _ => return Err(Error::Invalid), } }"
+    when :array
+      elem_size = xdr_fixed_size_of_type(type)
+      is_named, size = type.array_size
+      size_val = is_named ? size.to_s : size.to_s
+      if elem_size
+        total = elem_size * size.to_i
+        "{ check_bounds(buf, #{pos}, #{total})?; #{pos} = #{pos}.checked_add(#{total}).ok_or(Error::LengthExceedsMax)?; }"
+      else
+        inner_validate = validate_simple_rust_inner(parent_defn, type, pos, limits)
+        "{ for _ in 0..#{size_val}u32 { #{inner_validate}; } }"
+      end
+    when :var_array
+      base_ref = base_reference(type)
+      max = type.decl.resolved_size || "u32::MAX"
+      if base_ref == 'u8' || AST::Typespecs::String === type || AST::Typespecs::Opaque === type
+        "{ #{pos} = #{pos}.checked_add(skip_var_opaque(buf, #{pos}, #{max})?).ok_or(Error::LengthExceedsMax)?; }"
+      else
+        elem_size = xdr_fixed_size_of_type(type)
+        if elem_size
+          "{ #{pos} = #{pos}.checked_add(skip_vec_fixed(buf, #{pos}, #{elem_size}, #{max})?).ok_or(Error::LengthExceedsMax)?; }"
+        else
+          inner_validate = validate_simple_rust_inner(parent_defn, type, pos, limits)
+          "{ let count = read_u32_at(buf, #{pos})?; if count > #{max} { return Err(Error::LengthExceedsMax); } #{pos} = #{pos}.checked_add(4).ok_or(Error::LengthExceedsMax)?; for _ in 0..count { #{inner_validate}; } }"
+        end
+      end
+    else
+      raise "Unknown sub_type: #{type.sub_type}"
+    end
+  end
+
+  # Validate a simple (non-array, non-optional) type. Advances `pos`.
+  def validate_simple_rust(parent_defn, type, pos, limits)
+    fs = xdr_fixed_size_of_type(type)
+    if fs
+      "{ check_bounds(buf, #{pos}, #{fs})?; #{pos} = #{pos}.checked_add(#{fs}).ok_or(Error::LengthExceedsMax)?; }"
+    else
+      validate_simple_rust_variable(parent_defn, type, pos, limits)
+    end
+  end
+
+  # Validate a simple type at `pos_var`, advancing `pos_var` past it.
+  # Returns the inline Rust expression (no braces wrapping).
+  def validate_simple_rust_inner(parent_defn, type, pos_var, limits)
+    fs = xdr_fixed_size_of_type(type)
+    if fs
+      "check_bounds(buf, #{pos_var}, #{fs})?; #{pos_var} = #{pos_var}.checked_add(#{fs}).ok_or(Error::LengthExceedsMax)?;"
+    else
+      case type
+      when AST::Typespecs::String
+        max = type.decl.resolved_size || "u32::MAX"
+        "#{pos_var} = #{pos_var}.checked_add(skip_var_opaque(buf, #{pos_var}, #{max})?).ok_or(Error::LengthExceedsMax)?;"
+      when AST::Typespecs::Opaque
+        if !type.fixed?
+          max = type.decl.resolved_size || "u32::MAX"
+          "#{pos_var} = #{pos_var}.checked_add(skip_var_opaque(buf, #{pos_var}, #{max})?).ok_or(Error::LengthExceedsMax)?;"
+        else
+          n = type.size.to_i
+          total = n + ((4 - (n % 4)) % 4)
+          "check_bounds(buf, #{pos_var}, #{total})?; #{pos_var} = #{pos_var}.checked_add(#{total}).ok_or(Error::LengthExceedsMax)?;"
+        end
+      else
+        base = base_reference(type)
+        "{ let l = #{base}::xdr_ref_validate(buf, #{pos_var}, #{limits})?; #{pos_var} = #{pos_var}.checked_add(l).ok_or(Error::LengthExceedsMax)?; }"
+      end
+    end
+  end
+
+  def validate_simple_rust_variable(parent_defn, type, pos, limits)
+    base = base_reference(type)
+    case type
+    when AST::Typespecs::String
+      max = type.decl.resolved_size || "u32::MAX"
+      "{ #{pos} = #{pos}.checked_add(skip_var_opaque(buf, #{pos}, #{max})?).ok_or(Error::LengthExceedsMax)?; }"
+    when AST::Typespecs::Opaque
+      if !type.fixed?
+        max = type.decl.resolved_size || "u32::MAX"
+        "{ #{pos} = #{pos}.checked_add(skip_var_opaque(buf, #{pos}, #{max})?).ok_or(Error::LengthExceedsMax)?; }"
+      else
+        n = type.size.to_i
+        total = n + ((4 - (n % 4)) % 4)
+        "{ check_bounds(buf, #{pos}, #{total})?; #{pos} = #{pos}.checked_add(#{total}).ok_or(Error::LengthExceedsMax)?; }"
+      end
+    else
+      "{ let l = #{base}::xdr_ref_validate(buf, #{pos}, #{limits})?; #{pos} = #{pos}.checked_add(l).ok_or(Error::LengthExceedsMax)?; }"
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # Ref rendering — zero-copy reference types
+  # ---------------------------------------------------------------------------
+
+  def render_ref_top_matter(out)
+    out.puts <<-EOS.strip_heredoc
+      // Module #{@namespace}_refs is generated from:
+      //  #{@output.relative_source_paths.join("\n//  ")}
+      //
+      // Zero-copy buffer reference types for XDR.
+
+      #![allow(clippy::missing_errors_doc, clippy::unreadable_literal, clippy::too_many_lines, dead_code)]
+    EOS
+    out.break
+    out.puts "use super::generated::*;"
+    out.puts "use super::generated::{read_u32_at, read_i32_at, read_u64_at, read_i64_at, read_bool_at, read_bytes_at};"
+    out.puts "use super::generated::{check_bounds, check_padding, pad_len_ref, var_opaque_xdr_len};"
+    out.puts "use super::generated::{skip_var_opaque, skip_option, skip_vec_fixed, skip_vec_var};"
+    out.puts "use super::generated::{validate_i32, validate_u32, validate_i64, validate_u64, validate_bool, validate_void};"
+    out.puts "use super::generated::{validate_fixed_opaque, validate_option, validate_box};"
+    out.puts "use super::generated::{validate_vec, validate_vec_fixed, validate_vec_u8};"
+    out.puts "use super::generated::{validate_bytes, validate_string};"
+    out.puts "use super::generated::{validate_fixed_array, validate_fixed_array_var};"
+    out.puts "use super::generated::{cmp_i32, cmp_u32, cmp_i64, cmp_u64, cmp_bool, cmp_bytes};"
+    out.puts "use super::generated::{XdrRef, RefLimits, Error};"
+    out.puts "#[allow(unused_imports)]"
+    out.puts "use super::generated::{VecM, BytesM, StringM, Limits, Limited, ReadXdr, WriteXdr};"
+    out.puts "use core::cmp::Ordering;"
+    out.break
+  end
+
+  def render_ref_lib(out)
+    # No additional header needed; all infrastructure is in header_refs.rs
+    # which is included in the main generated.rs.
+  end
+
+  def render_definitions_ref(out, node)
+    node.definitions.each{|n| render_definition_ref out, n }
+    node.namespaces.each{|n| render_definitions_ref out, n }
+  end
+
+  def render_definition_ref(out, defn)
+    if @already_rendered_ref.include? name(defn)
+      return
+    end
+
+    render_nested_definitions_ref(out, defn)
+
+    @already_rendered_ref << name(defn)
+
+    case defn
+    when AST::Definitions::Struct ;
+      render_struct_ref out, defn
+    when AST::Definitions::Enum ;
+      render_enum_ref out, defn
+    when AST::Definitions::Union ;
+      render_union_ref out, defn
+    when AST::Definitions::Typedef ;
+      render_typedef_ref out, defn
+    when AST::Definitions::Const ;
+      # Constants don't need ref types
+    end
+  end
+
+  def render_nested_definitions_ref(out, defn)
+    return unless defn.respond_to? :nested_definitions
+    defn.nested_definitions.each{|ndefn| render_definition_ref out, ndefn}
+  end
+
+  # ---------------------------------------------------------------------------
+  # Enum ref
+  # ---------------------------------------------------------------------------
+
+  def render_enum_ref(out, enum)
+    n = name(enum)
+    out.puts "/// Ref type alias for [`#{n}`]."
+    out.puts "pub type #{n}Ref = XdrRef<#{n}>;"
+    out.puts ""
+
+    out.puts <<-EOS.strip_heredoc
+    impl #{n} {
+        /// Validate the XDR encoding of #{n} at `offset` in `buf`.
+        /// Returns the XDR byte length (always 4).
+        pub fn xdr_ref_validate(buf: &[u8], offset: u32, _limits: &mut RefLimits) -> Result<u32, Error> {
+            check_bounds(buf, offset, 4)?;
+            let v = read_i32_at(buf, offset)?;
+            let _: #{n} = v.try_into()?;
+            Ok(4)
+        }
+
+        /// Validate and construct an `XdrRef<#{n}>` at `offset`.
+        pub fn xdr_ref_from(buf: &[u8], offset: u32, limits: &mut RefLimits) -> Result<XdrRef<#{n}>, Error> {
+            let len = Self::xdr_ref_validate(buf, offset, limits)?;
+            Ok(XdrRef::new(offset, len))
+        }
+    }
+
+    impl XdrRef<#{n}> {
+        pub const XDR_FIXED_SIZE: u32 = 4;
+
+        /// Read the enum value from the buffer.
+        #[inline]
+        pub fn get(&self, buf: &[u8]) -> Result<#{n}, Error> {
+            let v = read_i32_at(buf, self.offset())?;
+            v.try_into()
+        }
+
+        /// Materialize the enum value.
+        #[inline]
+        pub fn materialize(&self, buf: &[u8]) -> Result<#{n}, Error> {
+            self.get(buf)
+        }
+
+        /// Compare two enum refs by their discriminant value.
+        #[inline]
+        pub fn cmp_in(&self, buf: &[u8], other: &Self, other_buf: &[u8]) -> Result<Ordering, Error> {
+            cmp_i32(buf, self.offset(), other_buf, other.offset())
+        }
+    }
+    EOS
+    out.break
+  end
+
+  # ---------------------------------------------------------------------------
+  # Struct ref
+  # ---------------------------------------------------------------------------
+
+  def render_struct_ref(out, struct)
+    n = name(struct)
+    fixed_size = xdr_fixed_size_of_defn(struct)
+
+    out.puts "/// Ref type alias for [`#{n}`]."
+    out.puts "pub type #{n}Ref = XdrRef<#{n}>;"
+    out.puts ""
+
+    # --- validate ---
+    out.puts "impl #{n} {"
+    out.puts "    /// Validate the XDR encoding of #{n} at `offset` in `buf`."
+    out.puts "    /// Returns the total XDR byte length."
+    out.puts "    pub fn xdr_ref_validate(buf: &[u8], offset: u32, limits: &mut RefLimits) -> Result<u32, Error> {"
+    out.puts "        limits.with_limited_depth(|limits| {"
+    out.puts "            let mut pos = offset;"
+    # Batch consecutive fixed-size fields into one bounds check + add.
+    pending_fixed = 0
+    struct.members.each do |m|
+      fs = xdr_fixed_size_of_field(m.declaration.type)
+      if fs
+        pending_fixed += fs
+      else
+        # Flush any accumulated fixed-size bytes first.
+        if pending_fixed > 0
+          out.puts "            check_bounds(buf, pos, #{pending_fixed})?; pos = pos.checked_add(#{pending_fixed}).ok_or(Error::LengthExceedsMax)?;"
+          pending_fixed = 0
+        end
+        out.puts "            #{validate_field_rust(struct, m.declaration.type, 'pos', 'limits')}"
+      end
+    end
+    if pending_fixed > 0
+      out.puts "            check_bounds(buf, pos, #{pending_fixed})?; pos = pos.checked_add(#{pending_fixed}).ok_or(Error::LengthExceedsMax)?;"
+    end
+    out.puts "            Ok(pos.checked_sub(offset).ok_or(Error::Invalid)?)"
+    out.puts "        })"
+    out.puts "    }"
+    out.puts ""
+    out.puts "    /// Validate and construct an `XdrRef<#{n}>` at `offset`."
+    out.puts "    pub fn xdr_ref_from(buf: &[u8], offset: u32, limits: &mut RefLimits) -> Result<XdrRef<#{n}>, Error> {"
+    out.puts "        let len = Self::xdr_ref_validate(buf, offset, limits)?;"
+    out.puts "        Ok(XdrRef::new(offset, len))"
+    out.puts "    }"
+    out.puts "}"
+    out.puts ""
+
+    # --- accessors ---
+    out.puts "impl XdrRef<#{n}> {"
+    if fixed_size
+      out.puts "    pub const XDR_FIXED_SIZE: u32 = #{fixed_size};"
+      out.puts ""
+    end
+
+    # Per-field accessors
+    cumulative_offset = 0
+    all_fixed_so_far = true
+    struct.members.each_with_index do |m, idx|
+      fname = field_name(m)
+      field_type = m.declaration.type
+      field_ref_type = ref_type_for_field(struct, field_type)
+      field_fs = xdr_fixed_size_of_field(field_type)
+
+      if all_fixed_so_far
+        # This field is at a known constant offset from the struct start.
+        out.puts "    /// Access field `#{fname}` at a #{field_fs ? 'fixed' : 'variable'} offset."
+        out.puts "    #[inline]"
+        out.puts "    pub fn #{fname}(&self, buf: &[u8]) -> Result<#{field_ref_type}, Error> {"
+        out.puts "        let field_off = self.offset().checked_add(#{cumulative_offset}).ok_or(Error::LengthExceedsMax)?;"
+        out.puts render_field_accessor_body(struct, field_type, 'field_off')
+        out.puts "    }"
+        out.puts ""
+        if field_fs
+          cumulative_offset += field_fs
+        else
+          all_fixed_so_far = false
+        end
+      else
+        # This field is at a variable offset. Scan from struct start.
+        out.puts "    /// Access field `#{fname}` (variable offset — scans preceding fields)."
+        out.puts "    pub fn #{fname}(&self, buf: &[u8]) -> Result<#{field_ref_type}, Error> {"
+        out.puts "        let mut pos = self.offset();"
+        # Skip all preceding fields. Batch consecutive fixed-size skips.
+        skip_pending = 0
+        struct.members[0...idx].each do |prev_m|
+          prev_fs = xdr_fixed_size_of_field(prev_m.declaration.type)
+          if prev_fs
+            skip_pending += prev_fs
+          else
+            if skip_pending > 0
+              out.puts "        pos = pos.checked_add(#{skip_pending}).ok_or(Error::LengthExceedsMax)?;"
+              skip_pending = 0
+            end
+            out.puts "        #{skip_field_rust(prev_m.declaration.type, 'pos')}"
+          end
+        end
+        if skip_pending > 0
+          out.puts "        pos = pos.checked_add(#{skip_pending}).ok_or(Error::LengthExceedsMax)?;"
+        end
+        out.puts "        let field_off = pos;"
+        out.puts render_field_accessor_body(struct, field_type, 'field_off')
+        out.puts "    }"
+        out.puts ""
+      end
+    end
+
+    # --- materialize ---
+    out.puts "    /// Materialize the full owned [`#{n}`] from the buffer."
+    out.puts "    #[cfg(feature = \"std\")]"
+    out.puts "    pub fn materialize(&self, buf: &[u8]) -> Result<#{n}, Error> {"
+    out.puts "        let s = self.as_slice(buf)?;"
+    out.puts "        let mut cursor = Limited::new(std::io::Cursor::new(s), Limits::len(s.len()));"
+    out.puts "        #{n}::read_xdr(&mut cursor)"
+    out.puts "    }"
+    out.puts ""
+
+    # --- cmp_in ---
+    out.puts "    /// Field-by-field comparison matching derived `Ord`."
+    out.puts "    pub fn cmp_in(&self, buf: &[u8], other: &Self, other_buf: &[u8]) -> Result<Ordering, Error> {"
+    struct.members.each_with_index do |m, idx|
+      fname = field_name(m)
+      out.puts "        let ord = self.#{fname}(buf)?.cmp_in(buf, &other.#{fname}(other_buf)?, other_buf)?;"
+      out.puts "        if ord != Ordering::Equal { return Ok(ord); }"
+    end
+    out.puts "        Ok(Ordering::Equal)"
+    out.puts "    }"
+
+    out.puts "}"
+    out.break
+  end
+
+  # Returns the Rust ref type for a given field type (the return type of an accessor).
+  def ref_type_for_field(parent, type)
+    base = base_reference(type)
+    parent_name = name(parent) if parent
+    cyclic = parent_name && is_type_in_type_field_types(base, parent_name)
+
+    case type.sub_type
+    when :simple
+      if cyclic
+        "XdrRef<Box<#{base}>>"
+      else
+        "XdrRef<#{base}>"
+      end
+    when :optional
+      if cyclic
+        "XdrRef<Option<Box<#{base}>>>"
+      else
+        "XdrRef<Option<#{base}>>"
+      end
+    when :array
+      if AST::Typespecs::Opaque === type && type.fixed?
+        "XdrRef<[u8; #{type.size}]>"
+      else
+        is_named, size = type.array_size
+        size = name @top.find_definition(size) if is_named
+        "XdrRef<[#{base}; #{size}]>"
+      end
+    when :var_array
+      if AST::Typespecs::String === type
+        max = type.decl.resolved_size
+        max ? "XdrRef<StringM<#{max}>>" : "XdrRef<StringM>"
+      elsif AST::Typespecs::Opaque === type
+        max = type.decl.resolved_size
+        max ? "XdrRef<BytesM<#{max}>>" : "XdrRef<BytesM>"
+      else
+        max = type.decl.resolved_size
+        max ? "XdrRef<VecM<#{base}, #{max}>>" : "XdrRef<VecM<#{base}>>"
+      end
+    else
+      raise "Unknown sub_type: #{type.sub_type}"
+    end
+  end
+
+  # Generate the body of a field accessor. Returns an XdrRef for the field.
+  def render_field_accessor_body(parent, type, off_var)
+    base = base_reference(type)
+    parent_name = name(parent) if parent
+    cyclic = parent_name && is_type_in_type_field_types(base, parent_name)
+
+    case type.sub_type
+    when :simple
+      fs = xdr_fixed_size_of_type(type)
+      if fs
+        "        Ok(XdrRef::new(#{off_var}, #{fs}))"
+      else
+        # Check for parameterized builtins (StringM, BytesM) that don't have
+        # xdr_ref_validate as an inherent method.
+        case type
+        when AST::Typespecs::String
+          max = type.decl.resolved_size || "u32::MAX"
+          "        let (_, total) = var_opaque_xdr_len(buf, #{off_var}, #{max})?;\n        Ok(XdrRef::new(#{off_var}, total))"
+        when AST::Typespecs::Opaque
+          if !type.fixed?
+            max = type.decl.resolved_size || "u32::MAX"
+            "        let (_, total) = var_opaque_xdr_len(buf, #{off_var}, #{max})?;\n        Ok(XdrRef::new(#{off_var}, total))"
+          else
+            n = type.size.to_i
+            total = n + ((4 - (n % 4)) % 4)
+            "        Ok(XdrRef::new(#{off_var}, #{total}))"
+          end
+        else
+          # Variable-size named type — compute length.
+          "        let l = #{base}::xdr_ref_validate(buf, #{off_var}, &mut RefLimits::none())?;\n        Ok(XdrRef::new(#{off_var}, l))"
+        end
+      end
+    when :optional
+      inner_size = xdr_fixed_size_of_type(type)
+      if inner_size
+        lines = "        let flag = read_u32_at(buf, #{off_var})?;\n"
+        lines += "        match flag {\n"
+        lines += "            0 => Ok(XdrRef::new(#{off_var}, 4)),\n"
+        lines += "            1 => Ok(XdrRef::new(#{off_var}, #{4 + inner_size})),\n"
+        lines += "            _ => Err(Error::Invalid),\n"
+        lines += "        }"
+        lines
+      else
+        lines = "        let flag = read_u32_at(buf, #{off_var})?;\n"
+        lines += "        match flag {\n"
+        lines += "            0 => Ok(XdrRef::new(#{off_var}, 4)),\n"
+        lines += "            1 => {\n"
+        lines += "                let inner_off = #{off_var}.checked_add(4).ok_or(Error::LengthExceedsMax)?;\n"
+        lines += "                let inner_len = #{base}::xdr_ref_validate(buf, inner_off, &mut RefLimits::none())?;\n"
+        lines += "                Ok(XdrRef::new(#{off_var}, 4u32.checked_add(inner_len).ok_or(Error::LengthExceedsMax)?))\n"
+        lines += "            }\n"
+        lines += "            _ => Err(Error::Invalid),\n"
+        lines += "        }"
+        lines
+      end
+    when :array
+      if AST::Typespecs::Opaque === type && type.fixed?
+        n = type.size.to_i
+        total = n + ((4 - (n % 4)) % 4)
+        "        Ok(XdrRef::new(#{off_var}, #{total}))"
+      else
+        elem_size = xdr_fixed_size_of_type(type)
+        is_named, size = type.array_size
+        size_int = size.to_i
+        if elem_size
+          total = elem_size * size_int
+          "        Ok(XdrRef::new(#{off_var}, #{total}))"
+        else
+          # Variable-size elements — scan
+          lines = "        let mut p = #{off_var};\n"
+          lines += "        for _ in 0..#{size_int}u32 {\n"
+          lines += "            let l = #{base}::xdr_ref_validate(buf, p, &mut RefLimits::none())?;\n"
+          lines += "            p = p.checked_add(l).ok_or(Error::LengthExceedsMax)?;\n"
+          lines += "        }\n"
+          lines += "        Ok(XdrRef::new(#{off_var}, p.checked_sub(#{off_var}).ok_or(Error::Invalid)?))"
+          lines
+        end
+      end
+    when :var_array
+      if AST::Typespecs::String === type || AST::Typespecs::Opaque === type
+        max = type.decl.resolved_size || "u32::MAX"
+        lines = "        let (_, total) = var_opaque_xdr_len(buf, #{off_var}, #{max})?;\n"
+        lines += "        Ok(XdrRef::new(#{off_var}, total))"
+        lines
+      else
+        max = type.decl.resolved_size || "u32::MAX"
+        elem_size = xdr_fixed_size_of_type(type)
+        if elem_size
+          lines = "        let total = skip_vec_fixed(buf, #{off_var}, #{elem_size}, #{max})?;\n"
+          lines += "        Ok(XdrRef::new(#{off_var}, total))"
+          lines
+        else
+          lines = "        let total = skip_vec_var(buf, #{off_var}, #{max}, |buf, off| {\n"
+          lines += "            let mut p = off;\n"
+          lines += "            let l = #{base}::xdr_ref_validate(buf, p, &mut RefLimits::none())?;\n"
+          lines += "            p = p.checked_add(l).ok_or(Error::LengthExceedsMax)?;\n"
+          lines += "            Ok(p.checked_sub(off).ok_or(Error::Invalid)?)\n"
+          lines += "        })?;\n"
+          lines += "        Ok(XdrRef::new(#{off_var}, total))"
+          lines
+        end
+      end
+    else
+      raise "Unknown sub_type: #{type.sub_type}"
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # Union ref
+  # ---------------------------------------------------------------------------
+
+  def render_union_ref(out, union)
+    n = name(union)
+    discriminant_type = reference(nil, union.discriminant.type)
+    discriminant_type_builtin = is_builtin_type(union.discriminant.type) || (is_builtin_type(union.discriminant.type.resolved_type.type) if union.discriminant.type.respond_to?(:resolved_type) && AST::Definitions::Typedef === union.discriminant.type.resolved_type)
+    fixed_size = xdr_fixed_size_of_defn(union)
+
+    # Determine the correct reader for the discriminant based on its type.
+    disc_unsigned = (AST::Typespecs::UnsignedInt === union.discriminant.type) ||
+      (union.discriminant.type.respond_to?(:resolved_type) &&
+       AST::Definitions::Typedef === union.discriminant.type.resolved_type &&
+       AST::Typespecs::UnsignedInt === union.discriminant.type.resolved_type.type)
+    disc_read_fn = disc_unsigned ? "read_u32_at" : "read_i32_at"
+
+    out.puts "/// Ref type alias for [`#{n}`]."
+    out.puts "pub type #{n}Ref = XdrRef<#{n}>;"
+    out.puts ""
+
+    # --- validate ---
+    out.puts "impl #{n} {"
+    out.puts "    /// Validate the XDR encoding of #{n} at `offset` in `buf`."
+    out.puts "    /// Returns the total XDR byte length."
+    out.puts "    pub fn xdr_ref_validate(buf: &[u8], offset: u32, limits: &mut RefLimits) -> Result<u32, Error> {"
+    out.puts "        limits.with_limited_depth(|limits| {"
+    out.puts "            let dv_ref = validate_i32(buf, offset)?;"
+    out.puts "            let dv = #{disc_read_fn}(buf, offset)?;"
+    out.puts "            let mut pos = offset.checked_add(4).ok_or(Error::LengthExceedsMax)?;"
+
+    # Determine discriminant matching pattern
+    if discriminant_type_builtin
+      out.puts "            #[allow(clippy::match_same_arms)]"
+      out.puts "            match dv {"
+      union_cases(union) do |case_name, arm, value|
+        if arm.void?
+          out.puts "                #{value} => {},"
+        else
+          out.puts "                #{value} => { #{validate_field_rust(union, arm.type, 'pos', 'limits')} },"
+        end
+      end
+    else
+      out.puts "            let disc: #{discriminant_type} = dv.try_into()?;"
+      out.puts "            #[allow(clippy::match_same_arms)]"
+      out.puts "            match disc {"
+      union_cases(union) do |case_name, arm, value|
+        if arm.void?
+          out.puts "                #{discriminant_type}::#{case_name} => {},"
+        else
+          out.puts "                #{discriminant_type}::#{case_name} => { #{validate_field_rust(union, arm.type, 'pos', 'limits')} },"
+        end
+      end
+    end
+    out.puts "                #[allow(unreachable_patterns)]"
+    out.puts "                _ => return Err(Error::Invalid),"
+    out.puts "            }"
+    out.puts "            Ok(pos.checked_sub(offset).ok_or(Error::Invalid)?)"
+    out.puts "        })"
+    out.puts "    }"
+    out.puts ""
+    out.puts "    /// Validate and construct an `XdrRef<#{n}>` at `offset`."
+    out.puts "    pub fn xdr_ref_from(buf: &[u8], offset: u32, limits: &mut RefLimits) -> Result<XdrRef<#{n}>, Error> {"
+    out.puts "        let len = Self::xdr_ref_validate(buf, offset, limits)?;"
+    out.puts "        Ok(XdrRef::new(offset, len))"
+    out.puts "    }"
+    out.puts "}"
+    out.puts ""
+
+    # --- accessors ---
+    out.puts "impl XdrRef<#{n}> {"
+    if fixed_size
+      out.puts "    pub const XDR_FIXED_SIZE: u32 = #{fixed_size};"
+      out.puts ""
+    end
+
+    # Discriminant accessor
+    out.puts "    /// Read the discriminant."
+    out.puts "    #[inline]"
+    out.puts "    pub fn discriminant(&self, buf: &[u8]) -> Result<#{discriminant_type}, Error> {"
+    if discriminant_type_builtin
+      out.puts "        #{disc_read_fn}(buf, self.offset())"
+    else
+      out.puts "        let v = #{disc_read_fn}(buf, self.offset())?;"
+      out.puts "        v.try_into()"
+    end
+    out.puts "    }"
+    out.puts ""
+
+    # Per-arm accessors
+    union_cases(union) do |case_name, arm, value|
+      arm_fname = case_name.underscore
+      unless arm.void?
+        arm_ref_type = ref_type_for_field(union, arm.type)
+        out.puts "    /// Access the `#{case_name}` arm. Returns `Ok(None)` if a different arm is active."
+        out.puts "    pub fn as_#{arm_fname}(&self, buf: &[u8]) -> Result<Option<#{arm_ref_type}>, Error> {"
+        if discriminant_type_builtin
+          out.puts "        let dv = #{disc_read_fn}(buf, self.offset())?;"
+          out.puts "        if dv != #{value} { return Ok(None); }"
+        else
+          out.puts "        let disc = self.discriminant(buf)?;"
+          out.puts "        if disc != #{discriminant_type}::#{case_name} { return Ok(None); }"
+        end
+        out.puts "        let arm_off = self.offset().checked_add(4).ok_or(Error::LengthExceedsMax)?;"
+        out.puts render_field_accessor_body(union, arm.type, 'arm_off').lines.map { |l| "    #{l}" }.join
+        out.puts "            .map(Some)"
+        out.puts "    }"
+        out.puts ""
+      end
+    end
+
+    # materialize
+    out.puts "    /// Materialize the full owned [`#{n}`] from the buffer."
+    out.puts "    #[cfg(feature = \"std\")]"
+    out.puts "    pub fn materialize(&self, buf: &[u8]) -> Result<#{n}, Error> {"
+    out.puts "        let s = self.as_slice(buf)?;"
+    out.puts "        let mut cursor = Limited::new(std::io::Cursor::new(s), Limits::len(s.len()));"
+    out.puts "        #{n}::read_xdr(&mut cursor)"
+    out.puts "    }"
+    out.puts ""
+
+    # cmp_in — compare discriminant first, then arm
+    out.puts "    /// Compare two union refs: discriminant first, then arm data."
+    out.puts "    pub fn cmp_in(&self, buf: &[u8], other: &Self, other_buf: &[u8]) -> Result<Ordering, Error> {"
+    out.puts "        let d1 = #{disc_read_fn}(buf, self.offset())?;"
+    out.puts "        let d2 = #{disc_read_fn}(other_buf, other.offset())?;"
+    out.puts "        let disc_ord = d1.cmp(&d2);"
+    out.puts "        if disc_ord != Ordering::Equal { return Ok(disc_ord); }"
+    out.puts "        // Same discriminant — compare arm data bytes."
+    out.puts "        let arm1_off = self.offset().checked_add(4).ok_or(Error::LengthExceedsMax)?;"
+    out.puts "        let arm1_len = self.len().checked_sub(4).ok_or(Error::Invalid)?;"
+    out.puts "        let arm2_off = other.offset().checked_add(4).ok_or(Error::LengthExceedsMax)?;"
+    out.puts "        let arm2_len = other.len().checked_sub(4).ok_or(Error::Invalid)?;"
+    out.puts "        // For union arms with the same discriminant, the XDR bytes are the same type."
+    out.puts "        // Byte comparison is correct for unsigned/opaque. For signed ints or complex"
+    out.puts "        // types we'd need field-by-field comparison. Use byte comparison as a"
+    out.puts "        // reasonable default matching the existing derived Ord on the owned type."
+    out.puts "        cmp_bytes(buf, arm1_off, arm1_len, other_buf, arm2_off, arm2_len)"
+    out.puts "    }"
+
+    out.puts "}"
+    out.break
+  end
+
+  # ---------------------------------------------------------------------------
+  # Typedef ref
+  # ---------------------------------------------------------------------------
+
+  def render_typedef_ref(out, typedef)
+    n = name(typedef)
+
+    if is_builtin_type(typedef.type)
+      # Builtin type alias — the ref is just XdrRef<base_type>.
+      # No separate type needed (users use XdrRef<i32> etc directly).
+      return
+    end
+
+    out.puts "/// Ref type alias for [`#{n}`]."
+    out.puts "pub type #{n}Ref = XdrRef<#{n}>;"
+    out.puts ""
+
+    inner_ref = base_reference(typedef.type)
+
+    # --- validate ---
+    out.puts "impl #{n} {"
+    out.puts "    /// Validate the XDR encoding of #{n} at `offset` in `buf`."
+    out.puts "    /// Returns the total XDR byte length."
+    out.puts "    pub fn xdr_ref_validate(buf: &[u8], offset: u32, limits: &mut RefLimits) -> Result<u32, Error> {"
+
+    if is_fixed_array_opaque(typedef.type)
+      size = typedef.type.size.to_i
+      total = size + ((4 - (size % 4)) % 4)
+      out.puts "        check_bounds(buf, offset, #{total})?;"
+      out.puts "        check_padding(buf, offset.checked_add(#{size}).ok_or(Error::LengthExceedsMax)?, #{(4 - (size % 4)) % 4})?;"
+      out.puts "        Ok(#{total})"
+    elsif is_var_array_type(typedef.type)
+      if AST::Typespecs::String === typedef.type
+        max = typedef.type.decl.resolved_size || "u32::MAX"
+        out.puts "        let (_, total) = var_opaque_xdr_len(buf, offset, #{max})?;"
+        out.puts "        Ok(total)"
+      elsif AST::Typespecs::Opaque === typedef.type
+        max = typedef.type.decl.resolved_size || "u32::MAX"
+        out.puts "        let (_, total) = var_opaque_xdr_len(buf, offset, #{max})?;"
+        out.puts "        Ok(total)"
+      else
+        # VecM<T, MAX>
+        elem_type_base = base_reference(typedef.type)
+        max = typedef.type.decl.resolved_size || "u32::MAX"
+        elem_size = xdr_fixed_size_of_type(typedef.type)
+        if elem_size
+          out.puts "        let r = skip_vec_fixed(buf, offset, #{elem_size}, #{max})?;"
+          out.puts "        Ok(r)"
+        else
+          out.puts "        let count = read_u32_at(buf, offset)?;"
+          out.puts "        if count > #{max} { return Err(Error::LengthExceedsMax); }"
+          out.puts "        let mut pos = offset.checked_add(4).ok_or(Error::LengthExceedsMax)?;"
+          out.puts "        for _ in 0..count {"
+          # element_type_for_vec gives us the element type name
+          elem_name = element_type_for_vec(typedef.type)
+          if ['u8', 'i32', 'u32', 'i64', 'u64', 'bool'].include?(elem_name)
+            fs = case elem_name
+              when 'u8' then nil # shouldn't happen, handled by opaque
+              when 'i32', 'u32', 'bool' then 4
+              when 'i64', 'u64' then 8
+            end
+            if fs
+              out.puts "            pos = pos.checked_add(#{fs}).ok_or(Error::LengthExceedsMax)?;"
+            end
+          else
+            out.puts "            let l = #{elem_name}::xdr_ref_validate(buf, pos, limits)?;"
+            out.puts "            pos = pos.checked_add(l).ok_or(Error::LengthExceedsMax)?;"
+          end
+          out.puts "        }"
+          out.puts "        Ok(pos.checked_sub(offset).ok_or(Error::Invalid)?)"
+        end
+      end
+    elsif is_fixed_array_type(typedef.type)
+      # Fixed array of non-opaque (e.g., [SomeType; N])
+      elem_size = xdr_fixed_size_of_type(typedef.type)
+      is_named, size = typedef.type.array_size
+      size_int = size.to_i
+      if elem_size
+        total = elem_size * size_int
+        out.puts "        check_bounds(buf, offset, #{total})?;"
+        out.puts "        Ok(#{total})"
+      else
+        elem_name = base_reference(typedef.type)
+        out.puts "        let mut pos = offset;"
+        out.puts "        for _ in 0..#{size_int}u32 {"
+        out.puts "            let l = #{elem_name}::xdr_ref_validate(buf, pos, limits)?;"
+        out.puts "            pos = pos.checked_add(l).ok_or(Error::LengthExceedsMax)?;"
+        out.puts "        }"
+        out.puts "        Ok(pos.checked_sub(offset).ok_or(Error::Invalid)?)"
+      end
+    else
+      # Simple named type
+      fs = xdr_fixed_size_of_type(typedef.type)
+      if fs
+        out.puts "        check_bounds(buf, offset, #{fs})?;"
+        out.puts "        Ok(#{fs})"
+      else
+        out.puts "        #{inner_ref}::xdr_ref_validate(buf, offset, limits)"
+      end
+    end
+
+    out.puts "    }"
+    out.puts ""
+    out.puts "    /// Validate and construct an `XdrRef<#{n}>` at `offset`."
+    out.puts "    pub fn xdr_ref_from(buf: &[u8], offset: u32, limits: &mut RefLimits) -> Result<XdrRef<#{n}>, Error> {"
+    out.puts "        let len = Self::xdr_ref_validate(buf, offset, limits)?;"
+    out.puts "        Ok(XdrRef::new(offset, len))"
+    out.puts "    }"
+    out.puts "}"
+    out.puts ""
+
+    # --- accessors ---
+    out.puts "impl XdrRef<#{n}> {"
+    fixed_size = xdr_fixed_size_of_defn(typedef)
+    if fixed_size
+      out.puts "    pub const XDR_FIXED_SIZE: u32 = #{fixed_size};"
+      out.puts ""
+    end
+
+    # Materialize
+    out.puts "    /// Materialize the full owned [`#{n}`] from the buffer."
+    out.puts "    #[cfg(feature = \"std\")]"
+    out.puts "    pub fn materialize(&self, buf: &[u8]) -> Result<#{n}, Error> {"
+    out.puts "        let s = self.as_slice(buf)?;"
+    out.puts "        let mut cursor = Limited::new(std::io::Cursor::new(s), Limits::len(s.len()));"
+    out.puts "        #{n}::read_xdr(&mut cursor)"
+    out.puts "    }"
+    out.puts ""
+
+    # cmp_in — delegate to byte comparison (canonical XDR)
+    out.puts "    /// Compare two typedef refs."
+    out.puts "    pub fn cmp_in(&self, buf: &[u8], other: &Self, other_buf: &[u8]) -> Result<Ordering, Error> {"
+    out.puts "        // Typedef wraps another type; byte comparison is correct for canonical XDR."
+    out.puts "        let a = self.as_slice(buf)?;"
+    out.puts "        let b = other.as_slice(other_buf)?;"
+    out.puts "        Ok(a.cmp(b))"
+    out.puts "    }"
+
+    out.puts "}"
+    out.break
+  end
+
+  # ---------------------------------------------------------------------------
+  # Enum of all types (TypeRef, etc.)
+  # ---------------------------------------------------------------------------
+
+  def render_enum_of_all_types_ref(out, types)
+    # No trait needed. Every generated type has an inherent `cmp_in` method,
+    # and struct `cmp_in` calls each field's `cmp_in` directly.
   end
 
 end
