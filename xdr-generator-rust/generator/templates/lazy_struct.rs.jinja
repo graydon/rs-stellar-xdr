@@ -9,25 +9,9 @@
 
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-{%- for step in s.lazy_validate_steps %}
-{%- match step %}
-{%- when LazyValidateStep::FixedGroup(g) %}
-{%- if g.total_fixed > 0 %}
-            let next_pos = pos.checked_add({{ g.total_fixed }}).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-{%- for cv in g.content_validations %}
-            <{{ cv.lazy_type }} as LazyXdr>::xdr_validate(&buf[(pos + {{ cv.offset }}) as usize..])?;
-{%- endfor %}
-            pos = next_pos;
-{%- endif %}
-{%- when LazyValidateStep::Variable(v) %}
-            {
-                let field_len = <{{ v.lazy_type }} as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos.checked_add(field_len).ok_or(super::Error::LengthExceedsMax)?;
-            }
-{%- endmatch %}
+{%- for m in s.members %}
+            let field_len = {{ m.lazy_type.validate_expr("buf", "pos") }};
+            pos = pos.checked_add(field_len).ok_or(super::Error::LengthExceedsMax)?;
 {%- endfor %}
             Ok(pos)
         }
@@ -42,14 +26,12 @@
 
         fn xdr_len(buf: &[u8]) -> u32 {
             let mut pos: u32 = 0;
-{%- for step in s.lazy_validate_steps %}
-{%- match step %}
-{%- when LazyValidateStep::FixedGroup(g) %}
-{%- if g.total_fixed > 0 %}
-            pos += {{ g.total_fixed }};
-{%- endif %}
-{%- when LazyValidateStep::Variable(v) %}
-            pos += <{{ v.lazy_type }} as LazyXdr>::xdr_len(&buf[pos as usize..]);
+{%- for scan_step in s.lazy_len_steps %}
+{%- match scan_step %}
+{%- when LazyScanStepOutput::Fixed with { len_expr } %}
+            pos += {{ len_expr }};
+{%- when LazyScanStepOutput::Variable with { type_output } %}
+            pos += {{ type_output.len_expr("buf", "pos") }};
 {%- endmatch %}
 {%- endfor %}
             pos
@@ -87,22 +69,18 @@
 {%- for m in s.members %}
         /// Access field `{{ m.name }}`.
         #[must_use]
-{%- if m.lazy_accessor.var_skips.is_empty() %}
-        pub fn {{ m.name }}(&self) -> {{ m.lazy_type }} {
-            <{{ m.lazy_type }} as LazyXdr>::from_xdr_at(&self.0, {{ m.lazy_accessor.initial_fixed }})
-        }
-{%- else %}
-        pub fn {{ m.name }}(&self) -> {{ m.lazy_type }} {
+        pub fn {{ m.name }}(&self) -> {{ m.lazy_type.rust_type() }} {
             let buf = self.0.as_slice();
-            let mut pos: u32 = {{ m.lazy_accessor.initial_fixed }};
-{%- for skip in m.lazy_accessor.var_skips %}
-            pos += <{{ skip.lazy_type }} as LazyXdr>::xdr_len(&buf[pos as usize..]);
-{%- if skip.post_fixed > 0 %}
-            pos += {{ skip.post_fixed }};
-{%- endif %}
+            let mut pos: u32 = 0;
+{%- for scan_step in m.lazy_scan_steps %}
+{%- match scan_step %}
+{%- when LazyScanStepOutput::Fixed with { len_expr } %}
+            pos += {{ len_expr }};
+{%- when LazyScanStepOutput::Variable with { type_output } %}
+            pos += {{ type_output.len_expr("buf", "pos") }};
+{%- endmatch %}
 {%- endfor %}
-            <{{ m.lazy_type }} as LazyXdr>::from_xdr_at(&self.0, pos)
+            {{ m.lazy_type.from_parent_expr("&self.0", "pos") }}
         }
-{%- endif %}
 {%- endfor %}
     }

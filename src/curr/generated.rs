@@ -71496,17 +71496,14 @@ pub mod lazy {
     impl LazyXdr for LazyScpBallot {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(4).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
-            {
-                let field_len = <LazyValue as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyValue as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -71548,12 +71545,17 @@ pub mod lazy {
         /// Access field `counter`.
         #[must_use]
         pub fn counter(&self) -> u32 {
-            <u32 as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <u32 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `value`.
         #[must_use]
         pub fn value(&self) -> LazyValue {
-            <LazyValue as LazyXdr>::from_xdr_at(&self.0, 4)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 4;
+            <LazyValue as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     // Enum ScpStatementType: scalar lazy type — impl LazyXdr directly on the enum.
@@ -71589,26 +71591,18 @@ pub mod lazy {
     impl LazyXdr for LazyScpNomination {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(32).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            <LazyHash as LazyXdr>::xdr_validate(&buf[(pos + 0) as usize..])?;
-            pos = next_pos;
-            {
-                let field_len =
-                    <LazyVecM<LazyValue> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len =
-                    <LazyVecM<LazyValue> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazyHash as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyVecM<LazyValue> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyVecM<LazyValue> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -71651,18 +71645,24 @@ pub mod lazy {
         /// Access field `quorum_set_hash`.
         #[must_use]
         pub fn quorum_set_hash(&self) -> LazyHash {
-            <LazyHash as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyHash as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `votes`.
         #[must_use]
         pub fn votes(&self) -> LazyVecM<LazyValue> {
-            <LazyVecM<LazyValue> as LazyXdr>::from_xdr_at(&self.0, 32)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 32;
+            <LazyVecM<LazyValue> as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `accepted`.
         #[must_use]
         pub fn accepted(&self) -> LazyVecM<LazyValue> {
             let buf = self.0.as_slice();
-            let mut pos: u32 = 32;
+            let mut pos: u32 = 0;
+            pos += 32;
             pos += <LazyVecM<LazyValue> as LazyXdr>::xdr_len(&buf[pos as usize..]);
             <LazyVecM<LazyValue> as LazyXdr>::from_xdr_at(&self.0, pos)
         }
@@ -71674,37 +71674,32 @@ pub mod lazy {
     impl LazyXdr for LazyScpStatementPrepare {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(32).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            <LazyHash as LazyXdr>::xdr_validate(&buf[(pos + 0) as usize..])?;
-            pos = next_pos;
-            {
-                let field_len = <LazyScpBallot as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len =
-                    <LazyOption<LazyScpBallot> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len =
-                    <LazyOption<LazyScpBallot> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            let next_pos = pos.checked_add(8).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
+            let field_len = <LazyHash as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyScpBallot as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyOption<LazyScpBallot> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyOption<LazyScpBallot> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -71749,18 +71744,24 @@ pub mod lazy {
         /// Access field `quorum_set_hash`.
         #[must_use]
         pub fn quorum_set_hash(&self) -> LazyHash {
-            <LazyHash as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyHash as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `ballot`.
         #[must_use]
         pub fn ballot(&self) -> LazyScpBallot {
-            <LazyScpBallot as LazyXdr>::from_xdr_at(&self.0, 32)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 32;
+            <LazyScpBallot as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `prepared`.
         #[must_use]
         pub fn prepared(&self) -> LazyOption<LazyScpBallot> {
             let buf = self.0.as_slice();
-            let mut pos: u32 = 32;
+            let mut pos: u32 = 0;
+            pos += 32;
             pos += <LazyScpBallot as LazyXdr>::xdr_len(&buf[pos as usize..]);
             <LazyOption<LazyScpBallot> as LazyXdr>::from_xdr_at(&self.0, pos)
         }
@@ -71768,7 +71769,8 @@ pub mod lazy {
         #[must_use]
         pub fn prepared_prime(&self) -> LazyOption<LazyScpBallot> {
             let buf = self.0.as_slice();
-            let mut pos: u32 = 32;
+            let mut pos: u32 = 0;
+            pos += 32;
             pos += <LazyScpBallot as LazyXdr>::xdr_len(&buf[pos as usize..]);
             pos += <LazyOption<LazyScpBallot> as LazyXdr>::xdr_len(&buf[pos as usize..]);
             <LazyOption<LazyScpBallot> as LazyXdr>::from_xdr_at(&self.0, pos)
@@ -71777,7 +71779,8 @@ pub mod lazy {
         #[must_use]
         pub fn n_c(&self) -> u32 {
             let buf = self.0.as_slice();
-            let mut pos: u32 = 32;
+            let mut pos: u32 = 0;
+            pos += 32;
             pos += <LazyScpBallot as LazyXdr>::xdr_len(&buf[pos as usize..]);
             pos += <LazyOption<LazyScpBallot> as LazyXdr>::xdr_len(&buf[pos as usize..]);
             pos += <LazyOption<LazyScpBallot> as LazyXdr>::xdr_len(&buf[pos as usize..]);
@@ -71787,7 +71790,8 @@ pub mod lazy {
         #[must_use]
         pub fn n_h(&self) -> u32 {
             let buf = self.0.as_slice();
-            let mut pos: u32 = 32;
+            let mut pos: u32 = 0;
+            pos += 32;
             pos += <LazyScpBallot as LazyXdr>::xdr_len(&buf[pos as usize..]);
             pos += <LazyOption<LazyScpBallot> as LazyXdr>::xdr_len(&buf[pos as usize..]);
             pos += <LazyOption<LazyScpBallot> as LazyXdr>::xdr_len(&buf[pos as usize..]);
@@ -71802,18 +71806,26 @@ pub mod lazy {
     impl LazyXdr for LazyScpStatementConfirm {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazyScpBallot as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            let next_pos = pos.checked_add(44).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            <LazyHash as LazyXdr>::xdr_validate(&buf[(pos + 12) as usize..])?;
-            pos = next_pos;
+            let field_len = <LazyScpBallot as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyHash as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -71855,7 +71867,9 @@ pub mod lazy {
         /// Access field `ballot`.
         #[must_use]
         pub fn ballot(&self) -> LazyScpBallot {
-            <LazyScpBallot as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyScpBallot as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `n_prepared`.
         #[must_use]
@@ -71900,18 +71914,18 @@ pub mod lazy {
     impl LazyXdr for LazyScpStatementExternalize {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazyScpBallot as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            let next_pos = pos.checked_add(36).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            <LazyHash as LazyXdr>::xdr_validate(&buf[(pos + 4) as usize..])?;
-            pos = next_pos;
+            let field_len = <LazyScpBallot as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyHash as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -71953,7 +71967,9 @@ pub mod lazy {
         /// Access field `commit`.
         #[must_use]
         pub fn commit(&self) -> LazyScpBallot {
-            <LazyScpBallot as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyScpBallot as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `n_h`.
         #[must_use]
@@ -72081,8 +72097,7 @@ pub mod lazy {
         /// Get the discriminant.
         #[must_use]
         pub fn discriminant(&self) -> super::ScpStatementType {
-            // Validated — unwrap is safe.
-            super::ScpStatementType::try_from(self.discriminant_i32()).unwrap()
+            <super::ScpStatementType as LazyXdr>::from_xdr_at(&self.0, 0)
         }
 
         /// Access arm `Prepare`. Returns `Some` if the discriminant matches.
@@ -72138,24 +72153,19 @@ pub mod lazy {
     impl LazyXdr for LazyScpStatement {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazyNodeId as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            let next_pos = pos.checked_add(8).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
-            {
-                let field_len =
-                    <LazyScpStatementPledges as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazyNodeId as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyScpStatementPledges as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -72198,7 +72208,9 @@ pub mod lazy {
         /// Access field `node_id`.
         #[must_use]
         pub fn node_id(&self) -> LazyNodeId {
-            <LazyNodeId as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyNodeId as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `slot_index`.
         #[must_use]
@@ -72225,18 +72237,14 @@ pub mod lazy {
     impl LazyXdr for LazyScpEnvelope {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazyScpStatement as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazySignature as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazyScpStatement as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazySignature as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -72278,7 +72286,9 @@ pub mod lazy {
         /// Access field `statement`.
         #[must_use]
         pub fn statement(&self) -> LazyScpStatement {
-            <LazyScpStatement as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyScpStatement as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `signature`.
         #[must_use]
@@ -72296,25 +72306,19 @@ pub mod lazy {
     impl LazyXdr for LazyScpQuorumSet {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(4).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
-            {
-                let field_len =
-                    <LazyVecM<LazyNodeId> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len =
-                    <LazyVecM<LazyScpQuorumSet> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyVecM<LazyNodeId> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyVecM<LazyScpQuorumSet> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -72357,18 +72361,24 @@ pub mod lazy {
         /// Access field `threshold`.
         #[must_use]
         pub fn threshold(&self) -> u32 {
-            <u32 as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <u32 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `validators`.
         #[must_use]
         pub fn validators(&self) -> LazyVecM<LazyNodeId> {
-            <LazyVecM<LazyNodeId> as LazyXdr>::from_xdr_at(&self.0, 4)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 4;
+            <LazyVecM<LazyNodeId> as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `inner_sets`.
         #[must_use]
         pub fn inner_sets(&self) -> LazyVecM<LazyScpQuorumSet> {
             let buf = self.0.as_slice();
-            let mut pos: u32 = 4;
+            let mut pos: u32 = 0;
+            pos += 4;
             pos += <LazyVecM<LazyNodeId> as LazyXdr>::xdr_len(&buf[pos as usize..]);
             <LazyVecM<LazyScpQuorumSet> as LazyXdr>::from_xdr_at(&self.0, pos)
         }
@@ -72426,11 +72436,10 @@ pub mod lazy {
 
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(4).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -72470,7 +72479,9 @@ pub mod lazy {
         /// Access field `ledger_max_tx_count`.
         #[must_use]
         pub fn ledger_max_tx_count(&self) -> u32 {
-            <u32 as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <u32 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     /// Lazy wrapper for [`super::ConfigSettingContractComputeV0`].
@@ -72482,11 +72493,22 @@ pub mod lazy {
 
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(28).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
+            let field_len = <i64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <i64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <i64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -72526,22 +72548,33 @@ pub mod lazy {
         /// Access field `ledger_max_instructions`.
         #[must_use]
         pub fn ledger_max_instructions(&self) -> i64 {
-            <i64 as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <i64 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `tx_max_instructions`.
         #[must_use]
         pub fn tx_max_instructions(&self) -> i64 {
-            <i64 as LazyXdr>::from_xdr_at(&self.0, 8)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 8;
+            <i64 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `fee_rate_per_instructions_increment`.
         #[must_use]
         pub fn fee_rate_per_instructions_increment(&self) -> i64 {
-            <i64 as LazyXdr>::from_xdr_at(&self.0, 16)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 16;
+            <i64 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `tx_memory_limit`.
         #[must_use]
         pub fn tx_memory_limit(&self) -> u32 {
-            <u32 as LazyXdr>::from_xdr_at(&self.0, 24)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 24;
+            <u32 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     /// Lazy wrapper for [`super::ConfigSettingContractParallelComputeV0`].
@@ -72553,11 +72586,10 @@ pub mod lazy {
 
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(4).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -72597,7 +72629,9 @@ pub mod lazy {
         /// Access field `ledger_max_dependent_tx_clusters`.
         #[must_use]
         pub fn ledger_max_dependent_tx_clusters(&self) -> u32 {
-            <u32 as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <u32 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     /// Lazy wrapper for [`super::ConfigSettingContractLedgerCostV0`].
@@ -72609,11 +72643,66 @@ pub mod lazy {
 
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(84).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <i64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <i64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <i64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <i64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <i64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <i64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -72653,77 +72742,121 @@ pub mod lazy {
         /// Access field `ledger_max_disk_read_entries`.
         #[must_use]
         pub fn ledger_max_disk_read_entries(&self) -> u32 {
-            <u32 as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <u32 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `ledger_max_disk_read_bytes`.
         #[must_use]
         pub fn ledger_max_disk_read_bytes(&self) -> u32 {
-            <u32 as LazyXdr>::from_xdr_at(&self.0, 4)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 4;
+            <u32 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `ledger_max_write_ledger_entries`.
         #[must_use]
         pub fn ledger_max_write_ledger_entries(&self) -> u32 {
-            <u32 as LazyXdr>::from_xdr_at(&self.0, 8)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 8;
+            <u32 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `ledger_max_write_bytes`.
         #[must_use]
         pub fn ledger_max_write_bytes(&self) -> u32 {
-            <u32 as LazyXdr>::from_xdr_at(&self.0, 12)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 12;
+            <u32 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `tx_max_disk_read_entries`.
         #[must_use]
         pub fn tx_max_disk_read_entries(&self) -> u32 {
-            <u32 as LazyXdr>::from_xdr_at(&self.0, 16)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 16;
+            <u32 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `tx_max_disk_read_bytes`.
         #[must_use]
         pub fn tx_max_disk_read_bytes(&self) -> u32 {
-            <u32 as LazyXdr>::from_xdr_at(&self.0, 20)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 20;
+            <u32 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `tx_max_write_ledger_entries`.
         #[must_use]
         pub fn tx_max_write_ledger_entries(&self) -> u32 {
-            <u32 as LazyXdr>::from_xdr_at(&self.0, 24)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 24;
+            <u32 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `tx_max_write_bytes`.
         #[must_use]
         pub fn tx_max_write_bytes(&self) -> u32 {
-            <u32 as LazyXdr>::from_xdr_at(&self.0, 28)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 28;
+            <u32 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `fee_disk_read_ledger_entry`.
         #[must_use]
         pub fn fee_disk_read_ledger_entry(&self) -> i64 {
-            <i64 as LazyXdr>::from_xdr_at(&self.0, 32)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 32;
+            <i64 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `fee_write_ledger_entry`.
         #[must_use]
         pub fn fee_write_ledger_entry(&self) -> i64 {
-            <i64 as LazyXdr>::from_xdr_at(&self.0, 40)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 40;
+            <i64 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `fee_disk_read1_kb`.
         #[must_use]
         pub fn fee_disk_read1_kb(&self) -> i64 {
-            <i64 as LazyXdr>::from_xdr_at(&self.0, 48)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 48;
+            <i64 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `soroban_state_target_size_bytes`.
         #[must_use]
         pub fn soroban_state_target_size_bytes(&self) -> i64 {
-            <i64 as LazyXdr>::from_xdr_at(&self.0, 56)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 56;
+            <i64 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `rent_fee1_kb_soroban_state_size_low`.
         #[must_use]
         pub fn rent_fee1_kb_soroban_state_size_low(&self) -> i64 {
-            <i64 as LazyXdr>::from_xdr_at(&self.0, 64)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 64;
+            <i64 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `rent_fee1_kb_soroban_state_size_high`.
         #[must_use]
         pub fn rent_fee1_kb_soroban_state_size_high(&self) -> i64 {
-            <i64 as LazyXdr>::from_xdr_at(&self.0, 72)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 72;
+            <i64 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `soroban_state_rent_fee_growth_factor`.
         #[must_use]
         pub fn soroban_state_rent_fee_growth_factor(&self) -> u32 {
-            <u32 as LazyXdr>::from_xdr_at(&self.0, 80)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 80;
+            <u32 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     /// Lazy wrapper for [`super::ConfigSettingContractLedgerCostExtV0`].
@@ -72735,11 +72868,14 @@ pub mod lazy {
 
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(12).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <i64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -72779,12 +72915,17 @@ pub mod lazy {
         /// Access field `tx_max_footprint_entries`.
         #[must_use]
         pub fn tx_max_footprint_entries(&self) -> u32 {
-            <u32 as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <u32 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `fee_write1_kb`.
         #[must_use]
         pub fn fee_write1_kb(&self) -> i64 {
-            <i64 as LazyXdr>::from_xdr_at(&self.0, 4)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 4;
+            <i64 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     /// Lazy wrapper for [`super::ConfigSettingContractHistoricalDataV0`].
@@ -72796,11 +72937,10 @@ pub mod lazy {
 
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(8).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
+            let field_len = <i64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -72840,7 +72980,9 @@ pub mod lazy {
         /// Access field `fee_historical1_kb`.
         #[must_use]
         pub fn fee_historical1_kb(&self) -> i64 {
-            <i64 as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <i64 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     /// Lazy wrapper for [`super::ConfigSettingContractEventsV0`].
@@ -72852,11 +72994,14 @@ pub mod lazy {
 
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(12).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <i64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -72896,12 +73041,17 @@ pub mod lazy {
         /// Access field `tx_max_contract_events_size_bytes`.
         #[must_use]
         pub fn tx_max_contract_events_size_bytes(&self) -> u32 {
-            <u32 as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <u32 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `fee_contract_events1_kb`.
         #[must_use]
         pub fn fee_contract_events1_kb(&self) -> i64 {
-            <i64 as LazyXdr>::from_xdr_at(&self.0, 4)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 4;
+            <i64 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     /// Lazy wrapper for [`super::ConfigSettingContractBandwidthV0`].
@@ -72913,11 +73063,18 @@ pub mod lazy {
 
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(16).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <i64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -72957,17 +73114,25 @@ pub mod lazy {
         /// Access field `ledger_max_txs_size_bytes`.
         #[must_use]
         pub fn ledger_max_txs_size_bytes(&self) -> u32 {
-            <u32 as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <u32 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `tx_max_size_bytes`.
         #[must_use]
         pub fn tx_max_size_bytes(&self) -> u32 {
-            <u32 as LazyXdr>::from_xdr_at(&self.0, 4)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 4;
+            <u32 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `fee_tx_size1_kb`.
         #[must_use]
         pub fn fee_tx_size1_kb(&self) -> i64 {
-            <i64 as LazyXdr>::from_xdr_at(&self.0, 8)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 8;
+            <i64 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     // Enum ContractCostType: scalar lazy type — impl LazyXdr directly on the enum.
@@ -73003,18 +73168,18 @@ pub mod lazy {
     impl LazyXdr for LazyContractCostParamEntry {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len =
-                    <LazyExtensionPoint as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            let next_pos = pos.checked_add(16).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
+            let field_len = <LazyExtensionPoint as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <i64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <i64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -73056,7 +73221,9 @@ pub mod lazy {
         /// Access field `ext`.
         #[must_use]
         pub fn ext(&self) -> LazyExtensionPoint {
-            <LazyExtensionPoint as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyExtensionPoint as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `const_term`.
         #[must_use]
@@ -73085,11 +73252,46 @@ pub mod lazy {
 
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(48).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <i64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <i64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -73129,52 +73331,81 @@ pub mod lazy {
         /// Access field `max_entry_ttl`.
         #[must_use]
         pub fn max_entry_ttl(&self) -> u32 {
-            <u32 as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <u32 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `min_temporary_ttl`.
         #[must_use]
         pub fn min_temporary_ttl(&self) -> u32 {
-            <u32 as LazyXdr>::from_xdr_at(&self.0, 4)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 4;
+            <u32 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `min_persistent_ttl`.
         #[must_use]
         pub fn min_persistent_ttl(&self) -> u32 {
-            <u32 as LazyXdr>::from_xdr_at(&self.0, 8)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 8;
+            <u32 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `persistent_rent_rate_denominator`.
         #[must_use]
         pub fn persistent_rent_rate_denominator(&self) -> i64 {
-            <i64 as LazyXdr>::from_xdr_at(&self.0, 12)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 12;
+            <i64 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `temp_rent_rate_denominator`.
         #[must_use]
         pub fn temp_rent_rate_denominator(&self) -> i64 {
-            <i64 as LazyXdr>::from_xdr_at(&self.0, 20)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 20;
+            <i64 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `max_entries_to_archive`.
         #[must_use]
         pub fn max_entries_to_archive(&self) -> u32 {
-            <u32 as LazyXdr>::from_xdr_at(&self.0, 28)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 28;
+            <u32 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `live_soroban_state_size_window_sample_size`.
         #[must_use]
         pub fn live_soroban_state_size_window_sample_size(&self) -> u32 {
-            <u32 as LazyXdr>::from_xdr_at(&self.0, 32)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 32;
+            <u32 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `live_soroban_state_size_window_sample_period`.
         #[must_use]
         pub fn live_soroban_state_size_window_sample_period(&self) -> u32 {
-            <u32 as LazyXdr>::from_xdr_at(&self.0, 36)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 36;
+            <u32 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `eviction_scan_size`.
         #[must_use]
         pub fn eviction_scan_size(&self) -> u32 {
-            <u32 as LazyXdr>::from_xdr_at(&self.0, 40)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 40;
+            <u32 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `starting_eviction_scan_level`.
         #[must_use]
         pub fn starting_eviction_scan_level(&self) -> u32 {
-            <u32 as LazyXdr>::from_xdr_at(&self.0, 44)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 44;
+            <u32 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     /// Lazy wrapper for [`super::EvictionIterator`].
@@ -73186,12 +73417,18 @@ pub mod lazy {
 
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(16).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            <bool as LazyXdr>::xdr_validate(&buf[(pos + 4) as usize..])?;
-            pos = next_pos;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <bool as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -73231,17 +73468,25 @@ pub mod lazy {
         /// Access field `bucket_list_level`.
         #[must_use]
         pub fn bucket_list_level(&self) -> u32 {
-            <u32 as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <u32 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `is_curr_bucket`.
         #[must_use]
         pub fn is_curr_bucket(&self) -> bool {
-            <bool as LazyXdr>::from_xdr_at(&self.0, 4)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 4;
+            <bool as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `bucket_file_offset`.
         #[must_use]
         pub fn bucket_file_offset(&self) -> u64 {
-            <u64 as LazyXdr>::from_xdr_at(&self.0, 8)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 8;
+            <u64 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     /// Lazy wrapper for [`super::ConfigSettingScpTiming`].
@@ -73253,11 +73498,26 @@ pub mod lazy {
 
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(20).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -73297,27 +73557,41 @@ pub mod lazy {
         /// Access field `ledger_target_close_time_milliseconds`.
         #[must_use]
         pub fn ledger_target_close_time_milliseconds(&self) -> u32 {
-            <u32 as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <u32 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `nomination_timeout_initial_milliseconds`.
         #[must_use]
         pub fn nomination_timeout_initial_milliseconds(&self) -> u32 {
-            <u32 as LazyXdr>::from_xdr_at(&self.0, 4)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 4;
+            <u32 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `nomination_timeout_increment_milliseconds`.
         #[must_use]
         pub fn nomination_timeout_increment_milliseconds(&self) -> u32 {
-            <u32 as LazyXdr>::from_xdr_at(&self.0, 8)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 8;
+            <u32 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `ballot_timeout_initial_milliseconds`.
         #[must_use]
         pub fn ballot_timeout_initial_milliseconds(&self) -> u32 {
-            <u32 as LazyXdr>::from_xdr_at(&self.0, 12)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 12;
+            <u32 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `ballot_timeout_increment_milliseconds`.
         #[must_use]
         pub fn ballot_timeout_increment_milliseconds(&self) -> u32 {
-            <u32 as LazyXdr>::from_xdr_at(&self.0, 16)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 16;
+            <u32 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     /// Lazy wrapper for [`super::FrozenLedgerKeys`].
@@ -73327,14 +73601,11 @@ pub mod lazy {
     impl LazyXdr for LazyFrozenLedgerKeys {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazyVecM<LazyEncodedLedgerKey> as LazyXdr>::xdr_validate(
-                    &buf[pos as usize..],
-                )?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len =
+                <LazyVecM<LazyEncodedLedgerKey> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -73375,7 +73646,9 @@ pub mod lazy {
         /// Access field `keys`.
         #[must_use]
         pub fn keys(&self) -> LazyVecM<LazyEncodedLedgerKey> {
-            <LazyVecM<LazyEncodedLedgerKey> as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyVecM<LazyEncodedLedgerKey> as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     /// Lazy wrapper for [`super::FrozenLedgerKeysDelta`].
@@ -73385,22 +73658,16 @@ pub mod lazy {
     impl LazyXdr for LazyFrozenLedgerKeysDelta {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazyVecM<LazyEncodedLedgerKey> as LazyXdr>::xdr_validate(
-                    &buf[pos as usize..],
-                )?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyVecM<LazyEncodedLedgerKey> as LazyXdr>::xdr_validate(
-                    &buf[pos as usize..],
-                )?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len =
+                <LazyVecM<LazyEncodedLedgerKey> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyVecM<LazyEncodedLedgerKey> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -73442,7 +73709,9 @@ pub mod lazy {
         /// Access field `keys_to_freeze`.
         #[must_use]
         pub fn keys_to_freeze(&self) -> LazyVecM<LazyEncodedLedgerKey> {
-            <LazyVecM<LazyEncodedLedgerKey> as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyVecM<LazyEncodedLedgerKey> as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `keys_to_unfreeze`.
         #[must_use]
@@ -73460,13 +73729,10 @@ pub mod lazy {
     impl LazyXdr for LazyFreezeBypassTxs {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len =
-                    <LazyVecM<LazyHash> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazyVecM<LazyHash> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -73507,7 +73773,9 @@ pub mod lazy {
         /// Access field `tx_hashes`.
         #[must_use]
         pub fn tx_hashes(&self) -> LazyVecM<LazyHash> {
-            <LazyVecM<LazyHash> as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyVecM<LazyHash> as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     /// Lazy wrapper for [`super::FreezeBypassTxsDelta`].
@@ -73517,20 +73785,14 @@ pub mod lazy {
     impl LazyXdr for LazyFreezeBypassTxsDelta {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len =
-                    <LazyVecM<LazyHash> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len =
-                    <LazyVecM<LazyHash> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazyVecM<LazyHash> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyVecM<LazyHash> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -73572,7 +73834,9 @@ pub mod lazy {
         /// Access field `add_txs`.
         #[must_use]
         pub fn add_txs(&self) -> LazyVecM<LazyHash> {
-            <LazyVecM<LazyHash> as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyVecM<LazyHash> as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `remove_txs`.
         #[must_use]
@@ -73964,13 +74228,12 @@ pub mod lazy {
         /// Get the discriminant.
         #[must_use]
         pub fn discriminant(&self) -> super::ConfigSettingId {
-            // Validated — unwrap is safe.
-            super::ConfigSettingId::try_from(self.discriminant_i32()).unwrap()
+            <super::ConfigSettingId as LazyXdr>::from_xdr_at(&self.0, 0)
         }
 
         /// Access arm `ContractMaxSizeBytes`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_contractmaxsizebytes(&self) -> Option<u32> {
+        pub fn as_contract_max_size_bytes(&self) -> Option<u32> {
             if self.discriminant_i32() == 0 {
                 Some(<u32 as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -73980,7 +74243,7 @@ pub mod lazy {
 
         /// Access arm `ContractComputeV0`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_contractcomputev0(&self) -> Option<LazyConfigSettingContractComputeV0> {
+        pub fn as_contract_compute_v0(&self) -> Option<LazyConfigSettingContractComputeV0> {
             if self.discriminant_i32() == 1 {
                 Some(<LazyConfigSettingContractComputeV0 as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -73990,7 +74253,7 @@ pub mod lazy {
 
         /// Access arm `ContractLedgerCostV0`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_contractledgercostv0(&self) -> Option<LazyConfigSettingContractLedgerCostV0> {
+        pub fn as_contract_ledger_cost_v0(&self) -> Option<LazyConfigSettingContractLedgerCostV0> {
             if self.discriminant_i32() == 2 {
                 Some(<LazyConfigSettingContractLedgerCostV0 as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -74000,7 +74263,7 @@ pub mod lazy {
 
         /// Access arm `ContractHistoricalDataV0`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_contracthistoricaldatav0(
+        pub fn as_contract_historical_data_v0(
             &self,
         ) -> Option<LazyConfigSettingContractHistoricalDataV0> {
             if self.discriminant_i32() == 3 {
@@ -74014,7 +74277,7 @@ pub mod lazy {
 
         /// Access arm `ContractEventsV0`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_contracteventsv0(&self) -> Option<LazyConfigSettingContractEventsV0> {
+        pub fn as_contract_events_v0(&self) -> Option<LazyConfigSettingContractEventsV0> {
             if self.discriminant_i32() == 4 {
                 Some(<LazyConfigSettingContractEventsV0 as LazyXdr>::from_xdr_at(
                     &self.0, 4,
@@ -74026,7 +74289,7 @@ pub mod lazy {
 
         /// Access arm `ContractBandwidthV0`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_contractbandwidthv0(&self) -> Option<LazyConfigSettingContractBandwidthV0> {
+        pub fn as_contract_bandwidth_v0(&self) -> Option<LazyConfigSettingContractBandwidthV0> {
             if self.discriminant_i32() == 5 {
                 Some(<LazyConfigSettingContractBandwidthV0 as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -74036,7 +74299,7 @@ pub mod lazy {
 
         /// Access arm `ContractCostParamsCpuInstructions`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_contractcostparamscpuinstructions(&self) -> Option<LazyContractCostParams> {
+        pub fn as_contract_cost_params_cpu_instructions(&self) -> Option<LazyContractCostParams> {
             if self.discriminant_i32() == 6 {
                 Some(<LazyContractCostParams as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -74046,7 +74309,7 @@ pub mod lazy {
 
         /// Access arm `ContractCostParamsMemoryBytes`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_contractcostparamsmemorybytes(&self) -> Option<LazyContractCostParams> {
+        pub fn as_contract_cost_params_memory_bytes(&self) -> Option<LazyContractCostParams> {
             if self.discriminant_i32() == 7 {
                 Some(<LazyContractCostParams as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -74056,7 +74319,7 @@ pub mod lazy {
 
         /// Access arm `ContractDataKeySizeBytes`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_contractdatakeysizebytes(&self) -> Option<u32> {
+        pub fn as_contract_data_key_size_bytes(&self) -> Option<u32> {
             if self.discriminant_i32() == 8 {
                 Some(<u32 as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -74066,7 +74329,7 @@ pub mod lazy {
 
         /// Access arm `ContractDataEntrySizeBytes`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_contractdataentrysizebytes(&self) -> Option<u32> {
+        pub fn as_contract_data_entry_size_bytes(&self) -> Option<u32> {
             if self.discriminant_i32() == 9 {
                 Some(<u32 as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -74076,7 +74339,7 @@ pub mod lazy {
 
         /// Access arm `StateArchival`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_statearchival(&self) -> Option<LazyStateArchivalSettings> {
+        pub fn as_state_archival(&self) -> Option<LazyStateArchivalSettings> {
             if self.discriminant_i32() == 10 {
                 Some(<LazyStateArchivalSettings as LazyXdr>::from_xdr_at(
                     &self.0, 4,
@@ -74088,7 +74351,7 @@ pub mod lazy {
 
         /// Access arm `ContractExecutionLanes`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_contractexecutionlanes(
+        pub fn as_contract_execution_lanes(
             &self,
         ) -> Option<LazyConfigSettingContractExecutionLanesV0> {
             if self.discriminant_i32() == 11 {
@@ -74102,7 +74365,7 @@ pub mod lazy {
 
         /// Access arm `LiveSorobanStateSizeWindow`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_livesorobanstatesizewindow(&self) -> Option<LazyVecM<u64>> {
+        pub fn as_live_soroban_state_size_window(&self) -> Option<LazyVecM<u64>> {
             if self.discriminant_i32() == 12 {
                 Some(<LazyVecM<u64> as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -74112,7 +74375,7 @@ pub mod lazy {
 
         /// Access arm `EvictionIterator`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_evictioniterator(&self) -> Option<LazyEvictionIterator> {
+        pub fn as_eviction_iterator(&self) -> Option<LazyEvictionIterator> {
             if self.discriminant_i32() == 13 {
                 Some(<LazyEvictionIterator as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -74122,7 +74385,7 @@ pub mod lazy {
 
         /// Access arm `ContractParallelComputeV0`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_contractparallelcomputev0(
+        pub fn as_contract_parallel_compute_v0(
             &self,
         ) -> Option<LazyConfigSettingContractParallelComputeV0> {
             if self.discriminant_i32() == 14 {
@@ -74138,7 +74401,7 @@ pub mod lazy {
 
         /// Access arm `ContractLedgerCostExtV0`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_contractledgercostextv0(
+        pub fn as_contract_ledger_cost_ext_v0(
             &self,
         ) -> Option<LazyConfigSettingContractLedgerCostExtV0> {
             if self.discriminant_i32() == 15 {
@@ -74150,7 +74413,7 @@ pub mod lazy {
 
         /// Access arm `ScpTiming`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_scptiming(&self) -> Option<LazyConfigSettingScpTiming> {
+        pub fn as_scp_timing(&self) -> Option<LazyConfigSettingScpTiming> {
             if self.discriminant_i32() == 16 {
                 Some(<LazyConfigSettingScpTiming as LazyXdr>::from_xdr_at(
                     &self.0, 4,
@@ -74162,7 +74425,7 @@ pub mod lazy {
 
         /// Access arm `FrozenLedgerKeys`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_frozenledgerkeys(&self) -> Option<LazyFrozenLedgerKeys> {
+        pub fn as_frozen_ledger_keys(&self) -> Option<LazyFrozenLedgerKeys> {
             if self.discriminant_i32() == 17 {
                 Some(<LazyFrozenLedgerKeys as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -74172,7 +74435,7 @@ pub mod lazy {
 
         /// Access arm `FrozenLedgerKeysDelta`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_frozenledgerkeysdelta(&self) -> Option<LazyFrozenLedgerKeysDelta> {
+        pub fn as_frozen_ledger_keys_delta(&self) -> Option<LazyFrozenLedgerKeysDelta> {
             if self.discriminant_i32() == 18 {
                 Some(<LazyFrozenLedgerKeysDelta as LazyXdr>::from_xdr_at(
                     &self.0, 4,
@@ -74184,7 +74447,7 @@ pub mod lazy {
 
         /// Access arm `FreezeBypassTxs`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_freezebypasstxs(&self) -> Option<LazyFreezeBypassTxs> {
+        pub fn as_freeze_bypass_txs(&self) -> Option<LazyFreezeBypassTxs> {
             if self.discriminant_i32() == 19 {
                 Some(<LazyFreezeBypassTxs as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -74194,7 +74457,7 @@ pub mod lazy {
 
         /// Access arm `FreezeBypassTxsDelta`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_freezebypasstxsdelta(&self) -> Option<LazyFreezeBypassTxsDelta> {
+        pub fn as_freeze_bypass_txs_delta(&self) -> Option<LazyFreezeBypassTxsDelta> {
             if self.discriminant_i32() == 20 {
                 Some(<LazyFreezeBypassTxsDelta as LazyXdr>::from_xdr_at(
                     &self.0, 4,
@@ -74239,11 +74502,14 @@ pub mod lazy {
 
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(8).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -74283,12 +74549,17 @@ pub mod lazy {
         /// Access field `protocol`.
         #[must_use]
         pub fn protocol(&self) -> u32 {
-            <u32 as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <u32 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `pre_release`.
         #[must_use]
         pub fn pre_release(&self) -> u32 {
-            <u32 as LazyXdr>::from_xdr_at(&self.0, 4)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 4;
+            <u32 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     /// Lazy wrapper for [`super::ScEnvMetaEntry`].
@@ -74371,13 +74642,12 @@ pub mod lazy {
         /// Get the discriminant.
         #[must_use]
         pub fn discriminant(&self) -> super::ScEnvMetaKind {
-            // Validated — unwrap is safe.
-            super::ScEnvMetaKind::try_from(self.discriminant_i32()).unwrap()
+            <super::ScEnvMetaKind as LazyXdr>::from_xdr_at(&self.0, 0)
         }
 
         /// Access arm `ScEnvMetaKindInterfaceVersion`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_scenvmetakindinterfaceversion(
+        pub fn as_sc_env_meta_kind_interface_version(
             &self,
         ) -> Option<LazyScEnvMetaEntryInterfaceVersion> {
             if self.discriminant_i32() == 0 {
@@ -74394,18 +74664,14 @@ pub mod lazy {
     impl LazyXdr for LazyScMetaV0 {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazyStringM as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyStringM as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazyStringM as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyStringM as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -74447,7 +74713,9 @@ pub mod lazy {
         /// Access field `key`.
         #[must_use]
         pub fn key(&self) -> LazyStringM {
-            <LazyStringM as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyStringM as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `val`.
         #[must_use]
@@ -74560,13 +74828,12 @@ pub mod lazy {
         /// Get the discriminant.
         #[must_use]
         pub fn discriminant(&self) -> super::ScMetaKind {
-            // Validated — unwrap is safe.
-            super::ScMetaKind::try_from(self.discriminant_i32()).unwrap()
+            <super::ScMetaKind as LazyXdr>::from_xdr_at(&self.0, 0)
         }
 
         /// Access arm `ScMetaV0`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_scmetav0(&self) -> Option<LazyScMetaV0> {
+        pub fn as_sc_meta_v0(&self) -> Option<LazyScMetaV0> {
             if self.discriminant_i32() == 0 {
                 Some(<LazyScMetaV0 as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -74608,12 +74875,10 @@ pub mod lazy {
     impl LazyXdr for LazyScSpecTypeOption {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazyScSpecTypeDef as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazyScSpecTypeDef as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -74654,7 +74919,9 @@ pub mod lazy {
         /// Access field `value_type`.
         #[must_use]
         pub fn value_type(&self) -> LazyScSpecTypeDef {
-            <LazyScSpecTypeDef as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyScSpecTypeDef as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     /// Lazy wrapper for [`super::ScSpecTypeResult`].
@@ -74664,18 +74931,14 @@ pub mod lazy {
     impl LazyXdr for LazyScSpecTypeResult {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazyScSpecTypeDef as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyScSpecTypeDef as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazyScSpecTypeDef as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyScSpecTypeDef as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -74717,7 +74980,9 @@ pub mod lazy {
         /// Access field `ok_type`.
         #[must_use]
         pub fn ok_type(&self) -> LazyScSpecTypeDef {
-            <LazyScSpecTypeDef as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyScSpecTypeDef as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `error_type`.
         #[must_use]
@@ -74735,12 +75000,10 @@ pub mod lazy {
     impl LazyXdr for LazyScSpecTypeVec {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazyScSpecTypeDef as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazyScSpecTypeDef as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -74781,7 +75044,9 @@ pub mod lazy {
         /// Access field `element_type`.
         #[must_use]
         pub fn element_type(&self) -> LazyScSpecTypeDef {
-            <LazyScSpecTypeDef as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyScSpecTypeDef as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     /// Lazy wrapper for [`super::ScSpecTypeMap`].
@@ -74791,18 +75056,14 @@ pub mod lazy {
     impl LazyXdr for LazyScSpecTypeMap {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazyScSpecTypeDef as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyScSpecTypeDef as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazyScSpecTypeDef as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyScSpecTypeDef as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -74844,7 +75105,9 @@ pub mod lazy {
         /// Access field `key_type`.
         #[must_use]
         pub fn key_type(&self) -> LazyScSpecTypeDef {
-            <LazyScSpecTypeDef as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyScSpecTypeDef as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `value_type`.
         #[must_use]
@@ -74862,14 +75125,11 @@ pub mod lazy {
     impl LazyXdr for LazyScSpecTypeTuple {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazyVecM<LazyScSpecTypeDef, 12> as LazyXdr>::xdr_validate(
-                    &buf[pos as usize..],
-                )?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len =
+                <LazyVecM<LazyScSpecTypeDef, 12> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -74910,7 +75170,9 @@ pub mod lazy {
         /// Access field `value_types`.
         #[must_use]
         pub fn value_types(&self) -> LazyVecM<LazyScSpecTypeDef, 12> {
-            <LazyVecM<LazyScSpecTypeDef, 12> as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyVecM<LazyScSpecTypeDef, 12> as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     /// Lazy wrapper for [`super::ScSpecTypeBytesN`].
@@ -74922,11 +75184,10 @@ pub mod lazy {
 
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(4).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -74966,7 +75227,9 @@ pub mod lazy {
         /// Access field `n`.
         #[must_use]
         pub fn n(&self) -> u32 {
-            <u32 as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <u32 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     /// Lazy wrapper for [`super::ScSpecTypeUdt`].
@@ -74976,12 +75239,10 @@ pub mod lazy {
     impl LazyXdr for LazyScSpecTypeUdt {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazyStringM<60> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazyStringM<60> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -75022,7 +75283,9 @@ pub mod lazy {
         /// Access field `name`.
         #[must_use]
         pub fn name(&self) -> LazyStringM<60> {
-            <LazyStringM<60> as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyStringM<60> as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     /// Lazy wrapper for [`super::ScSpecTypeDef`].
@@ -75276,8 +75539,7 @@ pub mod lazy {
         /// Get the discriminant.
         #[must_use]
         pub fn discriminant(&self) -> super::ScSpecType {
-            // Validated — unwrap is safe.
-            super::ScSpecType::try_from(self.discriminant_i32()).unwrap()
+            <super::ScSpecType as LazyXdr>::from_xdr_at(&self.0, 0)
         }
 
         /// Access arm `Option`. Returns `Some` if the discriminant matches.
@@ -75332,7 +75594,7 @@ pub mod lazy {
 
         /// Access arm `BytesN`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_bytesn(&self) -> Option<LazyScSpecTypeBytesN> {
+        pub fn as_bytes_n(&self) -> Option<LazyScSpecTypeBytesN> {
             if self.discriminant_i32() == 1006 {
                 Some(<LazyScSpecTypeBytesN as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -75357,24 +75619,18 @@ pub mod lazy {
     impl LazyXdr for LazyScSpecUdtStructFieldV0 {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazyStringM<1024> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyStringM<30> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyScSpecTypeDef as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazyStringM<1024> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyStringM<30> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyScSpecTypeDef as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -75417,7 +75673,9 @@ pub mod lazy {
         /// Access field `doc`.
         #[must_use]
         pub fn doc(&self) -> LazyStringM<1024> {
-            <LazyStringM<1024> as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyStringM<1024> as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `name`.
         #[must_use]
@@ -75444,32 +75702,24 @@ pub mod lazy {
     impl LazyXdr for LazyScSpecUdtStructV0 {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazyStringM<1024> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyStringM<80> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyStringM<60> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyVecM<LazyScSpecUdtStructFieldV0> as LazyXdr>::xdr_validate(
-                    &buf[pos as usize..],
-                )?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazyStringM<1024> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyStringM<80> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyStringM<60> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyVecM<LazyScSpecUdtStructFieldV0> as LazyXdr>::xdr_validate(
+                &buf[pos as usize..],
+            )?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -75513,7 +75763,9 @@ pub mod lazy {
         /// Access field `doc`.
         #[must_use]
         pub fn doc(&self) -> LazyStringM<1024> {
-            <LazyStringM<1024> as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyStringM<1024> as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `lib`.
         #[must_use]
@@ -75550,18 +75802,14 @@ pub mod lazy {
     impl LazyXdr for LazyScSpecUdtUnionCaseVoidV0 {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazyStringM<1024> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyStringM<60> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazyStringM<1024> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyStringM<60> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -75603,7 +75851,9 @@ pub mod lazy {
         /// Access field `doc`.
         #[must_use]
         pub fn doc(&self) -> LazyStringM<1024> {
-            <LazyStringM<1024> as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyStringM<1024> as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `name`.
         #[must_use]
@@ -75621,25 +75871,19 @@ pub mod lazy {
     impl LazyXdr for LazyScSpecUdtUnionCaseTupleV0 {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazyStringM<1024> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyStringM<60> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len =
-                    <LazyVecM<LazyScSpecTypeDef> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazyStringM<1024> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyStringM<60> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyVecM<LazyScSpecTypeDef> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -75682,7 +75926,9 @@ pub mod lazy {
         /// Access field `doc`.
         #[must_use]
         pub fn doc(&self) -> LazyStringM<1024> {
-            <LazyStringM<1024> as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyStringM<1024> as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `name`.
         #[must_use]
@@ -75818,13 +76064,12 @@ pub mod lazy {
         /// Get the discriminant.
         #[must_use]
         pub fn discriminant(&self) -> super::ScSpecUdtUnionCaseV0Kind {
-            // Validated — unwrap is safe.
-            super::ScSpecUdtUnionCaseV0Kind::try_from(self.discriminant_i32()).unwrap()
+            <super::ScSpecUdtUnionCaseV0Kind as LazyXdr>::from_xdr_at(&self.0, 0)
         }
 
         /// Access arm `VoidV0`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_voidv0(&self) -> Option<LazyScSpecUdtUnionCaseVoidV0> {
+        pub fn as_void_v0(&self) -> Option<LazyScSpecUdtUnionCaseVoidV0> {
             if self.discriminant_i32() == 0 {
                 Some(<LazyScSpecUdtUnionCaseVoidV0 as LazyXdr>::from_xdr_at(
                     &self.0, 4,
@@ -75836,7 +76081,7 @@ pub mod lazy {
 
         /// Access arm `TupleV0`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_tuplev0(&self) -> Option<LazyScSpecUdtUnionCaseTupleV0> {
+        pub fn as_tuple_v0(&self) -> Option<LazyScSpecUdtUnionCaseTupleV0> {
             if self.discriminant_i32() == 1 {
                 Some(<LazyScSpecUdtUnionCaseTupleV0 as LazyXdr>::from_xdr_at(
                     &self.0, 4,
@@ -75853,32 +76098,24 @@ pub mod lazy {
     impl LazyXdr for LazyScSpecUdtUnionV0 {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazyStringM<1024> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyStringM<80> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyStringM<60> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyVecM<LazyScSpecUdtUnionCaseV0> as LazyXdr>::xdr_validate(
-                    &buf[pos as usize..],
-                )?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazyStringM<1024> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyStringM<80> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyStringM<60> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyVecM<LazyScSpecUdtUnionCaseV0> as LazyXdr>::xdr_validate(
+                &buf[pos as usize..],
+            )?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -75922,7 +76159,9 @@ pub mod lazy {
         /// Access field `doc`.
         #[must_use]
         pub fn doc(&self) -> LazyStringM<1024> {
-            <LazyStringM<1024> as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyStringM<1024> as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `lib`.
         #[must_use]
@@ -75959,23 +76198,18 @@ pub mod lazy {
     impl LazyXdr for LazyScSpecUdtEnumCaseV0 {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazyStringM<1024> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyStringM<60> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            let next_pos = pos.checked_add(4).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
+            let field_len = <LazyStringM<1024> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyStringM<60> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -76018,7 +76252,9 @@ pub mod lazy {
         /// Access field `doc`.
         #[must_use]
         pub fn doc(&self) -> LazyStringM<1024> {
-            <LazyStringM<1024> as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyStringM<1024> as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `name`.
         #[must_use]
@@ -76045,32 +76281,23 @@ pub mod lazy {
     impl LazyXdr for LazyScSpecUdtEnumV0 {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazyStringM<1024> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyStringM<80> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyStringM<60> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyVecM<LazyScSpecUdtEnumCaseV0> as LazyXdr>::xdr_validate(
-                    &buf[pos as usize..],
-                )?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazyStringM<1024> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyStringM<80> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyStringM<60> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyVecM<LazyScSpecUdtEnumCaseV0> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -76114,7 +76341,9 @@ pub mod lazy {
         /// Access field `doc`.
         #[must_use]
         pub fn doc(&self) -> LazyStringM<1024> {
-            <LazyStringM<1024> as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyStringM<1024> as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `lib`.
         #[must_use]
@@ -76151,23 +76380,18 @@ pub mod lazy {
     impl LazyXdr for LazyScSpecUdtErrorEnumCaseV0 {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazyStringM<1024> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyStringM<60> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            let next_pos = pos.checked_add(4).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
+            let field_len = <LazyStringM<1024> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyStringM<60> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -76210,7 +76434,9 @@ pub mod lazy {
         /// Access field `doc`.
         #[must_use]
         pub fn doc(&self) -> LazyStringM<1024> {
-            <LazyStringM<1024> as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyStringM<1024> as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `name`.
         #[must_use]
@@ -76237,32 +76463,24 @@ pub mod lazy {
     impl LazyXdr for LazyScSpecUdtErrorEnumV0 {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazyStringM<1024> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyStringM<80> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyStringM<60> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyVecM<LazyScSpecUdtErrorEnumCaseV0> as LazyXdr>::xdr_validate(
-                    &buf[pos as usize..],
-                )?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazyStringM<1024> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyStringM<80> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyStringM<60> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyVecM<LazyScSpecUdtErrorEnumCaseV0> as LazyXdr>::xdr_validate(
+                &buf[pos as usize..],
+            )?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -76307,7 +76525,9 @@ pub mod lazy {
         /// Access field `doc`.
         #[must_use]
         pub fn doc(&self) -> LazyStringM<1024> {
-            <LazyStringM<1024> as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyStringM<1024> as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `lib`.
         #[must_use]
@@ -76344,24 +76564,18 @@ pub mod lazy {
     impl LazyXdr for LazyScSpecFunctionInputV0 {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazyStringM<1024> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyStringM<30> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyScSpecTypeDef as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazyStringM<1024> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyStringM<30> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyScSpecTypeDef as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -76404,7 +76618,9 @@ pub mod lazy {
         /// Access field `doc`.
         #[must_use]
         pub fn doc(&self) -> LazyStringM<1024> {
-            <LazyStringM<1024> as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyStringM<1024> as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `name`.
         #[must_use]
@@ -76431,34 +76647,25 @@ pub mod lazy {
     impl LazyXdr for LazyScSpecFunctionV0 {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazyStringM<1024> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyScSymbol as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyVecM<LazyScSpecFunctionInputV0> as LazyXdr>::xdr_validate(
-                    &buf[pos as usize..],
-                )?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyVecM<LazyScSpecTypeDef, 1> as LazyXdr>::xdr_validate(
-                    &buf[pos as usize..],
-                )?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazyStringM<1024> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyScSymbol as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyVecM<LazyScSpecFunctionInputV0> as LazyXdr>::xdr_validate(
+                &buf[pos as usize..],
+            )?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyVecM<LazyScSpecTypeDef, 1> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -76502,7 +76709,9 @@ pub mod lazy {
         /// Access field `doc`.
         #[must_use]
         pub fn doc(&self) -> LazyStringM<1024> {
-            <LazyStringM<1024> as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyStringM<1024> as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `name`.
         #[must_use]
@@ -76565,32 +76774,23 @@ pub mod lazy {
     impl LazyXdr for LazyScSpecEventParamV0 {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazyStringM<1024> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyStringM<30> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyScSpecTypeDef as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            let next_pos = pos.checked_add(4).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            <super::ScSpecEventParamLocationV0 as LazyXdr>::xdr_validate(
-                &buf[(pos + 0) as usize..],
-            )?;
-            pos = next_pos;
+            let field_len = <LazyStringM<1024> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyStringM<30> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyScSpecTypeDef as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <super::ScSpecEventParamLocationV0 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -76634,7 +76834,9 @@ pub mod lazy {
         /// Access field `doc`.
         #[must_use]
         pub fn doc(&self) -> LazyStringM<1024> {
-            <LazyStringM<1024> as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyStringM<1024> as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `name`.
         #[must_use]
@@ -76697,45 +76899,33 @@ pub mod lazy {
     impl LazyXdr for LazyScSpecEventV0 {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazyStringM<1024> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyStringM<80> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyScSymbol as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len =
-                    <LazyVecM<LazyScSymbol, 2> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyVecM<LazyScSpecEventParamV0> as LazyXdr>::xdr_validate(
-                    &buf[pos as usize..],
-                )?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            let next_pos = pos.checked_add(4).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            <super::ScSpecEventDataFormat as LazyXdr>::xdr_validate(&buf[(pos + 0) as usize..])?;
-            pos = next_pos;
+            let field_len = <LazyStringM<1024> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyStringM<80> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyScSymbol as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyVecM<LazyScSymbol, 2> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyVecM<LazyScSpecEventParamV0> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <super::ScSpecEventDataFormat as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -76781,7 +76971,9 @@ pub mod lazy {
         /// Access field `doc`.
         #[must_use]
         pub fn doc(&self) -> LazyStringM<1024> {
-            <LazyStringM<1024> as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyStringM<1024> as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `lib`.
         #[must_use]
@@ -76987,13 +77179,12 @@ pub mod lazy {
         /// Get the discriminant.
         #[must_use]
         pub fn discriminant(&self) -> super::ScSpecEntryKind {
-            // Validated — unwrap is safe.
-            super::ScSpecEntryKind::try_from(self.discriminant_i32()).unwrap()
+            <super::ScSpecEntryKind as LazyXdr>::from_xdr_at(&self.0, 0)
         }
 
         /// Access arm `FunctionV0`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_functionv0(&self) -> Option<LazyScSpecFunctionV0> {
+        pub fn as_function_v0(&self) -> Option<LazyScSpecFunctionV0> {
             if self.discriminant_i32() == 0 {
                 Some(<LazyScSpecFunctionV0 as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -77003,7 +77194,7 @@ pub mod lazy {
 
         /// Access arm `UdtStructV0`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_udtstructv0(&self) -> Option<LazyScSpecUdtStructV0> {
+        pub fn as_udt_struct_v0(&self) -> Option<LazyScSpecUdtStructV0> {
             if self.discriminant_i32() == 1 {
                 Some(<LazyScSpecUdtStructV0 as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -77013,7 +77204,7 @@ pub mod lazy {
 
         /// Access arm `UdtUnionV0`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_udtunionv0(&self) -> Option<LazyScSpecUdtUnionV0> {
+        pub fn as_udt_union_v0(&self) -> Option<LazyScSpecUdtUnionV0> {
             if self.discriminant_i32() == 2 {
                 Some(<LazyScSpecUdtUnionV0 as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -77023,7 +77214,7 @@ pub mod lazy {
 
         /// Access arm `UdtEnumV0`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_udtenumv0(&self) -> Option<LazyScSpecUdtEnumV0> {
+        pub fn as_udt_enum_v0(&self) -> Option<LazyScSpecUdtEnumV0> {
             if self.discriminant_i32() == 3 {
                 Some(<LazyScSpecUdtEnumV0 as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -77033,7 +77224,7 @@ pub mod lazy {
 
         /// Access arm `UdtErrorEnumV0`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_udterrorenumv0(&self) -> Option<LazyScSpecUdtErrorEnumV0> {
+        pub fn as_udt_error_enum_v0(&self) -> Option<LazyScSpecUdtErrorEnumV0> {
             if self.discriminant_i32() == 4 {
                 Some(<LazyScSpecUdtErrorEnumV0 as LazyXdr>::from_xdr_at(
                     &self.0, 4,
@@ -77045,7 +77236,7 @@ pub mod lazy {
 
         /// Access arm `EventV0`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_eventv0(&self) -> Option<LazyScSpecEventV0> {
+        pub fn as_event_v0(&self) -> Option<LazyScSpecEventV0> {
             if self.discriminant_i32() == 5 {
                 Some(<LazyScSpecEventV0 as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -77297,8 +77488,7 @@ pub mod lazy {
         /// Get the discriminant.
         #[must_use]
         pub fn discriminant(&self) -> super::ScErrorType {
-            // Validated — unwrap is safe.
-            super::ScErrorType::try_from(self.discriminant_i32()).unwrap()
+            <super::ScErrorType as LazyXdr>::from_xdr_at(&self.0, 0)
         }
 
         /// Access arm `Contract`. Returns `Some` if the discriminant matches.
@@ -77313,7 +77503,7 @@ pub mod lazy {
 
         /// Access arm `WasmVm`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_wasmvm(&self) -> Option<super::ScErrorCode> {
+        pub fn as_wasm_vm(&self) -> Option<super::ScErrorCode> {
             if self.discriminant_i32() == 1 {
                 Some(<super::ScErrorCode as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -77410,11 +77600,14 @@ pub mod lazy {
 
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(16).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
+            let field_len = <u64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -77454,12 +77647,17 @@ pub mod lazy {
         /// Access field `hi`.
         #[must_use]
         pub fn hi(&self) -> u64 {
-            <u64 as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <u64 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `lo`.
         #[must_use]
         pub fn lo(&self) -> u64 {
-            <u64 as LazyXdr>::from_xdr_at(&self.0, 8)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 8;
+            <u64 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     /// Lazy wrapper for [`super::Int128Parts`].
@@ -77471,11 +77669,14 @@ pub mod lazy {
 
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(16).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
+            let field_len = <i64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -77515,12 +77716,17 @@ pub mod lazy {
         /// Access field `hi`.
         #[must_use]
         pub fn hi(&self) -> i64 {
-            <i64 as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <i64 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `lo`.
         #[must_use]
         pub fn lo(&self) -> u64 {
-            <u64 as LazyXdr>::from_xdr_at(&self.0, 8)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 8;
+            <u64 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     /// Lazy wrapper for [`super::UInt256Parts`].
@@ -77532,11 +77738,22 @@ pub mod lazy {
 
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(32).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
+            let field_len = <u64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -77576,22 +77793,33 @@ pub mod lazy {
         /// Access field `hi_hi`.
         #[must_use]
         pub fn hi_hi(&self) -> u64 {
-            <u64 as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <u64 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `hi_lo`.
         #[must_use]
         pub fn hi_lo(&self) -> u64 {
-            <u64 as LazyXdr>::from_xdr_at(&self.0, 8)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 8;
+            <u64 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `lo_hi`.
         #[must_use]
         pub fn lo_hi(&self) -> u64 {
-            <u64 as LazyXdr>::from_xdr_at(&self.0, 16)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 16;
+            <u64 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `lo_lo`.
         #[must_use]
         pub fn lo_lo(&self) -> u64 {
-            <u64 as LazyXdr>::from_xdr_at(&self.0, 24)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 24;
+            <u64 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     /// Lazy wrapper for [`super::Int256Parts`].
@@ -77603,11 +77831,22 @@ pub mod lazy {
 
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(32).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
+            let field_len = <i64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -77647,22 +77886,33 @@ pub mod lazy {
         /// Access field `hi_hi`.
         #[must_use]
         pub fn hi_hi(&self) -> i64 {
-            <i64 as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <i64 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `hi_lo`.
         #[must_use]
         pub fn hi_lo(&self) -> u64 {
-            <u64 as LazyXdr>::from_xdr_at(&self.0, 8)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 8;
+            <u64 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `lo_hi`.
         #[must_use]
         pub fn lo_hi(&self) -> u64 {
-            <u64 as LazyXdr>::from_xdr_at(&self.0, 16)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 16;
+            <u64 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `lo_lo`.
         #[must_use]
         pub fn lo_lo(&self) -> u64 {
-            <u64 as LazyXdr>::from_xdr_at(&self.0, 24)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 24;
+            <u64 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     // Enum ContractExecutableType: scalar lazy type — impl LazyXdr directly on the enum.
@@ -77773,8 +78023,7 @@ pub mod lazy {
         /// Get the discriminant.
         #[must_use]
         pub fn discriminant(&self) -> super::ContractExecutableType {
-            // Validated — unwrap is safe.
-            super::ContractExecutableType::try_from(self.discriminant_i32()).unwrap()
+            <super::ContractExecutableType as LazyXdr>::from_xdr_at(&self.0, 0)
         }
 
         /// Access arm `Wasm`. Returns `Some` if the discriminant matches.
@@ -77822,12 +78071,14 @@ pub mod lazy {
 
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(40).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            <LazyUint256 as LazyXdr>::xdr_validate(&buf[(pos + 8) as usize..])?;
-            pos = next_pos;
+            let field_len = <u64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyUint256 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -77867,12 +78118,17 @@ pub mod lazy {
         /// Access field `id`.
         #[must_use]
         pub fn id(&self) -> u64 {
-            <u64 as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <u64 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `ed25519`.
         #[must_use]
         pub fn ed25519(&self) -> LazyUint256 {
-            <LazyUint256 as LazyXdr>::from_xdr_at(&self.0, 8)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 8;
+            <LazyUint256 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     /// Lazy wrapper for [`super::ScAddress`].
@@ -77990,8 +78246,7 @@ pub mod lazy {
         /// Get the discriminant.
         #[must_use]
         pub fn discriminant(&self) -> super::ScAddressType {
-            // Validated — unwrap is safe.
-            super::ScAddressType::try_from(self.discriminant_i32()).unwrap()
+            <super::ScAddressType as LazyXdr>::from_xdr_at(&self.0, 0)
         }
 
         /// Access arm `Account`. Returns `Some` if the discriminant matches.
@@ -78016,7 +78271,7 @@ pub mod lazy {
 
         /// Access arm `MuxedAccount`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_muxedaccount(&self) -> Option<LazyMuxedEd25519Account> {
+        pub fn as_muxed_account(&self) -> Option<LazyMuxedEd25519Account> {
             if self.discriminant_i32() == 2 {
                 Some(<LazyMuxedEd25519Account as LazyXdr>::from_xdr_at(
                     &self.0, 4,
@@ -78028,7 +78283,7 @@ pub mod lazy {
 
         /// Access arm `ClaimableBalance`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_claimablebalance(&self) -> Option<LazyClaimableBalanceId> {
+        pub fn as_claimable_balance(&self) -> Option<LazyClaimableBalanceId> {
             if self.discriminant_i32() == 3 {
                 Some(<LazyClaimableBalanceId as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -78038,7 +78293,7 @@ pub mod lazy {
 
         /// Access arm `LiquidityPool`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_liquiditypool(&self) -> Option<LazyPoolId> {
+        pub fn as_liquidity_pool(&self) -> Option<LazyPoolId> {
             if self.discriminant_i32() == 4 {
                 Some(<LazyPoolId as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -78286,11 +78541,10 @@ pub mod lazy {
 
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(8).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
+            let field_len = <i64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -78330,7 +78584,9 @@ pub mod lazy {
         /// Access field `nonce`.
         #[must_use]
         pub fn nonce(&self) -> i64 {
-            <i64 as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <i64 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     /// Lazy wrapper for [`super::ScContractInstance`].
@@ -78340,20 +78596,15 @@ pub mod lazy {
     impl LazyXdr for LazyScContractInstance {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len =
-                    <LazyContractExecutable as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len =
-                    <LazyOption<LazyScMap> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len =
+                <LazyContractExecutable as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyOption<LazyScMap> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -78395,7 +78646,9 @@ pub mod lazy {
         /// Access field `executable`.
         #[must_use]
         pub fn executable(&self) -> LazyContractExecutable {
-            <LazyContractExecutable as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyContractExecutable as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `storage`.
         #[must_use]
@@ -78673,8 +78926,7 @@ pub mod lazy {
         /// Get the discriminant.
         #[must_use]
         pub fn discriminant(&self) -> super::ScValType {
-            // Validated — unwrap is safe.
-            super::ScValType::try_from(self.discriminant_i32()).unwrap()
+            <super::ScValType as LazyXdr>::from_xdr_at(&self.0, 0)
         }
 
         /// Access arm `Bool`. Returns `Some` if the discriminant matches.
@@ -78859,7 +79111,7 @@ pub mod lazy {
 
         /// Access arm `ContractInstance`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_contractinstance(&self) -> Option<LazyScContractInstance> {
+        pub fn as_contract_instance(&self) -> Option<LazyScContractInstance> {
             if self.discriminant_i32() == 19 {
                 Some(<LazyScContractInstance as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -78869,7 +79121,7 @@ pub mod lazy {
 
         /// Access arm `LedgerKeyNonce`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_ledgerkeynonce(&self) -> Option<LazyScNonceKey> {
+        pub fn as_ledger_key_nonce(&self) -> Option<LazyScNonceKey> {
             if self.discriminant_i32() == 21 {
                 Some(<LazyScNonceKey as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -78884,18 +79136,14 @@ pub mod lazy {
     impl LazyXdr for LazyScMapEntry {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazyScVal as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyScVal as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazyScVal as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyScVal as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -78937,7 +79185,9 @@ pub mod lazy {
         /// Access field `key`.
         #[must_use]
         pub fn key(&self) -> LazyScVal {
-            <LazyScVal as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyScVal as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `val`.
         #[must_use]
@@ -78955,18 +79205,19 @@ pub mod lazy {
     impl LazyXdr for LazyLedgerCloseMetaBatch {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(8).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
-            {
-                let field_len =
-                    <LazyVecM<LazyLedgerCloseMeta> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyVecM<LazyLedgerCloseMeta> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -79008,17 +79259,25 @@ pub mod lazy {
         /// Access field `start_sequence`.
         #[must_use]
         pub fn start_sequence(&self) -> u32 {
-            <u32 as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <u32 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `end_sequence`.
         #[must_use]
         pub fn end_sequence(&self) -> u32 {
-            <u32 as LazyXdr>::from_xdr_at(&self.0, 4)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 4;
+            <u32 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `ledger_close_metas`.
         #[must_use]
         pub fn ledger_close_metas(&self) -> LazyVecM<LazyLedgerCloseMeta> {
-            <LazyVecM<LazyLedgerCloseMeta> as LazyXdr>::from_xdr_at(&self.0, 8)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 8;
+            <LazyVecM<LazyLedgerCloseMeta> as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     /// Lazy wrapper for [`super::StoredTransactionSet`].
@@ -79142,24 +79401,19 @@ pub mod lazy {
     impl LazyXdr for LazyStoredDebugTransactionSet {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len =
-                    <LazyStoredTransactionSet as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            let next_pos = pos.checked_add(4).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
-            {
-                let field_len = <LazyStellarValue as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len =
+                <LazyStoredTransactionSet as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyStellarValue as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -79202,7 +79456,9 @@ pub mod lazy {
         /// Access field `tx_set`.
         #[must_use]
         pub fn tx_set(&self) -> LazyStoredTransactionSet {
-            <LazyStoredTransactionSet as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyStoredTransactionSet as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `ledger_seq`.
         #[must_use]
@@ -79229,28 +79485,22 @@ pub mod lazy {
     impl LazyXdr for LazyPersistedScpStateV0 {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len =
-                    <LazyVecM<LazyScpEnvelope> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len =
-                    <LazyVecM<LazyScpQuorumSet> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyVecM<LazyStoredTransactionSet> as LazyXdr>::xdr_validate(
-                    &buf[pos as usize..],
-                )?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len =
+                <LazyVecM<LazyScpEnvelope> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyVecM<LazyScpQuorumSet> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyVecM<LazyStoredTransactionSet> as LazyXdr>::xdr_validate(
+                &buf[pos as usize..],
+            )?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -79293,7 +79543,9 @@ pub mod lazy {
         /// Access field `scp_envelopes`.
         #[must_use]
         pub fn scp_envelopes(&self) -> LazyVecM<LazyScpEnvelope> {
-            <LazyVecM<LazyScpEnvelope> as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyVecM<LazyScpEnvelope> as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `quorum_sets`.
         #[must_use]
@@ -79320,20 +79572,16 @@ pub mod lazy {
     impl LazyXdr for LazyPersistedScpStateV1 {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len =
-                    <LazyVecM<LazyScpEnvelope> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len =
-                    <LazyVecM<LazyScpQuorumSet> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len =
+                <LazyVecM<LazyScpEnvelope> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyVecM<LazyScpQuorumSet> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -79375,7 +79623,9 @@ pub mod lazy {
         /// Access field `scp_envelopes`.
         #[must_use]
         pub fn scp_envelopes(&self) -> LazyVecM<LazyScpEnvelope> {
-            <LazyVecM<LazyScpEnvelope> as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyVecM<LazyScpEnvelope> as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `quorum_sets`.
         #[must_use]
@@ -79931,13 +80181,12 @@ pub mod lazy {
         /// Get the discriminant.
         #[must_use]
         pub fn discriminant(&self) -> super::AssetType {
-            // Validated — unwrap is safe.
-            super::AssetType::try_from(self.discriminant_i32()).unwrap()
+            <super::AssetType as LazyXdr>::from_xdr_at(&self.0, 0)
         }
 
         /// Access arm `CreditAlphanum4`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_creditalphanum4(&self) -> Option<LazyAssetCode4> {
+        pub fn as_credit_alphanum4(&self) -> Option<LazyAssetCode4> {
             if self.discriminant_i32() == 1 {
                 Some(<LazyAssetCode4 as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -79947,7 +80196,7 @@ pub mod lazy {
 
         /// Access arm `CreditAlphanum12`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_creditalphanum12(&self) -> Option<LazyAssetCode12> {
+        pub fn as_credit_alphanum12(&self) -> Option<LazyAssetCode12> {
             if self.discriminant_i32() == 2 {
                 Some(<LazyAssetCode12 as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -79962,18 +80211,14 @@ pub mod lazy {
     impl LazyXdr for LazyAlphaNum4 {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(4).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            <LazyAssetCode4 as LazyXdr>::xdr_validate(&buf[(pos + 0) as usize..])?;
-            pos = next_pos;
-            {
-                let field_len = <LazyAccountId as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazyAssetCode4 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyAccountId as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -80015,12 +80260,17 @@ pub mod lazy {
         /// Access field `asset_code`.
         #[must_use]
         pub fn asset_code(&self) -> LazyAssetCode4 {
-            <LazyAssetCode4 as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyAssetCode4 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `issuer`.
         #[must_use]
         pub fn issuer(&self) -> LazyAccountId {
-            <LazyAccountId as LazyXdr>::from_xdr_at(&self.0, 4)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 4;
+            <LazyAccountId as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     /// Lazy wrapper for [`super::AlphaNum12`].
@@ -80030,18 +80280,14 @@ pub mod lazy {
     impl LazyXdr for LazyAlphaNum12 {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(12).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            <LazyAssetCode12 as LazyXdr>::xdr_validate(&buf[(pos + 0) as usize..])?;
-            pos = next_pos;
-            {
-                let field_len = <LazyAccountId as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazyAssetCode12 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyAccountId as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -80083,12 +80329,17 @@ pub mod lazy {
         /// Access field `asset_code`.
         #[must_use]
         pub fn asset_code(&self) -> LazyAssetCode12 {
-            <LazyAssetCode12 as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyAssetCode12 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `issuer`.
         #[must_use]
         pub fn issuer(&self) -> LazyAccountId {
-            <LazyAccountId as LazyXdr>::from_xdr_at(&self.0, 12)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 12;
+            <LazyAccountId as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     /// Lazy wrapper for [`super::Asset`].
@@ -80183,13 +80434,12 @@ pub mod lazy {
         /// Get the discriminant.
         #[must_use]
         pub fn discriminant(&self) -> super::AssetType {
-            // Validated — unwrap is safe.
-            super::AssetType::try_from(self.discriminant_i32()).unwrap()
+            <super::AssetType as LazyXdr>::from_xdr_at(&self.0, 0)
         }
 
         /// Access arm `CreditAlphanum4`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_creditalphanum4(&self) -> Option<LazyAlphaNum4> {
+        pub fn as_credit_alphanum4(&self) -> Option<LazyAlphaNum4> {
             if self.discriminant_i32() == 1 {
                 Some(<LazyAlphaNum4 as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -80199,7 +80449,7 @@ pub mod lazy {
 
         /// Access arm `CreditAlphanum12`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_creditalphanum12(&self) -> Option<LazyAlphaNum12> {
+        pub fn as_credit_alphanum12(&self) -> Option<LazyAlphaNum12> {
             if self.discriminant_i32() == 2 {
                 Some(<LazyAlphaNum12 as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -80216,11 +80466,14 @@ pub mod lazy {
 
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(8).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
+            let field_len = <i32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <i32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -80260,12 +80513,17 @@ pub mod lazy {
         /// Access field `n`.
         #[must_use]
         pub fn n(&self) -> i32 {
-            <i32 as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <i32 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `d`.
         #[must_use]
         pub fn d(&self) -> i32 {
-            <i32 as LazyXdr>::from_xdr_at(&self.0, 4)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 4;
+            <i32 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     /// Lazy wrapper for [`super::Liabilities`].
@@ -80277,11 +80535,14 @@ pub mod lazy {
 
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(16).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
+            let field_len = <i64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <i64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -80321,12 +80582,17 @@ pub mod lazy {
         /// Access field `buying`.
         #[must_use]
         pub fn buying(&self) -> i64 {
-            <i64 as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <i64 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `selling`.
         #[must_use]
         pub fn selling(&self) -> i64 {
-            <i64 as LazyXdr>::from_xdr_at(&self.0, 8)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 8;
+            <i64 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     // Enum ThresholdIndexes: scalar lazy type — impl LazyXdr directly on the enum.
@@ -80388,17 +80654,14 @@ pub mod lazy {
     impl LazyXdr for LazySigner {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazySignerKey as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            let next_pos = pos.checked_add(4).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
+            let field_len = <LazySignerKey as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -80440,7 +80703,9 @@ pub mod lazy {
         /// Access field `key`.
         #[must_use]
         pub fn key(&self) -> LazySignerKey {
-            <LazySignerKey as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazySignerKey as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `weight`.
         #[must_use]
@@ -80533,18 +80798,18 @@ pub mod lazy {
     impl LazyXdr for LazyAccountEntryExtensionV3 {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len =
-                    <LazyExtensionPoint as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            let next_pos = pos.checked_add(12).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
+            let field_len = <LazyExtensionPoint as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyTimePoint as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -80586,7 +80851,9 @@ pub mod lazy {
         /// Access field `ext`.
         #[must_use]
         pub fn ext(&self) -> LazyExtensionPoint {
-            <LazyExtensionPoint as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyExtensionPoint as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `seq_ledger`.
         #[must_use]
@@ -80712,27 +80979,25 @@ pub mod lazy {
     impl LazyXdr for LazyAccountEntryExtensionV2 {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(8).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
-            {
-                let field_len = <LazyVecM<LazySponsorshipDescriptor, 20> as LazyXdr>::xdr_validate(
-                    &buf[pos as usize..],
-                )?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyAccountEntryExtensionV2Ext as LazyXdr>::xdr_validate(
-                    &buf[pos as usize..],
-                )?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyVecM<LazySponsorshipDescriptor, 20> as LazyXdr>::xdr_validate(
+                &buf[pos as usize..],
+            )?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyAccountEntryExtensionV2Ext as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -80776,23 +81041,32 @@ pub mod lazy {
         /// Access field `num_sponsored`.
         #[must_use]
         pub fn num_sponsored(&self) -> u32 {
-            <u32 as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <u32 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `num_sponsoring`.
         #[must_use]
         pub fn num_sponsoring(&self) -> u32 {
-            <u32 as LazyXdr>::from_xdr_at(&self.0, 4)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 4;
+            <u32 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `signer_sponsoring_i_ds`.
         #[must_use]
         pub fn signer_sponsoring_i_ds(&self) -> LazyVecM<LazySponsorshipDescriptor, 20> {
-            <LazyVecM<LazySponsorshipDescriptor, 20> as LazyXdr>::from_xdr_at(&self.0, 8)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 8;
+            <LazyVecM<LazySponsorshipDescriptor, 20> as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `ext`.
         #[must_use]
         pub fn ext(&self) -> LazyAccountEntryExtensionV2Ext {
             let buf = self.0.as_slice();
-            let mut pos: u32 = 8;
+            let mut pos: u32 = 0;
+            pos += 8;
             pos +=
                 <LazyVecM<LazySponsorshipDescriptor, 20> as LazyXdr>::xdr_len(&buf[pos as usize..]);
             <LazyAccountEntryExtensionV2Ext as LazyXdr>::from_xdr_at(&self.0, pos)
@@ -80904,20 +81178,15 @@ pub mod lazy {
     impl LazyXdr for LazyAccountEntryExtensionV1 {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(16).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            <LazyLiabilities as LazyXdr>::xdr_validate(&buf[(pos + 0) as usize..])?;
-            pos = next_pos;
-            {
-                let field_len = <LazyAccountEntryExtensionV1Ext as LazyXdr>::xdr_validate(
-                    &buf[pos as usize..],
-                )?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazyLiabilities as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyAccountEntryExtensionV1Ext as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -80959,12 +81228,17 @@ pub mod lazy {
         /// Access field `liabilities`.
         #[must_use]
         pub fn liabilities(&self) -> LazyLiabilities {
-            <LazyLiabilities as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyLiabilities as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `ext`.
         #[must_use]
         pub fn ext(&self) -> LazyAccountEntryExtensionV1Ext {
-            <LazyAccountEntryExtensionV1Ext as LazyXdr>::from_xdr_at(&self.0, 16)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 16;
+            <LazyAccountEntryExtensionV1Ext as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     /// Lazy wrapper for [`super::AccountEntryExt`].
@@ -81073,55 +81347,48 @@ pub mod lazy {
     impl LazyXdr for LazyAccountEntry {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazyAccountId as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            let next_pos = pos.checked_add(20).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
-            {
-                let field_len =
-                    <LazyOption<LazyAccountId> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            let next_pos = pos.checked_add(4).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
-            {
-                let field_len = <LazyString32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            let next_pos = pos.checked_add(4).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            <LazyThresholds as LazyXdr>::xdr_validate(&buf[(pos + 0) as usize..])?;
-            pos = next_pos;
-            {
-                let field_len =
-                    <LazyVecM<LazySigner, 20> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len =
-                    <LazyAccountEntryExt as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazyAccountId as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <i64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazySequenceNumber as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyOption<LazyAccountId> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyString32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyThresholds as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyVecM<LazySigner, 20> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyAccountEntryExt as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -81169,7 +81436,9 @@ pub mod lazy {
         /// Access field `account_id`.
         #[must_use]
         pub fn account_id(&self) -> LazyAccountId {
-            <LazyAccountId as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyAccountId as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `balance`.
         #[must_use]
@@ -81421,13 +81690,12 @@ pub mod lazy {
         /// Get the discriminant.
         #[must_use]
         pub fn discriminant(&self) -> super::AssetType {
-            // Validated — unwrap is safe.
-            super::AssetType::try_from(self.discriminant_i32()).unwrap()
+            <super::AssetType as LazyXdr>::from_xdr_at(&self.0, 0)
         }
 
         /// Access arm `CreditAlphanum4`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_creditalphanum4(&self) -> Option<LazyAlphaNum4> {
+        pub fn as_credit_alphanum4(&self) -> Option<LazyAlphaNum4> {
             if self.discriminant_i32() == 1 {
                 Some(<LazyAlphaNum4 as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -81437,7 +81705,7 @@ pub mod lazy {
 
         /// Access arm `CreditAlphanum12`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_creditalphanum12(&self) -> Option<LazyAlphaNum12> {
+        pub fn as_credit_alphanum12(&self) -> Option<LazyAlphaNum12> {
             if self.discriminant_i32() == 2 {
                 Some(<LazyAlphaNum12 as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -81447,7 +81715,7 @@ pub mod lazy {
 
         /// Access arm `PoolShare`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_poolshare(&self) -> Option<LazyPoolId> {
+        pub fn as_pool_share(&self) -> Option<LazyPoolId> {
             if self.discriminant_i32() == 3 {
                 Some(<LazyPoolId as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -81538,19 +81806,15 @@ pub mod lazy {
     impl LazyXdr for LazyTrustLineEntryExtensionV2 {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(4).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
-            {
-                let field_len = <LazyTrustLineEntryExtensionV2Ext as LazyXdr>::xdr_validate(
-                    &buf[pos as usize..],
-                )?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <i32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyTrustLineEntryExtensionV2Ext as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -81592,12 +81856,17 @@ pub mod lazy {
         /// Access field `liquidity_pool_use_count`.
         #[must_use]
         pub fn liquidity_pool_use_count(&self) -> i32 {
-            <i32 as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <i32 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `ext`.
         #[must_use]
         pub fn ext(&self) -> LazyTrustLineEntryExtensionV2Ext {
-            <LazyTrustLineEntryExtensionV2Ext as LazyXdr>::from_xdr_at(&self.0, 4)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 4;
+            <LazyTrustLineEntryExtensionV2Ext as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     /// Lazy wrapper for [`super::TrustLineEntryV1Ext`].
@@ -81707,19 +81976,15 @@ pub mod lazy {
     impl LazyXdr for LazyTrustLineEntryV1 {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(16).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            <LazyLiabilities as LazyXdr>::xdr_validate(&buf[(pos + 0) as usize..])?;
-            pos = next_pos;
-            {
-                let field_len =
-                    <LazyTrustLineEntryV1Ext as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazyLiabilities as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyTrustLineEntryV1Ext as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -81761,12 +82026,17 @@ pub mod lazy {
         /// Access field `liabilities`.
         #[must_use]
         pub fn liabilities(&self) -> LazyLiabilities {
-            <LazyLiabilities as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyLiabilities as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `ext`.
         #[must_use]
         pub fn ext(&self) -> LazyTrustLineEntryV1Ext {
-            <LazyTrustLineEntryV1Ext as LazyXdr>::from_xdr_at(&self.0, 16)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 16;
+            <LazyTrustLineEntryV1Ext as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     /// Lazy wrapper for [`super::TrustLineEntryExt`].
@@ -81872,31 +82142,30 @@ pub mod lazy {
     impl LazyXdr for LazyTrustLineEntry {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazyAccountId as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len =
-                    <LazyTrustLineAsset as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            let next_pos = pos.checked_add(20).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
-            {
-                let field_len =
-                    <LazyTrustLineEntryExt as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazyAccountId as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyTrustLineAsset as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <i64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <i64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyTrustLineEntryExt as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -81940,7 +82209,9 @@ pub mod lazy {
         /// Access field `account_id`.
         #[must_use]
         pub fn account_id(&self) -> LazyAccountId {
-            <LazyAccountId as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyAccountId as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `asset`.
         #[must_use]
@@ -82100,41 +82371,38 @@ pub mod lazy {
     impl LazyXdr for LazyOfferEntry {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazyAccountId as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            let next_pos = pos.checked_add(8).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
-            {
-                let field_len = <LazyAsset as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyAsset as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            let next_pos = pos.checked_add(20).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            <LazyPrice as LazyXdr>::xdr_validate(&buf[(pos + 8) as usize..])?;
-            pos = next_pos;
-            {
-                let field_len = <LazyOfferEntryExt as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazyAccountId as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <i64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyAsset as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyAsset as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <i64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyPrice as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyOfferEntryExt as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -82180,7 +82448,9 @@ pub mod lazy {
         /// Access field `seller_id`.
         #[must_use]
         pub fn seller_id(&self) -> LazyAccountId {
-            <LazyAccountId as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyAccountId as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `offer_id`.
         #[must_use]
@@ -82340,30 +82610,22 @@ pub mod lazy {
     impl LazyXdr for LazyDataEntry {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazyAccountId as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyString64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyDataValue as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyDataEntryExt as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazyAccountId as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyString64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyDataValue as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyDataEntryExt as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -82407,7 +82669,9 @@ pub mod lazy {
         /// Access field `account_id`.
         #[must_use]
         pub fn account_id(&self) -> LazyAccountId {
-            <LazyAccountId as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyAccountId as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `data_name`.
         #[must_use]
@@ -82590,8 +82854,7 @@ pub mod lazy {
         /// Get the discriminant.
         #[must_use]
         pub fn discriminant(&self) -> super::ClaimPredicateType {
-            // Validated — unwrap is safe.
-            super::ClaimPredicateType::try_from(self.discriminant_i32()).unwrap()
+            <super::ClaimPredicateType as LazyXdr>::from_xdr_at(&self.0, 0)
         }
 
         /// Access arm `And`. Returns `Some` if the discriminant matches.
@@ -82632,7 +82895,7 @@ pub mod lazy {
 
         /// Access arm `BeforeAbsoluteTime`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_beforeabsolutetime(&self) -> Option<i64> {
+        pub fn as_before_absolute_time(&self) -> Option<i64> {
             if self.discriminant_i32() == 4 {
                 Some(<i64 as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -82642,7 +82905,7 @@ pub mod lazy {
 
         /// Access arm `BeforeRelativeTime`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_beforerelativetime(&self) -> Option<i64> {
+        pub fn as_before_relative_time(&self) -> Option<i64> {
             if self.discriminant_i32() == 5 {
                 Some(<i64 as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -82683,19 +82946,14 @@ pub mod lazy {
     impl LazyXdr for LazyClaimantV0 {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazyAccountId as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len =
-                    <LazyClaimPredicate as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazyAccountId as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyClaimPredicate as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -82737,7 +82995,9 @@ pub mod lazy {
         /// Access field `destination`.
         #[must_use]
         pub fn destination(&self) -> LazyAccountId {
-            <LazyAccountId as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyAccountId as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `predicate`.
         #[must_use]
@@ -82825,13 +83085,12 @@ pub mod lazy {
         /// Get the discriminant.
         #[must_use]
         pub fn discriminant(&self) -> super::ClaimantType {
-            // Validated — unwrap is safe.
-            super::ClaimantType::try_from(self.discriminant_i32()).unwrap()
+            <super::ClaimantType as LazyXdr>::from_xdr_at(&self.0, 0)
         }
 
         /// Access arm `ClaimantTypeV0`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_claimanttypev0(&self) -> Option<LazyClaimantV0> {
+        pub fn as_claimant_type_v0(&self) -> Option<LazyClaimantV0> {
             if self.discriminant_i32() == 0 {
                 Some(<LazyClaimantV0 as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -82949,19 +83208,16 @@ pub mod lazy {
     impl LazyXdr for LazyClaimableBalanceEntryExtensionV1 {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazyClaimableBalanceEntryExtensionV1Ext as LazyXdr>::xdr_validate(
-                    &buf[pos as usize..],
-                )?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            let next_pos = pos.checked_add(4).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
+            let field_len = <LazyClaimableBalanceEntryExtensionV1Ext as LazyXdr>::xdr_validate(
+                &buf[pos as usize..],
+            )?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -83004,7 +83260,9 @@ pub mod lazy {
         /// Access field `ext`.
         #[must_use]
         pub fn ext(&self) -> LazyClaimableBalanceEntryExtensionV1Ext {
-            <LazyClaimableBalanceEntryExtensionV1Ext as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyClaimableBalanceEntryExtensionV1Ext as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `flags`.
         #[must_use]
@@ -83123,38 +83381,29 @@ pub mod lazy {
     impl LazyXdr for LazyClaimableBalanceEntry {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len =
-                    <LazyClaimableBalanceId as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len =
-                    <LazyVecM<LazyClaimant, 10> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyAsset as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            let next_pos = pos.checked_add(8).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
-            {
-                let field_len =
-                    <LazyClaimableBalanceEntryExt as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len =
+                <LazyClaimableBalanceId as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyVecM<LazyClaimant, 10> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyAsset as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <i64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyClaimableBalanceEntryExt as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -83199,7 +83448,9 @@ pub mod lazy {
         /// Access field `balance_id`.
         #[must_use]
         pub fn balance_id(&self) -> LazyClaimableBalanceId {
-            <LazyClaimableBalanceId as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyClaimableBalanceId as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `claimants`.
         #[must_use]
@@ -83247,23 +83498,18 @@ pub mod lazy {
     impl LazyXdr for LazyLiquidityPoolConstantProductParameters {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazyAsset as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyAsset as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            let next_pos = pos.checked_add(4).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
+            let field_len = <LazyAsset as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyAsset as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <i32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -83306,7 +83552,9 @@ pub mod lazy {
         /// Access field `asset_a`.
         #[must_use]
         pub fn asset_a(&self) -> LazyAsset {
-            <LazyAsset as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyAsset as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `asset_b`.
         #[must_use]
@@ -83333,20 +83581,28 @@ pub mod lazy {
     impl LazyXdr for LazyLiquidityPoolEntryConstantProduct {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len =
-                    <LazyLiquidityPoolConstantProductParameters as LazyXdr>::xdr_validate(
-                        &buf[pos as usize..],
-                    )?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            let next_pos = pos.checked_add(32).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
+            let field_len = <LazyLiquidityPoolConstantProductParameters as LazyXdr>::xdr_validate(
+                &buf[pos as usize..],
+            )?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <i64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <i64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <i64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <i64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -83390,7 +83646,9 @@ pub mod lazy {
         /// Access field `params`.
         #[must_use]
         pub fn params(&self) -> LazyLiquidityPoolConstantProductParameters {
-            <LazyLiquidityPoolConstantProductParameters as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyLiquidityPoolConstantProductParameters as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `reserve_a`.
         #[must_use]
@@ -83517,13 +83775,12 @@ pub mod lazy {
         /// Get the discriminant.
         #[must_use]
         pub fn discriminant(&self) -> super::LiquidityPoolType {
-            // Validated — unwrap is safe.
-            super::LiquidityPoolType::try_from(self.discriminant_i32()).unwrap()
+            <super::LiquidityPoolType as LazyXdr>::from_xdr_at(&self.0, 0)
         }
 
         /// Access arm `LiquidityPoolConstantProduct`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_liquiditypoolconstantproduct(
+        pub fn as_liquidity_pool_constant_product(
             &self,
         ) -> Option<LazyLiquidityPoolEntryConstantProduct> {
             if self.discriminant_i32() == 0 {
@@ -83540,19 +83797,15 @@ pub mod lazy {
     impl LazyXdr for LazyLiquidityPoolEntry {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(32).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            <LazyPoolId as LazyXdr>::xdr_validate(&buf[(pos + 0) as usize..])?;
-            pos = next_pos;
-            {
-                let field_len =
-                    <LazyLiquidityPoolEntryBody as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazyPoolId as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyLiquidityPoolEntryBody as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -83594,12 +83847,17 @@ pub mod lazy {
         /// Access field `liquidity_pool_id`.
         #[must_use]
         pub fn liquidity_pool_id(&self) -> LazyPoolId {
-            <LazyPoolId as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyPoolId as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `body`.
         #[must_use]
         pub fn body(&self) -> LazyLiquidityPoolEntryBody {
-            <LazyLiquidityPoolEntryBody as LazyXdr>::from_xdr_at(&self.0, 32)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 32;
+            <LazyLiquidityPoolEntryBody as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     // Enum ContractDataDurability: scalar lazy type — impl LazyXdr directly on the enum.
@@ -83635,37 +83893,27 @@ pub mod lazy {
     impl LazyXdr for LazyContractDataEntry {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len =
-                    <LazyExtensionPoint as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyScAddress as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyScVal as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            let next_pos = pos.checked_add(4).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            <super::ContractDataDurability as LazyXdr>::xdr_validate(&buf[(pos + 0) as usize..])?;
-            pos = next_pos;
-            {
-                let field_len = <LazyScVal as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazyExtensionPoint as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyScAddress as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyScVal as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <super::ContractDataDurability as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyScVal as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -83710,7 +83958,9 @@ pub mod lazy {
         /// Access field `ext`.
         #[must_use]
         pub fn ext(&self) -> LazyExtensionPoint {
-            <LazyExtensionPoint as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyExtensionPoint as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `contract`.
         #[must_use]
@@ -83758,18 +84008,50 @@ pub mod lazy {
     impl LazyXdr for LazyContractCodeCostInputs {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len =
-                    <LazyExtensionPoint as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            let next_pos = pos.checked_add(40).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
+            let field_len = <LazyExtensionPoint as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -83811,7 +84093,9 @@ pub mod lazy {
         /// Access field `ext`.
         #[must_use]
         pub fn ext(&self) -> LazyExtensionPoint {
-            <LazyExtensionPoint as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyExtensionPoint as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `n_instructions`.
         #[must_use]
@@ -83910,20 +84194,15 @@ pub mod lazy {
     impl LazyXdr for LazyContractCodeEntryV1 {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len =
-                    <LazyExtensionPoint as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len =
-                    <LazyContractCodeCostInputs as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazyExtensionPoint as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyContractCodeCostInputs as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -83965,7 +84244,9 @@ pub mod lazy {
         /// Access field `ext`.
         #[must_use]
         pub fn ext(&self) -> LazyExtensionPoint {
-            <LazyExtensionPoint as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyExtensionPoint as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `cost_inputs`.
         #[must_use]
@@ -84081,25 +84362,19 @@ pub mod lazy {
     impl LazyXdr for LazyContractCodeEntry {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len =
-                    <LazyContractCodeEntryExt as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            let next_pos = pos.checked_add(32).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            <LazyHash as LazyXdr>::xdr_validate(&buf[(pos + 0) as usize..])?;
-            pos = next_pos;
-            {
-                let field_len = <LazyBytesM as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len =
+                <LazyContractCodeEntryExt as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyHash as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyBytesM as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -84142,7 +84417,9 @@ pub mod lazy {
         /// Access field `ext`.
         #[must_use]
         pub fn ext(&self) -> LazyContractCodeEntryExt {
-            <LazyContractCodeEntryExt as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyContractCodeEntryExt as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `hash`.
         #[must_use]
@@ -84171,12 +84448,14 @@ pub mod lazy {
 
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(36).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            <LazyHash as LazyXdr>::xdr_validate(&buf[(pos + 0) as usize..])?;
-            pos = next_pos;
+            let field_len = <LazyHash as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -84216,12 +84495,17 @@ pub mod lazy {
         /// Access field `key_hash`.
         #[must_use]
         pub fn key_hash(&self) -> LazyHash {
-            <LazyHash as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyHash as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `live_until_ledger_seq`.
         #[must_use]
         pub fn live_until_ledger_seq(&self) -> u32 {
-            <u32 as LazyXdr>::from_xdr_at(&self.0, 32)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 32;
+            <u32 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     /// Lazy wrapper for [`super::LedgerEntryExtensionV1Ext`].
@@ -84307,20 +84591,16 @@ pub mod lazy {
     impl LazyXdr for LazyLedgerEntryExtensionV1 {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len =
-                    <LazySponsorshipDescriptor as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len =
-                    <LazyLedgerEntryExtensionV1Ext as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len =
+                <LazySponsorshipDescriptor as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyLedgerEntryExtensionV1Ext as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -84362,7 +84642,9 @@ pub mod lazy {
         /// Access field `sponsoring_id`.
         #[must_use]
         pub fn sponsoring_id(&self) -> LazySponsorshipDescriptor {
-            <LazySponsorshipDescriptor as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazySponsorshipDescriptor as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `ext`.
         #[must_use]
@@ -84538,8 +84820,7 @@ pub mod lazy {
         /// Get the discriminant.
         #[must_use]
         pub fn discriminant(&self) -> super::LedgerEntryType {
-            // Validated — unwrap is safe.
-            super::LedgerEntryType::try_from(self.discriminant_i32()).unwrap()
+            <super::LedgerEntryType as LazyXdr>::from_xdr_at(&self.0, 0)
         }
 
         /// Access arm `Account`. Returns `Some` if the discriminant matches.
@@ -84584,7 +84865,7 @@ pub mod lazy {
 
         /// Access arm `ClaimableBalance`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_claimablebalance(&self) -> Option<LazyClaimableBalanceEntry> {
+        pub fn as_claimable_balance(&self) -> Option<LazyClaimableBalanceEntry> {
             if self.discriminant_i32() == 4 {
                 Some(<LazyClaimableBalanceEntry as LazyXdr>::from_xdr_at(
                     &self.0, 4,
@@ -84596,7 +84877,7 @@ pub mod lazy {
 
         /// Access arm `LiquidityPool`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_liquiditypool(&self) -> Option<LazyLiquidityPoolEntry> {
+        pub fn as_liquidity_pool(&self) -> Option<LazyLiquidityPoolEntry> {
             if self.discriminant_i32() == 5 {
                 Some(<LazyLiquidityPoolEntry as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -84606,7 +84887,7 @@ pub mod lazy {
 
         /// Access arm `ContractData`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_contractdata(&self) -> Option<LazyContractDataEntry> {
+        pub fn as_contract_data(&self) -> Option<LazyContractDataEntry> {
             if self.discriminant_i32() == 6 {
                 Some(<LazyContractDataEntry as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -84616,7 +84897,7 @@ pub mod lazy {
 
         /// Access arm `ContractCode`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_contractcode(&self) -> Option<LazyContractCodeEntry> {
+        pub fn as_contract_code(&self) -> Option<LazyContractCodeEntry> {
             if self.discriminant_i32() == 7 {
                 Some(<LazyContractCodeEntry as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -84626,7 +84907,7 @@ pub mod lazy {
 
         /// Access arm `ConfigSetting`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_configsetting(&self) -> Option<LazyConfigSettingEntry> {
+        pub fn as_config_setting(&self) -> Option<LazyConfigSettingEntry> {
             if self.discriminant_i32() == 8 {
                 Some(<LazyConfigSettingEntry as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -84750,25 +85031,18 @@ pub mod lazy {
     impl LazyXdr for LazyLedgerEntry {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(4).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
-            {
-                let field_len =
-                    <LazyLedgerEntryData as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len =
-                    <LazyLedgerEntryExt as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyLedgerEntryData as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyLedgerEntryExt as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -84811,18 +85085,24 @@ pub mod lazy {
         /// Access field `last_modified_ledger_seq`.
         #[must_use]
         pub fn last_modified_ledger_seq(&self) -> u32 {
-            <u32 as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <u32 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `data`.
         #[must_use]
         pub fn data(&self) -> LazyLedgerEntryData {
-            <LazyLedgerEntryData as LazyXdr>::from_xdr_at(&self.0, 4)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 4;
+            <LazyLedgerEntryData as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `ext`.
         #[must_use]
         pub fn ext(&self) -> LazyLedgerEntryExt {
             let buf = self.0.as_slice();
-            let mut pos: u32 = 4;
+            let mut pos: u32 = 0;
+            pos += 4;
             pos += <LazyLedgerEntryData as LazyXdr>::xdr_len(&buf[pos as usize..]);
             <LazyLedgerEntryExt as LazyXdr>::from_xdr_at(&self.0, pos)
         }
@@ -84834,12 +85114,10 @@ pub mod lazy {
     impl LazyXdr for LazyLedgerKeyAccount {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazyAccountId as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazyAccountId as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -84880,7 +85158,9 @@ pub mod lazy {
         /// Access field `account_id`.
         #[must_use]
         pub fn account_id(&self) -> LazyAccountId {
-            <LazyAccountId as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyAccountId as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     /// Lazy wrapper for [`super::LedgerKeyTrustLine`].
@@ -84890,19 +85170,14 @@ pub mod lazy {
     impl LazyXdr for LazyLedgerKeyTrustLine {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazyAccountId as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len =
-                    <LazyTrustLineAsset as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazyAccountId as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyTrustLineAsset as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -84944,7 +85219,9 @@ pub mod lazy {
         /// Access field `account_id`.
         #[must_use]
         pub fn account_id(&self) -> LazyAccountId {
-            <LazyAccountId as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyAccountId as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `asset`.
         #[must_use]
@@ -84962,17 +85239,14 @@ pub mod lazy {
     impl LazyXdr for LazyLedgerKeyOffer {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazyAccountId as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            let next_pos = pos.checked_add(8).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
+            let field_len = <LazyAccountId as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <i64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -85014,7 +85288,9 @@ pub mod lazy {
         /// Access field `seller_id`.
         #[must_use]
         pub fn seller_id(&self) -> LazyAccountId {
-            <LazyAccountId as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyAccountId as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `offer_id`.
         #[must_use]
@@ -85032,18 +85308,14 @@ pub mod lazy {
     impl LazyXdr for LazyLedgerKeyData {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazyAccountId as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyString64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazyAccountId as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyString64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -85085,7 +85357,9 @@ pub mod lazy {
         /// Access field `account_id`.
         #[must_use]
         pub fn account_id(&self) -> LazyAccountId {
-            <LazyAccountId as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyAccountId as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `data_name`.
         #[must_use]
@@ -85103,13 +85377,11 @@ pub mod lazy {
     impl LazyXdr for LazyLedgerKeyClaimableBalance {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len =
-                    <LazyClaimableBalanceId as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len =
+                <LazyClaimableBalanceId as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -85150,7 +85422,9 @@ pub mod lazy {
         /// Access field `balance_id`.
         #[must_use]
         pub fn balance_id(&self) -> LazyClaimableBalanceId {
-            <LazyClaimableBalanceId as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyClaimableBalanceId as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     /// Lazy wrapper for [`super::LedgerKeyLiquidityPool`].
@@ -85162,12 +85436,10 @@ pub mod lazy {
 
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(32).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            <LazyPoolId as LazyXdr>::xdr_validate(&buf[(pos + 0) as usize..])?;
-            pos = next_pos;
+            let field_len = <LazyPoolId as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -85207,7 +85479,9 @@ pub mod lazy {
         /// Access field `liquidity_pool_id`.
         #[must_use]
         pub fn liquidity_pool_id(&self) -> LazyPoolId {
-            <LazyPoolId as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyPoolId as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     /// Lazy wrapper for [`super::LedgerKeyContractData`].
@@ -85217,24 +85491,19 @@ pub mod lazy {
     impl LazyXdr for LazyLedgerKeyContractData {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazyScAddress as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyScVal as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            let next_pos = pos.checked_add(4).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            <super::ContractDataDurability as LazyXdr>::xdr_validate(&buf[(pos + 0) as usize..])?;
-            pos = next_pos;
+            let field_len = <LazyScAddress as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyScVal as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <super::ContractDataDurability as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -85277,7 +85546,9 @@ pub mod lazy {
         /// Access field `contract`.
         #[must_use]
         pub fn contract(&self) -> LazyScAddress {
-            <LazyScAddress as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyScAddress as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `key`.
         #[must_use]
@@ -85306,12 +85577,10 @@ pub mod lazy {
 
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(32).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            <LazyHash as LazyXdr>::xdr_validate(&buf[(pos + 0) as usize..])?;
-            pos = next_pos;
+            let field_len = <LazyHash as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -85351,7 +85620,9 @@ pub mod lazy {
         /// Access field `hash`.
         #[must_use]
         pub fn hash(&self) -> LazyHash {
-            <LazyHash as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyHash as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     /// Lazy wrapper for [`super::LedgerKeyConfigSetting`].
@@ -85363,12 +85634,11 @@ pub mod lazy {
 
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(4).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            <super::ConfigSettingId as LazyXdr>::xdr_validate(&buf[(pos + 0) as usize..])?;
-            pos = next_pos;
+            let field_len =
+                <super::ConfigSettingId as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -85408,7 +85678,9 @@ pub mod lazy {
         /// Access field `config_setting_id`.
         #[must_use]
         pub fn config_setting_id(&self) -> super::ConfigSettingId {
-            <super::ConfigSettingId as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <super::ConfigSettingId as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     /// Lazy wrapper for [`super::LedgerKeyTtl`].
@@ -85420,12 +85692,10 @@ pub mod lazy {
 
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(32).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            <LazyHash as LazyXdr>::xdr_validate(&buf[(pos + 0) as usize..])?;
-            pos = next_pos;
+            let field_len = <LazyHash as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -85465,7 +85735,9 @@ pub mod lazy {
         /// Access field `key_hash`.
         #[must_use]
         pub fn key_hash(&self) -> LazyHash {
-            <LazyHash as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyHash as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     /// Lazy wrapper for [`super::LedgerKey`].
@@ -85639,8 +85911,7 @@ pub mod lazy {
         /// Get the discriminant.
         #[must_use]
         pub fn discriminant(&self) -> super::LedgerEntryType {
-            // Validated — unwrap is safe.
-            super::LedgerEntryType::try_from(self.discriminant_i32()).unwrap()
+            <super::LedgerEntryType as LazyXdr>::from_xdr_at(&self.0, 0)
         }
 
         /// Access arm `Account`. Returns `Some` if the discriminant matches.
@@ -85685,7 +85956,7 @@ pub mod lazy {
 
         /// Access arm `ClaimableBalance`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_claimablebalance(&self) -> Option<LazyLedgerKeyClaimableBalance> {
+        pub fn as_claimable_balance(&self) -> Option<LazyLedgerKeyClaimableBalance> {
             if self.discriminant_i32() == 4 {
                 Some(<LazyLedgerKeyClaimableBalance as LazyXdr>::from_xdr_at(
                     &self.0, 4,
@@ -85697,7 +85968,7 @@ pub mod lazy {
 
         /// Access arm `LiquidityPool`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_liquiditypool(&self) -> Option<LazyLedgerKeyLiquidityPool> {
+        pub fn as_liquidity_pool(&self) -> Option<LazyLedgerKeyLiquidityPool> {
             if self.discriminant_i32() == 5 {
                 Some(<LazyLedgerKeyLiquidityPool as LazyXdr>::from_xdr_at(
                     &self.0, 4,
@@ -85709,7 +85980,7 @@ pub mod lazy {
 
         /// Access arm `ContractData`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_contractdata(&self) -> Option<LazyLedgerKeyContractData> {
+        pub fn as_contract_data(&self) -> Option<LazyLedgerKeyContractData> {
             if self.discriminant_i32() == 6 {
                 Some(<LazyLedgerKeyContractData as LazyXdr>::from_xdr_at(
                     &self.0, 4,
@@ -85721,7 +85992,7 @@ pub mod lazy {
 
         /// Access arm `ContractCode`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_contractcode(&self) -> Option<LazyLedgerKeyContractCode> {
+        pub fn as_contract_code(&self) -> Option<LazyLedgerKeyContractCode> {
             if self.discriminant_i32() == 7 {
                 Some(<LazyLedgerKeyContractCode as LazyXdr>::from_xdr_at(
                     &self.0, 4,
@@ -85733,7 +86004,7 @@ pub mod lazy {
 
         /// Access arm `ConfigSetting`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_configsetting(&self) -> Option<LazyLedgerKeyConfigSetting> {
+        pub fn as_config_setting(&self) -> Option<LazyLedgerKeyConfigSetting> {
             if self.discriminant_i32() == 8 {
                 Some(<LazyLedgerKeyConfigSetting as LazyXdr>::from_xdr_at(
                     &self.0, 4,
@@ -85960,18 +86231,14 @@ pub mod lazy {
     impl LazyXdr for LazyBucketMetadata {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(4).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
-            {
-                let field_len =
-                    <LazyBucketMetadataExt as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyBucketMetadataExt as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -86013,12 +86280,17 @@ pub mod lazy {
         /// Access field `ledger_version`.
         #[must_use]
         pub fn ledger_version(&self) -> u32 {
-            <u32 as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <u32 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `ext`.
         #[must_use]
         pub fn ext(&self) -> LazyBucketMetadataExt {
-            <LazyBucketMetadataExt as LazyXdr>::from_xdr_at(&self.0, 4)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 4;
+            <LazyBucketMetadataExt as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     /// Lazy wrapper for [`super::BucketEntry`].
@@ -86127,8 +86399,7 @@ pub mod lazy {
         /// Get the discriminant.
         #[must_use]
         pub fn discriminant(&self) -> super::BucketEntryType {
-            // Validated — unwrap is safe.
-            super::BucketEntryType::try_from(self.discriminant_i32()).unwrap()
+            <super::BucketEntryType as LazyXdr>::from_xdr_at(&self.0, 0)
         }
 
         /// Access arm `Liveentry`. Returns `Some` if the discriminant matches.
@@ -86267,8 +86538,7 @@ pub mod lazy {
         /// Get the discriminant.
         #[must_use]
         pub fn discriminant(&self) -> super::HotArchiveBucketEntryType {
-            // Validated — unwrap is safe.
-            super::HotArchiveBucketEntryType::try_from(self.discriminant_i32()).unwrap()
+            <super::HotArchiveBucketEntryType as LazyXdr>::from_xdr_at(&self.0, 0)
         }
 
         /// Access arm `Archived`. Returns `Some` if the discriminant matches.
@@ -86380,18 +86650,14 @@ pub mod lazy {
     impl LazyXdr for LazyLedgerCloseValueSignature {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazyNodeId as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazySignature as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazyNodeId as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazySignature as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -86433,7 +86699,9 @@ pub mod lazy {
         /// Access field `node_id`.
         #[must_use]
         pub fn node_id(&self) -> LazyNodeId {
-            <LazyNodeId as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyNodeId as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `signature`.
         #[must_use]
@@ -86529,8 +86797,7 @@ pub mod lazy {
         /// Get the discriminant.
         #[must_use]
         pub fn discriminant(&self) -> super::StellarValueType {
-            // Validated — unwrap is safe.
-            super::StellarValueType::try_from(self.discriminant_i32()).unwrap()
+            <super::StellarValueType as LazyXdr>::from_xdr_at(&self.0, 0)
         }
 
         /// Access arm `Signed`. Returns `Some` if the discriminant matches.
@@ -86552,26 +86819,23 @@ pub mod lazy {
     impl LazyXdr for LazyStellarValue {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(40).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            <LazyHash as LazyXdr>::xdr_validate(&buf[(pos + 0) as usize..])?;
-            pos = next_pos;
-            {
-                let field_len =
-                    <LazyVecM<LazyUpgradeType, 6> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len =
-                    <LazyStellarValueExt as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazyHash as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyTimePoint as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyVecM<LazyUpgradeType, 6> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyStellarValueExt as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -86614,23 +86878,32 @@ pub mod lazy {
         /// Access field `tx_set_hash`.
         #[must_use]
         pub fn tx_set_hash(&self) -> LazyHash {
-            <LazyHash as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyHash as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `close_time`.
         #[must_use]
         pub fn close_time(&self) -> LazyTimePoint {
-            <LazyTimePoint as LazyXdr>::from_xdr_at(&self.0, 32)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 32;
+            <LazyTimePoint as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `upgrades`.
         #[must_use]
         pub fn upgrades(&self) -> LazyVecM<LazyUpgradeType, 6> {
-            <LazyVecM<LazyUpgradeType, 6> as LazyXdr>::from_xdr_at(&self.0, 40)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 40;
+            <LazyVecM<LazyUpgradeType, 6> as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `ext`.
         #[must_use]
         pub fn ext(&self) -> LazyStellarValueExt {
             let buf = self.0.as_slice();
-            let mut pos: u32 = 40;
+            let mut pos: u32 = 0;
+            pos += 40;
             pos += <LazyVecM<LazyUpgradeType, 6> as LazyXdr>::xdr_len(&buf[pos as usize..]);
             <LazyStellarValueExt as LazyXdr>::from_xdr_at(&self.0, pos)
         }
@@ -86745,19 +87018,15 @@ pub mod lazy {
     impl LazyXdr for LazyLedgerHeaderExtensionV1 {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(4).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
-            {
-                let field_len = <LazyLedgerHeaderExtensionV1Ext as LazyXdr>::xdr_validate(
-                    &buf[pos as usize..],
-                )?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyLedgerHeaderExtensionV1Ext as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -86799,12 +87068,17 @@ pub mod lazy {
         /// Access field `flags`.
         #[must_use]
         pub fn flags(&self) -> u32 {
-            <u32 as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <u32 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `ext`.
         #[must_use]
         pub fn ext(&self) -> LazyLedgerHeaderExtensionV1Ext {
-            <LazyLedgerHeaderExtensionV1Ext as LazyXdr>::from_xdr_at(&self.0, 4)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 4;
+            <LazyLedgerHeaderExtensionV1Ext as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     /// Lazy wrapper for [`super::LedgerHeaderExt`].
@@ -86913,33 +87187,67 @@ pub mod lazy {
     impl LazyXdr for LazyLedgerHeader {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(36).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            <LazyHash as LazyXdr>::xdr_validate(&buf[(pos + 4) as usize..])?;
-            pos = next_pos;
-            {
-                let field_len = <LazyStellarValue as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            let next_pos = pos.checked_add(236).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            <LazyHash as LazyXdr>::xdr_validate(&buf[(pos + 0) as usize..])?;
-            <LazyHash as LazyXdr>::xdr_validate(&buf[(pos + 32) as usize..])?;
-            <LazyFixedArray<LazyHash, 4> as LazyXdr>::xdr_validate(&buf[(pos + 108) as usize..])?;
-            pos = next_pos;
-            {
-                let field_len =
-                    <LazyLedgerHeaderExt as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyHash as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyStellarValue as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyHash as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyHash as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <i64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <i64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyFixedArray<LazyHash, 4> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyLedgerHeaderExt as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -86983,23 +87291,32 @@ pub mod lazy {
         /// Access field `ledger_version`.
         #[must_use]
         pub fn ledger_version(&self) -> u32 {
-            <u32 as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <u32 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `previous_ledger_hash`.
         #[must_use]
         pub fn previous_ledger_hash(&self) -> LazyHash {
-            <LazyHash as LazyXdr>::from_xdr_at(&self.0, 4)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 4;
+            <LazyHash as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `scp_value`.
         #[must_use]
         pub fn scp_value(&self) -> LazyStellarValue {
-            <LazyStellarValue as LazyXdr>::from_xdr_at(&self.0, 36)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 36;
+            <LazyStellarValue as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `tx_set_result_hash`.
         #[must_use]
         pub fn tx_set_result_hash(&self) -> LazyHash {
             let buf = self.0.as_slice();
-            let mut pos: u32 = 36;
+            let mut pos: u32 = 0;
+            pos += 36;
             pos += <LazyStellarValue as LazyXdr>::xdr_len(&buf[pos as usize..]);
             <LazyHash as LazyXdr>::from_xdr_at(&self.0, pos)
         }
@@ -87007,7 +87324,8 @@ pub mod lazy {
         #[must_use]
         pub fn bucket_list_hash(&self) -> LazyHash {
             let buf = self.0.as_slice();
-            let mut pos: u32 = 36;
+            let mut pos: u32 = 0;
+            pos += 36;
             pos += <LazyStellarValue as LazyXdr>::xdr_len(&buf[pos as usize..]);
             pos += 32;
             <LazyHash as LazyXdr>::from_xdr_at(&self.0, pos)
@@ -87016,7 +87334,8 @@ pub mod lazy {
         #[must_use]
         pub fn ledger_seq(&self) -> u32 {
             let buf = self.0.as_slice();
-            let mut pos: u32 = 36;
+            let mut pos: u32 = 0;
+            pos += 36;
             pos += <LazyStellarValue as LazyXdr>::xdr_len(&buf[pos as usize..]);
             pos += 64;
             <u32 as LazyXdr>::from_xdr_at(&self.0, pos)
@@ -87025,7 +87344,8 @@ pub mod lazy {
         #[must_use]
         pub fn total_coins(&self) -> i64 {
             let buf = self.0.as_slice();
-            let mut pos: u32 = 36;
+            let mut pos: u32 = 0;
+            pos += 36;
             pos += <LazyStellarValue as LazyXdr>::xdr_len(&buf[pos as usize..]);
             pos += 68;
             <i64 as LazyXdr>::from_xdr_at(&self.0, pos)
@@ -87034,7 +87354,8 @@ pub mod lazy {
         #[must_use]
         pub fn fee_pool(&self) -> i64 {
             let buf = self.0.as_slice();
-            let mut pos: u32 = 36;
+            let mut pos: u32 = 0;
+            pos += 36;
             pos += <LazyStellarValue as LazyXdr>::xdr_len(&buf[pos as usize..]);
             pos += 76;
             <i64 as LazyXdr>::from_xdr_at(&self.0, pos)
@@ -87043,7 +87364,8 @@ pub mod lazy {
         #[must_use]
         pub fn inflation_seq(&self) -> u32 {
             let buf = self.0.as_slice();
-            let mut pos: u32 = 36;
+            let mut pos: u32 = 0;
+            pos += 36;
             pos += <LazyStellarValue as LazyXdr>::xdr_len(&buf[pos as usize..]);
             pos += 84;
             <u32 as LazyXdr>::from_xdr_at(&self.0, pos)
@@ -87052,7 +87374,8 @@ pub mod lazy {
         #[must_use]
         pub fn id_pool(&self) -> u64 {
             let buf = self.0.as_slice();
-            let mut pos: u32 = 36;
+            let mut pos: u32 = 0;
+            pos += 36;
             pos += <LazyStellarValue as LazyXdr>::xdr_len(&buf[pos as usize..]);
             pos += 88;
             <u64 as LazyXdr>::from_xdr_at(&self.0, pos)
@@ -87061,7 +87384,8 @@ pub mod lazy {
         #[must_use]
         pub fn base_fee(&self) -> u32 {
             let buf = self.0.as_slice();
-            let mut pos: u32 = 36;
+            let mut pos: u32 = 0;
+            pos += 36;
             pos += <LazyStellarValue as LazyXdr>::xdr_len(&buf[pos as usize..]);
             pos += 96;
             <u32 as LazyXdr>::from_xdr_at(&self.0, pos)
@@ -87070,7 +87394,8 @@ pub mod lazy {
         #[must_use]
         pub fn base_reserve(&self) -> u32 {
             let buf = self.0.as_slice();
-            let mut pos: u32 = 36;
+            let mut pos: u32 = 0;
+            pos += 36;
             pos += <LazyStellarValue as LazyXdr>::xdr_len(&buf[pos as usize..]);
             pos += 100;
             <u32 as LazyXdr>::from_xdr_at(&self.0, pos)
@@ -87079,7 +87404,8 @@ pub mod lazy {
         #[must_use]
         pub fn max_tx_set_size(&self) -> u32 {
             let buf = self.0.as_slice();
-            let mut pos: u32 = 36;
+            let mut pos: u32 = 0;
+            pos += 36;
             pos += <LazyStellarValue as LazyXdr>::xdr_len(&buf[pos as usize..]);
             pos += 104;
             <u32 as LazyXdr>::from_xdr_at(&self.0, pos)
@@ -87088,7 +87414,8 @@ pub mod lazy {
         #[must_use]
         pub fn skip_list(&self) -> LazyFixedArray<LazyHash, 4> {
             let buf = self.0.as_slice();
-            let mut pos: u32 = 36;
+            let mut pos: u32 = 0;
+            pos += 36;
             pos += <LazyStellarValue as LazyXdr>::xdr_len(&buf[pos as usize..]);
             pos += 108;
             <LazyFixedArray<LazyHash, 4> as LazyXdr>::from_xdr_at(&self.0, pos)
@@ -87097,7 +87424,8 @@ pub mod lazy {
         #[must_use]
         pub fn ext(&self) -> LazyLedgerHeaderExt {
             let buf = self.0.as_slice();
-            let mut pos: u32 = 36;
+            let mut pos: u32 = 0;
+            pos += 36;
             pos += <LazyStellarValue as LazyXdr>::xdr_len(&buf[pos as usize..]);
             pos += 236;
             <LazyLedgerHeaderExt as LazyXdr>::from_xdr_at(&self.0, pos)
@@ -87138,13 +87466,14 @@ pub mod lazy {
 
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(64).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            <LazyContractId as LazyXdr>::xdr_validate(&buf[(pos + 0) as usize..])?;
-            <LazyHash as LazyXdr>::xdr_validate(&buf[(pos + 32) as usize..])?;
-            pos = next_pos;
+            let field_len = <LazyContractId as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyHash as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -87184,12 +87513,17 @@ pub mod lazy {
         /// Access field `contract_id`.
         #[must_use]
         pub fn contract_id(&self) -> LazyContractId {
-            <LazyContractId as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyContractId as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `content_hash`.
         #[must_use]
         pub fn content_hash(&self) -> LazyHash {
-            <LazyHash as LazyXdr>::from_xdr_at(&self.0, 32)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 32;
+            <LazyHash as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     /// Lazy wrapper for [`super::LedgerUpgrade`].
@@ -87323,8 +87657,7 @@ pub mod lazy {
         /// Get the discriminant.
         #[must_use]
         pub fn discriminant(&self) -> super::LedgerUpgradeType {
-            // Validated — unwrap is safe.
-            super::LedgerUpgradeType::try_from(self.discriminant_i32()).unwrap()
+            <super::LedgerUpgradeType as LazyXdr>::from_xdr_at(&self.0, 0)
         }
 
         /// Access arm `Version`. Returns `Some` if the discriminant matches.
@@ -87339,7 +87672,7 @@ pub mod lazy {
 
         /// Access arm `BaseFee`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_basefee(&self) -> Option<u32> {
+        pub fn as_base_fee(&self) -> Option<u32> {
             if self.discriminant_i32() == 2 {
                 Some(<u32 as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -87349,7 +87682,7 @@ pub mod lazy {
 
         /// Access arm `MaxTxSetSize`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_maxtxsetsize(&self) -> Option<u32> {
+        pub fn as_max_tx_set_size(&self) -> Option<u32> {
             if self.discriminant_i32() == 3 {
                 Some(<u32 as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -87359,7 +87692,7 @@ pub mod lazy {
 
         /// Access arm `BaseReserve`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_basereserve(&self) -> Option<u32> {
+        pub fn as_base_reserve(&self) -> Option<u32> {
             if self.discriminant_i32() == 4 {
                 Some(<u32 as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -87391,7 +87724,7 @@ pub mod lazy {
 
         /// Access arm `MaxSorobanTxSetSize`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_maxsorobantxsetsize(&self) -> Option<u32> {
+        pub fn as_max_soroban_tx_set_size(&self) -> Option<u32> {
             if self.discriminant_i32() == 7 {
                 Some(<u32 as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -87406,14 +87739,11 @@ pub mod lazy {
     impl LazyXdr for LazyConfigUpgradeSet {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazyVecM<LazyConfigSettingEntry> as LazyXdr>::xdr_validate(
-                    &buf[pos as usize..],
-                )?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len =
+                <LazyVecM<LazyConfigSettingEntry> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -87454,7 +87784,9 @@ pub mod lazy {
         /// Access field `updated_entry`.
         #[must_use]
         pub fn updated_entry(&self) -> LazyVecM<LazyConfigSettingEntry> {
-            <LazyVecM<LazyConfigSettingEntry> as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyVecM<LazyConfigSettingEntry> as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     // Enum TxSetComponentType: scalar lazy type — impl LazyXdr directly on the enum.
@@ -87586,20 +87918,16 @@ pub mod lazy {
     impl LazyXdr for LazyParallelTxsComponent {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazyOption<i64> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyVecM<LazyParallelTxExecutionStage> as LazyXdr>::xdr_validate(
-                    &buf[pos as usize..],
-                )?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazyOption<i64> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyVecM<LazyParallelTxExecutionStage> as LazyXdr>::xdr_validate(
+                &buf[pos as usize..],
+            )?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -87642,7 +87970,9 @@ pub mod lazy {
         /// Access field `base_fee`.
         #[must_use]
         pub fn base_fee(&self) -> LazyOption<i64> {
-            <LazyOption<i64> as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyOption<i64> as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `execution_stages`.
         #[must_use]
@@ -87660,20 +87990,15 @@ pub mod lazy {
     impl LazyXdr for LazyTxSetComponentTxsMaybeDiscountedFee {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazyOption<i64> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyVecM<LazyTransactionEnvelope> as LazyXdr>::xdr_validate(
-                    &buf[pos as usize..],
-                )?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazyOption<i64> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyVecM<LazyTransactionEnvelope> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -87715,7 +88040,9 @@ pub mod lazy {
         /// Access field `base_fee`.
         #[must_use]
         pub fn base_fee(&self) -> LazyOption<i64> {
-            <LazyOption<i64> as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyOption<i64> as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `txs`.
         #[must_use]
@@ -87807,13 +88134,12 @@ pub mod lazy {
         /// Get the discriminant.
         #[must_use]
         pub fn discriminant(&self) -> super::TxSetComponentType {
-            // Validated — unwrap is safe.
-            super::TxSetComponentType::try_from(self.discriminant_i32()).unwrap()
+            <super::TxSetComponentType as LazyXdr>::from_xdr_at(&self.0, 0)
         }
 
         /// Access arm `TxsetCompTxsMaybeDiscountedFee`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_txsetcomptxsmaybediscountedfee(
+        pub fn as_txset_comp_txs_maybe_discounted_fee(
             &self,
         ) -> Option<LazyTxSetComponentTxsMaybeDiscountedFee> {
             if self.discriminant_i32() == 0 {
@@ -87945,20 +88271,15 @@ pub mod lazy {
     impl LazyXdr for LazyTransactionSet {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(32).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            <LazyHash as LazyXdr>::xdr_validate(&buf[(pos + 0) as usize..])?;
-            pos = next_pos;
-            {
-                let field_len = <LazyVecM<LazyTransactionEnvelope> as LazyXdr>::xdr_validate(
-                    &buf[pos as usize..],
-                )?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazyHash as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyVecM<LazyTransactionEnvelope> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -88000,12 +88321,17 @@ pub mod lazy {
         /// Access field `previous_ledger_hash`.
         #[must_use]
         pub fn previous_ledger_hash(&self) -> LazyHash {
-            <LazyHash as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyHash as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `txs`.
         #[must_use]
         pub fn txs(&self) -> LazyVecM<LazyTransactionEnvelope> {
-            <LazyVecM<LazyTransactionEnvelope> as LazyXdr>::from_xdr_at(&self.0, 32)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 32;
+            <LazyVecM<LazyTransactionEnvelope> as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     /// Lazy wrapper for [`super::TransactionSetV1`].
@@ -88015,20 +88341,15 @@ pub mod lazy {
     impl LazyXdr for LazyTransactionSetV1 {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(32).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            <LazyHash as LazyXdr>::xdr_validate(&buf[(pos + 0) as usize..])?;
-            pos = next_pos;
-            {
-                let field_len = <LazyVecM<LazyTransactionPhase> as LazyXdr>::xdr_validate(
-                    &buf[pos as usize..],
-                )?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazyHash as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyVecM<LazyTransactionPhase> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -88070,12 +88391,17 @@ pub mod lazy {
         /// Access field `previous_ledger_hash`.
         #[must_use]
         pub fn previous_ledger_hash(&self) -> LazyHash {
-            <LazyHash as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyHash as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `phases`.
         #[must_use]
         pub fn phases(&self) -> LazyVecM<LazyTransactionPhase> {
-            <LazyVecM<LazyTransactionPhase> as LazyXdr>::from_xdr_at(&self.0, 32)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 32;
+            <LazyVecM<LazyTransactionPhase> as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     /// Lazy wrapper for [`super::GeneralizedTransactionSet`].
@@ -88175,19 +88501,14 @@ pub mod lazy {
     impl LazyXdr for LazyTransactionResultPair {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(32).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            <LazyHash as LazyXdr>::xdr_validate(&buf[(pos + 0) as usize..])?;
-            pos = next_pos;
-            {
-                let field_len =
-                    <LazyTransactionResult as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazyHash as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyTransactionResult as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -88229,12 +88550,17 @@ pub mod lazy {
         /// Access field `transaction_hash`.
         #[must_use]
         pub fn transaction_hash(&self) -> LazyHash {
-            <LazyHash as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyHash as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `result`.
         #[must_use]
         pub fn result(&self) -> LazyTransactionResult {
-            <LazyTransactionResult as LazyXdr>::from_xdr_at(&self.0, 32)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 32;
+            <LazyTransactionResult as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     /// Lazy wrapper for [`super::TransactionResultSet`].
@@ -88244,14 +88570,12 @@ pub mod lazy {
     impl LazyXdr for LazyTransactionResultSet {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazyVecM<LazyTransactionResultPair> as LazyXdr>::xdr_validate(
-                    &buf[pos as usize..],
-                )?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazyVecM<LazyTransactionResultPair> as LazyXdr>::xdr_validate(
+                &buf[pos as usize..],
+            )?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -88292,7 +88616,9 @@ pub mod lazy {
         /// Access field `results`.
         #[must_use]
         pub fn results(&self) -> LazyVecM<LazyTransactionResultPair> {
-            <LazyVecM<LazyTransactionResultPair> as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyVecM<LazyTransactionResultPair> as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     /// Lazy wrapper for [`super::TransactionHistoryEntryExt`].
@@ -88402,26 +88728,19 @@ pub mod lazy {
     impl LazyXdr for LazyTransactionHistoryEntry {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(4).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
-            {
-                let field_len =
-                    <LazyTransactionSet as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyTransactionHistoryEntryExt as LazyXdr>::xdr_validate(
-                    &buf[pos as usize..],
-                )?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyTransactionSet as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyTransactionHistoryEntryExt as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -88464,18 +88783,24 @@ pub mod lazy {
         /// Access field `ledger_seq`.
         #[must_use]
         pub fn ledger_seq(&self) -> u32 {
-            <u32 as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <u32 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `tx_set`.
         #[must_use]
         pub fn tx_set(&self) -> LazyTransactionSet {
-            <LazyTransactionSet as LazyXdr>::from_xdr_at(&self.0, 4)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 4;
+            <LazyTransactionSet as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `ext`.
         #[must_use]
         pub fn ext(&self) -> LazyTransactionHistoryEntryExt {
             let buf = self.0.as_slice();
-            let mut pos: u32 = 4;
+            let mut pos: u32 = 0;
+            pos += 4;
             pos += <LazyTransactionSet as LazyXdr>::xdr_len(&buf[pos as usize..]);
             <LazyTransactionHistoryEntryExt as LazyXdr>::from_xdr_at(&self.0, pos)
         }
@@ -88563,26 +88888,21 @@ pub mod lazy {
     impl LazyXdr for LazyTransactionHistoryResultEntry {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(4).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
-            {
-                let field_len =
-                    <LazyTransactionResultSet as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyTransactionHistoryResultEntryExt as LazyXdr>::xdr_validate(
-                    &buf[pos as usize..],
-                )?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyTransactionResultSet as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyTransactionHistoryResultEntryExt as LazyXdr>::xdr_validate(
+                &buf[pos as usize..],
+            )?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -88625,18 +88945,24 @@ pub mod lazy {
         /// Access field `ledger_seq`.
         #[must_use]
         pub fn ledger_seq(&self) -> u32 {
-            <u32 as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <u32 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `tx_result_set`.
         #[must_use]
         pub fn tx_result_set(&self) -> LazyTransactionResultSet {
-            <LazyTransactionResultSet as LazyXdr>::from_xdr_at(&self.0, 4)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 4;
+            <LazyTransactionResultSet as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `ext`.
         #[must_use]
         pub fn ext(&self) -> LazyTransactionHistoryResultEntryExt {
             let buf = self.0.as_slice();
-            let mut pos: u32 = 4;
+            let mut pos: u32 = 0;
+            pos += 4;
             pos += <LazyTransactionResultSet as LazyXdr>::xdr_len(&buf[pos as usize..]);
             <LazyTransactionHistoryResultEntryExt as LazyXdr>::from_xdr_at(&self.0, pos)
         }
@@ -88724,26 +89050,19 @@ pub mod lazy {
     impl LazyXdr for LazyLedgerHeaderHistoryEntry {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(32).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            <LazyHash as LazyXdr>::xdr_validate(&buf[(pos + 0) as usize..])?;
-            pos = next_pos;
-            {
-                let field_len = <LazyLedgerHeader as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyLedgerHeaderHistoryEntryExt as LazyXdr>::xdr_validate(
-                    &buf[pos as usize..],
-                )?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazyHash as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyLedgerHeader as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyLedgerHeaderHistoryEntryExt as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -88786,18 +89105,24 @@ pub mod lazy {
         /// Access field `hash`.
         #[must_use]
         pub fn hash(&self) -> LazyHash {
-            <LazyHash as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyHash as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `header`.
         #[must_use]
         pub fn header(&self) -> LazyLedgerHeader {
-            <LazyLedgerHeader as LazyXdr>::from_xdr_at(&self.0, 32)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 32;
+            <LazyLedgerHeader as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `ext`.
         #[must_use]
         pub fn ext(&self) -> LazyLedgerHeaderHistoryEntryExt {
             let buf = self.0.as_slice();
-            let mut pos: u32 = 32;
+            let mut pos: u32 = 0;
+            pos += 32;
             pos += <LazyLedgerHeader as LazyXdr>::xdr_len(&buf[pos as usize..]);
             <LazyLedgerHeaderHistoryEntryExt as LazyXdr>::from_xdr_at(&self.0, pos)
         }
@@ -88809,18 +89134,15 @@ pub mod lazy {
     impl LazyXdr for LazyLedgerScpMessages {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(4).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
-            {
-                let field_len =
-                    <LazyVecM<LazyScpEnvelope> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyVecM<LazyScpEnvelope> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -88862,12 +89184,17 @@ pub mod lazy {
         /// Access field `ledger_seq`.
         #[must_use]
         pub fn ledger_seq(&self) -> u32 {
-            <u32 as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <u32 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `messages`.
         #[must_use]
         pub fn messages(&self) -> LazyVecM<LazyScpEnvelope> {
-            <LazyVecM<LazyScpEnvelope> as LazyXdr>::from_xdr_at(&self.0, 4)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 4;
+            <LazyVecM<LazyScpEnvelope> as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     /// Lazy wrapper for [`super::ScpHistoryEntryV0`].
@@ -88877,20 +89204,15 @@ pub mod lazy {
     impl LazyXdr for LazyScpHistoryEntryV0 {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len =
-                    <LazyVecM<LazyScpQuorumSet> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len =
-                    <LazyLedgerScpMessages as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len =
+                <LazyVecM<LazyScpQuorumSet> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyLedgerScpMessages as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -88932,7 +89254,9 @@ pub mod lazy {
         /// Access field `quorum_sets`.
         #[must_use]
         pub fn quorum_sets(&self) -> LazyVecM<LazyScpQuorumSet> {
-            <LazyVecM<LazyScpQuorumSet> as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyVecM<LazyScpQuorumSet> as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `ledger_messages`.
         #[must_use]
@@ -89175,8 +89499,7 @@ pub mod lazy {
         /// Get the discriminant.
         #[must_use]
         pub fn discriminant(&self) -> super::LedgerEntryChangeType {
-            // Validated — unwrap is safe.
-            super::LedgerEntryChangeType::try_from(self.discriminant_i32()).unwrap()
+            <super::LedgerEntryChangeType as LazyXdr>::from_xdr_at(&self.0, 0)
         }
 
         /// Access arm `Created`. Returns `Some` if the discriminant matches.
@@ -89284,13 +89607,11 @@ pub mod lazy {
     impl LazyXdr for LazyOperationMeta {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len =
-                    <LazyLedgerEntryChanges as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len =
+                <LazyLedgerEntryChanges as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -89331,7 +89652,9 @@ pub mod lazy {
         /// Access field `changes`.
         #[must_use]
         pub fn changes(&self) -> LazyLedgerEntryChanges {
-            <LazyLedgerEntryChanges as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyLedgerEntryChanges as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     /// Lazy wrapper for [`super::TransactionMetaV1`].
@@ -89341,20 +89664,16 @@ pub mod lazy {
     impl LazyXdr for LazyTransactionMetaV1 {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len =
-                    <LazyLedgerEntryChanges as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len =
-                    <LazyVecM<LazyOperationMeta> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len =
+                <LazyLedgerEntryChanges as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyVecM<LazyOperationMeta> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -89396,7 +89715,9 @@ pub mod lazy {
         /// Access field `tx_changes`.
         #[must_use]
         pub fn tx_changes(&self) -> LazyLedgerEntryChanges {
-            <LazyLedgerEntryChanges as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyLedgerEntryChanges as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `operations`.
         #[must_use]
@@ -89414,27 +89735,21 @@ pub mod lazy {
     impl LazyXdr for LazyTransactionMetaV2 {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len =
-                    <LazyLedgerEntryChanges as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len =
-                    <LazyVecM<LazyOperationMeta> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len =
-                    <LazyLedgerEntryChanges as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len =
+                <LazyLedgerEntryChanges as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyVecM<LazyOperationMeta> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyLedgerEntryChanges as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -89477,7 +89792,9 @@ pub mod lazy {
         /// Access field `tx_changes_before`.
         #[must_use]
         pub fn tx_changes_before(&self) -> LazyLedgerEntryChanges {
-            <LazyLedgerEntryChanges as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyLedgerEntryChanges as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `operations`.
         #[must_use]
@@ -89530,19 +89847,14 @@ pub mod lazy {
     impl LazyXdr for LazyContractEventV0 {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len =
-                    <LazyVecM<LazyScVal> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyScVal as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazyVecM<LazyScVal> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyScVal as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -89584,7 +89896,9 @@ pub mod lazy {
         /// Access field `topics`.
         #[must_use]
         pub fn topics(&self) -> LazyVecM<LazyScVal> {
-            <LazyVecM<LazyScVal> as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyVecM<LazyScVal> as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `data`.
         #[must_use]
@@ -89692,33 +90006,24 @@ pub mod lazy {
     impl LazyXdr for LazyContractEvent {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len =
-                    <LazyExtensionPoint as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len =
-                    <LazyOption<LazyContractId> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            let next_pos = pos.checked_add(4).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            <super::ContractEventType as LazyXdr>::xdr_validate(&buf[(pos + 0) as usize..])?;
-            pos = next_pos;
-            {
-                let field_len =
-                    <LazyContractEventBody as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazyExtensionPoint as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyOption<LazyContractId> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <super::ContractEventType as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyContractEventBody as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -89762,7 +90067,9 @@ pub mod lazy {
         /// Access field `ext`.
         #[must_use]
         pub fn ext(&self) -> LazyExtensionPoint {
-            <LazyExtensionPoint as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyExtensionPoint as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `contract_id`.
         #[must_use]
@@ -89799,18 +90106,14 @@ pub mod lazy {
     impl LazyXdr for LazyDiagnosticEvent {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(4).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            <bool as LazyXdr>::xdr_validate(&buf[(pos + 0) as usize..])?;
-            pos = next_pos;
-            {
-                let field_len = <LazyContractEvent as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <bool as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyContractEvent as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -89852,12 +90155,17 @@ pub mod lazy {
         /// Access field `in_successful_contract_call`.
         #[must_use]
         pub fn in_successful_contract_call(&self) -> bool {
-            <bool as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <bool as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `event`.
         #[must_use]
         pub fn event(&self) -> LazyContractEvent {
-            <LazyContractEvent as LazyXdr>::from_xdr_at(&self.0, 4)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 4;
+            <LazyContractEvent as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     /// Lazy wrapper for [`super::SorobanTransactionMetaExtV1`].
@@ -89867,18 +90175,22 @@ pub mod lazy {
     impl LazyXdr for LazySorobanTransactionMetaExtV1 {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len =
-                    <LazyExtensionPoint as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            let next_pos = pos.checked_add(24).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
+            let field_len = <LazyExtensionPoint as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <i64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <i64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <i64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -89920,7 +90232,9 @@ pub mod lazy {
         /// Access field `ext`.
         #[must_use]
         pub fn ext(&self) -> LazyExtensionPoint {
-            <LazyExtensionPoint as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyExtensionPoint as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `total_non_refundable_resource_fee_charged`.
         #[must_use]
@@ -90056,33 +90370,25 @@ pub mod lazy {
     impl LazyXdr for LazySorobanTransactionMeta {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len =
-                    <LazySorobanTransactionMetaExt as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len =
-                    <LazyVecM<LazyContractEvent> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyScVal as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len =
-                    <LazyVecM<LazyDiagnosticEvent> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len =
+                <LazySorobanTransactionMetaExt as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyVecM<LazyContractEvent> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyScVal as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyVecM<LazyDiagnosticEvent> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -90126,7 +90432,9 @@ pub mod lazy {
         /// Access field `ext`.
         #[must_use]
         pub fn ext(&self) -> LazySorobanTransactionMetaExt {
-            <LazySorobanTransactionMetaExt as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazySorobanTransactionMetaExt as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `events`.
         #[must_use]
@@ -90163,42 +90471,31 @@ pub mod lazy {
     impl LazyXdr for LazyTransactionMetaV3 {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len =
-                    <LazyExtensionPoint as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len =
-                    <LazyLedgerEntryChanges as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len =
-                    <LazyVecM<LazyOperationMeta> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len =
-                    <LazyLedgerEntryChanges as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyOption<LazySorobanTransactionMeta> as LazyXdr>::xdr_validate(
-                    &buf[pos as usize..],
-                )?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazyExtensionPoint as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyLedgerEntryChanges as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyVecM<LazyOperationMeta> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyLedgerEntryChanges as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyOption<LazySorobanTransactionMeta> as LazyXdr>::xdr_validate(
+                &buf[pos as usize..],
+            )?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -90244,7 +90541,9 @@ pub mod lazy {
         /// Access field `ext`.
         #[must_use]
         pub fn ext(&self) -> LazyExtensionPoint {
-            <LazyExtensionPoint as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyExtensionPoint as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `tx_changes_before`.
         #[must_use]
@@ -90292,27 +90591,20 @@ pub mod lazy {
     impl LazyXdr for LazyOperationMetaV2 {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len =
-                    <LazyExtensionPoint as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len =
-                    <LazyLedgerEntryChanges as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len =
-                    <LazyVecM<LazyContractEvent> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazyExtensionPoint as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyLedgerEntryChanges as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyVecM<LazyContractEvent> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -90355,7 +90647,9 @@ pub mod lazy {
         /// Access field `ext`.
         #[must_use]
         pub fn ext(&self) -> LazyExtensionPoint {
-            <LazyExtensionPoint as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyExtensionPoint as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `changes`.
         #[must_use]
@@ -90382,20 +90676,15 @@ pub mod lazy {
     impl LazyXdr for LazySorobanTransactionMetaV2 {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len =
-                    <LazySorobanTransactionMetaExt as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len =
-                    <LazyOption<LazyScVal> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len =
+                <LazySorobanTransactionMetaExt as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyOption<LazyScVal> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -90437,7 +90726,9 @@ pub mod lazy {
         /// Access field `ext`.
         #[must_use]
         pub fn ext(&self) -> LazySorobanTransactionMetaExt {
-            <LazySorobanTransactionMetaExt as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazySorobanTransactionMetaExt as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `return_value`.
         #[must_use]
@@ -90481,18 +90772,15 @@ pub mod lazy {
     impl LazyXdr for LazyTransactionEvent {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(4).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            <super::TransactionEventStage as LazyXdr>::xdr_validate(&buf[(pos + 0) as usize..])?;
-            pos = next_pos;
-            {
-                let field_len = <LazyContractEvent as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len =
+                <super::TransactionEventStage as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyContractEvent as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -90534,12 +90822,17 @@ pub mod lazy {
         /// Access field `stage`.
         #[must_use]
         pub fn stage(&self) -> super::TransactionEventStage {
-            <super::TransactionEventStage as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <super::TransactionEventStage as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `event`.
         #[must_use]
         pub fn event(&self) -> LazyContractEvent {
-            <LazyContractEvent as LazyXdr>::from_xdr_at(&self.0, 4)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 4;
+            <LazyContractEvent as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     /// Lazy wrapper for [`super::TransactionMetaV4`].
@@ -90549,58 +90842,41 @@ pub mod lazy {
     impl LazyXdr for LazyTransactionMetaV4 {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len =
-                    <LazyExtensionPoint as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len =
-                    <LazyLedgerEntryChanges as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len =
-                    <LazyVecM<LazyOperationMetaV2> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len =
-                    <LazyLedgerEntryChanges as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len =
-                    <LazyOption<LazySorobanTransactionMetaV2> as LazyXdr>::xdr_validate(
-                        &buf[pos as usize..],
-                    )?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyVecM<LazyTransactionEvent> as LazyXdr>::xdr_validate(
-                    &buf[pos as usize..],
-                )?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len =
-                    <LazyVecM<LazyDiagnosticEvent> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazyExtensionPoint as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyLedgerEntryChanges as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyVecM<LazyOperationMetaV2> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyLedgerEntryChanges as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyOption<LazySorobanTransactionMetaV2> as LazyXdr>::xdr_validate(
+                &buf[pos as usize..],
+            )?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyVecM<LazyTransactionEvent> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyVecM<LazyDiagnosticEvent> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -90649,7 +90925,9 @@ pub mod lazy {
         /// Access field `ext`.
         #[must_use]
         pub fn ext(&self) -> LazyExtensionPoint {
-            <LazyExtensionPoint as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyExtensionPoint as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `tx_changes_before`.
         #[must_use]
@@ -90726,19 +91004,15 @@ pub mod lazy {
     impl LazyXdr for LazyInvokeHostFunctionSuccessPreImage {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazyScVal as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len =
-                    <LazyVecM<LazyContractEvent> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazyScVal as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyVecM<LazyContractEvent> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -90780,7 +91054,9 @@ pub mod lazy {
         /// Access field `return_value`.
         #[must_use]
         pub fn return_value(&self) -> LazyScVal {
-            <LazyScVal as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyScVal as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `events`.
         #[must_use]
@@ -90971,27 +91247,20 @@ pub mod lazy {
     impl LazyXdr for LazyTransactionResultMeta {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len =
-                    <LazyTransactionResultPair as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len =
-                    <LazyLedgerEntryChanges as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len =
-                    <LazyTransactionMeta as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len =
+                <LazyTransactionResultPair as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyLedgerEntryChanges as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyTransactionMeta as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -91034,7 +91303,9 @@ pub mod lazy {
         /// Access field `result`.
         #[must_use]
         pub fn result(&self) -> LazyTransactionResultPair {
-            <LazyTransactionResultPair as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyTransactionResultPair as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `fee_processing`.
         #[must_use]
@@ -91061,41 +91332,29 @@ pub mod lazy {
     impl LazyXdr for LazyTransactionResultMetaV1 {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len =
-                    <LazyExtensionPoint as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len =
-                    <LazyTransactionResultPair as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len =
-                    <LazyLedgerEntryChanges as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len =
-                    <LazyTransactionMeta as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len =
-                    <LazyLedgerEntryChanges as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazyExtensionPoint as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyTransactionResultPair as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyLedgerEntryChanges as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyTransactionMeta as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyLedgerEntryChanges as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -91140,7 +91399,9 @@ pub mod lazy {
         /// Access field `ext`.
         #[must_use]
         pub fn ext(&self) -> LazyExtensionPoint {
-            <LazyExtensionPoint as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyExtensionPoint as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `result`.
         #[must_use]
@@ -91188,19 +91449,15 @@ pub mod lazy {
     impl LazyXdr for LazyUpgradeEntryMeta {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazyLedgerUpgrade as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len =
-                    <LazyLedgerEntryChanges as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazyLedgerUpgrade as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyLedgerEntryChanges as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -91242,7 +91499,9 @@ pub mod lazy {
         /// Access field `upgrade`.
         #[must_use]
         pub fn upgrade(&self) -> LazyLedgerUpgrade {
-            <LazyLedgerUpgrade as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyLedgerUpgrade as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `changes`.
         #[must_use]
@@ -91260,43 +91519,31 @@ pub mod lazy {
     impl LazyXdr for LazyLedgerCloseMetaV0 {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len =
-                    <LazyLedgerHeaderHistoryEntry as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len =
-                    <LazyTransactionSet as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyVecM<LazyTransactionResultMeta> as LazyXdr>::xdr_validate(
-                    &buf[pos as usize..],
-                )?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyVecM<LazyUpgradeEntryMeta> as LazyXdr>::xdr_validate(
-                    &buf[pos as usize..],
-                )?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len =
-                    <LazyVecM<LazyScpHistoryEntry> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len =
+                <LazyLedgerHeaderHistoryEntry as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyTransactionSet as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyVecM<LazyTransactionResultMeta> as LazyXdr>::xdr_validate(
+                &buf[pos as usize..],
+            )?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyVecM<LazyUpgradeEntryMeta> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyVecM<LazyScpHistoryEntry> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -91341,7 +91588,9 @@ pub mod lazy {
         /// Access field `ledger_header`.
         #[must_use]
         pub fn ledger_header(&self) -> LazyLedgerHeaderHistoryEntry {
-            <LazyLedgerHeaderHistoryEntry as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyLedgerHeaderHistoryEntry as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `tx_set`.
         #[must_use]
@@ -91389,18 +91638,14 @@ pub mod lazy {
     impl LazyXdr for LazyLedgerCloseMetaExtV1 {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len =
-                    <LazyExtensionPoint as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            let next_pos = pos.checked_add(8).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
+            let field_len = <LazyExtensionPoint as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <i64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -91442,7 +91687,9 @@ pub mod lazy {
         /// Access field `ext`.
         #[must_use]
         pub fn ext(&self) -> LazyExtensionPoint {
-            <LazyExtensionPoint as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyExtensionPoint as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `soroban_fee_write1_kb`.
         #[must_use]
@@ -91558,69 +91805,51 @@ pub mod lazy {
     impl LazyXdr for LazyLedgerCloseMetaV1 {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len =
-                    <LazyLedgerCloseMetaExt as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len =
-                    <LazyLedgerHeaderHistoryEntry as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len =
-                    <LazyGeneralizedTransactionSet as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyVecM<LazyTransactionResultMeta> as LazyXdr>::xdr_validate(
-                    &buf[pos as usize..],
-                )?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyVecM<LazyUpgradeEntryMeta> as LazyXdr>::xdr_validate(
-                    &buf[pos as usize..],
-                )?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len =
-                    <LazyVecM<LazyScpHistoryEntry> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            let next_pos = pos.checked_add(8).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
-            {
-                let field_len =
-                    <LazyVecM<LazyLedgerKey> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len =
-                    <LazyVecM<LazyLedgerEntry> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len =
+                <LazyLedgerCloseMetaExt as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyLedgerHeaderHistoryEntry as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyGeneralizedTransactionSet as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyVecM<LazyTransactionResultMeta> as LazyXdr>::xdr_validate(
+                &buf[pos as usize..],
+            )?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyVecM<LazyUpgradeEntryMeta> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyVecM<LazyScpHistoryEntry> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyVecM<LazyLedgerKey> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyVecM<LazyLedgerEntry> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -91669,7 +91898,9 @@ pub mod lazy {
         /// Access field `ext`.
         #[must_use]
         pub fn ext(&self) -> LazyLedgerCloseMetaExt {
-            <LazyLedgerCloseMetaExt as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyLedgerCloseMetaExt as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `ledger_header`.
         #[must_use]
@@ -91771,62 +92002,46 @@ pub mod lazy {
     impl LazyXdr for LazyLedgerCloseMetaV2 {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len =
-                    <LazyLedgerCloseMetaExt as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len =
-                    <LazyLedgerHeaderHistoryEntry as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len =
-                    <LazyGeneralizedTransactionSet as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyVecM<LazyTransactionResultMetaV1> as LazyXdr>::xdr_validate(
-                    &buf[pos as usize..],
-                )?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyVecM<LazyUpgradeEntryMeta> as LazyXdr>::xdr_validate(
-                    &buf[pos as usize..],
-                )?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len =
-                    <LazyVecM<LazyScpHistoryEntry> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            let next_pos = pos.checked_add(8).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
-            {
-                let field_len =
-                    <LazyVecM<LazyLedgerKey> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len =
+                <LazyLedgerCloseMetaExt as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyLedgerHeaderHistoryEntry as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyGeneralizedTransactionSet as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyVecM<LazyTransactionResultMetaV1> as LazyXdr>::xdr_validate(
+                &buf[pos as usize..],
+            )?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyVecM<LazyUpgradeEntryMeta> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyVecM<LazyScpHistoryEntry> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyVecM<LazyLedgerKey> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -91875,7 +92090,9 @@ pub mod lazy {
         /// Access field `ext`.
         #[must_use]
         pub fn ext(&self) -> LazyLedgerCloseMetaExt {
-            <LazyLedgerCloseMetaExt as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyLedgerCloseMetaExt as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `ledger_header`.
         #[must_use]
@@ -92122,18 +92339,14 @@ pub mod lazy {
     impl LazyXdr for LazySError {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(4).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            <super::ErrorCode as LazyXdr>::xdr_validate(&buf[(pos + 0) as usize..])?;
-            pos = next_pos;
-            {
-                let field_len = <LazyStringM<100> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <super::ErrorCode as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyStringM<100> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -92175,12 +92388,17 @@ pub mod lazy {
         /// Access field `code`.
         #[must_use]
         pub fn code(&self) -> super::ErrorCode {
-            <super::ErrorCode as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <super::ErrorCode as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `msg`.
         #[must_use]
         pub fn msg(&self) -> LazyStringM<100> {
-            <LazyStringM<100> as LazyXdr>::from_xdr_at(&self.0, 4)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 4;
+            <LazyStringM<100> as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     /// Lazy wrapper for [`super::SendMore`].
@@ -92192,11 +92410,10 @@ pub mod lazy {
 
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(4).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -92236,7 +92453,9 @@ pub mod lazy {
         /// Access field `num_messages`.
         #[must_use]
         pub fn num_messages(&self) -> u32 {
-            <u32 as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <u32 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     /// Lazy wrapper for [`super::SendMoreExtended`].
@@ -92248,11 +92467,14 @@ pub mod lazy {
 
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(8).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -92292,12 +92514,17 @@ pub mod lazy {
         /// Access field `num_messages`.
         #[must_use]
         pub fn num_messages(&self) -> u32 {
-            <u32 as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <u32 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `num_bytes`.
         #[must_use]
         pub fn num_bytes(&self) -> u32 {
-            <u32 as LazyXdr>::from_xdr_at(&self.0, 4)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 4;
+            <u32 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     /// Lazy wrapper for [`super::AuthCert`].
@@ -92307,18 +92534,18 @@ pub mod lazy {
     impl LazyXdr for LazyAuthCert {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(40).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            <LazyCurve25519Public as LazyXdr>::xdr_validate(&buf[(pos + 0) as usize..])?;
-            pos = next_pos;
-            {
-                let field_len = <LazySignature as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazyCurve25519Public as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazySignature as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -92360,17 +92587,25 @@ pub mod lazy {
         /// Access field `pubkey`.
         #[must_use]
         pub fn pubkey(&self) -> LazyCurve25519Public {
-            <LazyCurve25519Public as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyCurve25519Public as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `expiration`.
         #[must_use]
         pub fn expiration(&self) -> u64 {
-            <u64 as LazyXdr>::from_xdr_at(&self.0, 32)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 32;
+            <u64 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `sig`.
         #[must_use]
         pub fn sig(&self) -> LazySignature {
-            <LazySignature as LazyXdr>::from_xdr_at(&self.0, 40)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 40;
+            <LazySignature as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     /// Lazy wrapper for [`super::Hello`].
@@ -92380,41 +92615,42 @@ pub mod lazy {
     impl LazyXdr for LazyHello {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(44).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            <LazyHash as LazyXdr>::xdr_validate(&buf[(pos + 12) as usize..])?;
-            pos = next_pos;
-            {
-                let field_len = <LazyStringM<100> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            let next_pos = pos.checked_add(4).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
-            {
-                let field_len = <LazyNodeId as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyAuthCert as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            let next_pos = pos.checked_add(32).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            <LazyUint256 as LazyXdr>::xdr_validate(&buf[(pos + 0) as usize..])?;
-            pos = next_pos;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyHash as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyStringM<100> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <i32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyNodeId as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyAuthCert as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyUint256 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -92460,33 +92696,48 @@ pub mod lazy {
         /// Access field `ledger_version`.
         #[must_use]
         pub fn ledger_version(&self) -> u32 {
-            <u32 as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <u32 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `overlay_version`.
         #[must_use]
         pub fn overlay_version(&self) -> u32 {
-            <u32 as LazyXdr>::from_xdr_at(&self.0, 4)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 4;
+            <u32 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `overlay_min_version`.
         #[must_use]
         pub fn overlay_min_version(&self) -> u32 {
-            <u32 as LazyXdr>::from_xdr_at(&self.0, 8)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 8;
+            <u32 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `network_id`.
         #[must_use]
         pub fn network_id(&self) -> LazyHash {
-            <LazyHash as LazyXdr>::from_xdr_at(&self.0, 12)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 12;
+            <LazyHash as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `version_str`.
         #[must_use]
         pub fn version_str(&self) -> LazyStringM<100> {
-            <LazyStringM<100> as LazyXdr>::from_xdr_at(&self.0, 44)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 44;
+            <LazyStringM<100> as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `listening_port`.
         #[must_use]
         pub fn listening_port(&self) -> i32 {
             let buf = self.0.as_slice();
-            let mut pos: u32 = 44;
+            let mut pos: u32 = 0;
+            pos += 44;
             pos += <LazyStringM<100> as LazyXdr>::xdr_len(&buf[pos as usize..]);
             <i32 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
@@ -92494,7 +92745,8 @@ pub mod lazy {
         #[must_use]
         pub fn peer_id(&self) -> LazyNodeId {
             let buf = self.0.as_slice();
-            let mut pos: u32 = 44;
+            let mut pos: u32 = 0;
+            pos += 44;
             pos += <LazyStringM<100> as LazyXdr>::xdr_len(&buf[pos as usize..]);
             pos += 4;
             <LazyNodeId as LazyXdr>::from_xdr_at(&self.0, pos)
@@ -92503,7 +92755,8 @@ pub mod lazy {
         #[must_use]
         pub fn cert(&self) -> LazyAuthCert {
             let buf = self.0.as_slice();
-            let mut pos: u32 = 44;
+            let mut pos: u32 = 0;
+            pos += 44;
             pos += <LazyStringM<100> as LazyXdr>::xdr_len(&buf[pos as usize..]);
             pos += 4;
             pos += <LazyNodeId as LazyXdr>::xdr_len(&buf[pos as usize..]);
@@ -92513,7 +92766,8 @@ pub mod lazy {
         #[must_use]
         pub fn nonce(&self) -> LazyUint256 {
             let buf = self.0.as_slice();
-            let mut pos: u32 = 44;
+            let mut pos: u32 = 0;
+            pos += 44;
             pos += <LazyStringM<100> as LazyXdr>::xdr_len(&buf[pos as usize..]);
             pos += 4;
             pos += <LazyNodeId as LazyXdr>::xdr_len(&buf[pos as usize..]);
@@ -92531,11 +92785,10 @@ pub mod lazy {
 
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(4).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
+            let field_len = <i32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -92575,7 +92828,9 @@ pub mod lazy {
         /// Access field `flags`.
         #[must_use]
         pub fn flags(&self) -> i32 {
-            <i32 as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <i32 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     // Enum IpAddrType: scalar lazy type — impl LazyXdr directly on the enum.
@@ -92691,13 +92946,12 @@ pub mod lazy {
         /// Get the discriminant.
         #[must_use]
         pub fn discriminant(&self) -> super::IpAddrType {
-            // Validated — unwrap is safe.
-            super::IpAddrType::try_from(self.discriminant_i32()).unwrap()
+            <super::IpAddrType as LazyXdr>::from_xdr_at(&self.0, 0)
         }
 
         /// Access arm `IPv4`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_ipv4(&self) -> Option<LazyOpaqueFixed<4>> {
+        pub fn as_i_pv4(&self) -> Option<LazyOpaqueFixed<4>> {
             if self.discriminant_i32() == 0 {
                 Some(<LazyOpaqueFixed<4> as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -92707,7 +92961,7 @@ pub mod lazy {
 
         /// Access arm `IPv6`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_ipv6(&self) -> Option<LazyOpaqueFixed<16>> {
+        pub fn as_i_pv6(&self) -> Option<LazyOpaqueFixed<16>> {
             if self.discriminant_i32() == 1 {
                 Some(<LazyOpaqueFixed<16> as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -92722,17 +92976,18 @@ pub mod lazy {
     impl LazyXdr for LazyPeerAddress {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazyPeerAddressIp as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            let next_pos = pos.checked_add(8).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
+            let field_len = <LazyPeerAddressIp as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -92774,7 +93029,9 @@ pub mod lazy {
         /// Access field `ip`.
         #[must_use]
         pub fn ip(&self) -> LazyPeerAddressIp {
-            <LazyPeerAddressIp as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyPeerAddressIp as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `port`.
         #[must_use]
@@ -92829,13 +93086,14 @@ pub mod lazy {
 
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(36).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            <super::MessageType as LazyXdr>::xdr_validate(&buf[(pos + 0) as usize..])?;
-            <LazyUint256 as LazyXdr>::xdr_validate(&buf[(pos + 4) as usize..])?;
-            pos = next_pos;
+            let field_len = <super::MessageType as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyUint256 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -92875,12 +93133,17 @@ pub mod lazy {
         /// Access field `type_`.
         #[must_use]
         pub fn type_(&self) -> super::MessageType {
-            <super::MessageType as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <super::MessageType as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `req_hash`.
         #[must_use]
         pub fn req_hash(&self) -> LazyUint256 {
-            <LazyUint256 as LazyXdr>::from_xdr_at(&self.0, 4)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 4;
+            <LazyUint256 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     // Enum SurveyMessageCommandType: scalar lazy type — impl LazyXdr directly on the enum.
@@ -92942,17 +93205,18 @@ pub mod lazy {
     impl LazyXdr for LazyTimeSlicedSurveyStartCollectingMessage {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazyNodeId as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            let next_pos = pos.checked_add(8).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
+            let field_len = <LazyNodeId as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -92994,7 +93258,9 @@ pub mod lazy {
         /// Access field `surveyor_id`.
         #[must_use]
         pub fn surveyor_id(&self) -> LazyNodeId {
-            <LazyNodeId as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyNodeId as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `nonce`.
         #[must_use]
@@ -93021,21 +93287,16 @@ pub mod lazy {
     impl LazyXdr for LazySignedTimeSlicedSurveyStartCollectingMessage {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazySignature as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len =
-                    <LazyTimeSlicedSurveyStartCollectingMessage as LazyXdr>::xdr_validate(
-                        &buf[pos as usize..],
-                    )?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazySignature as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyTimeSlicedSurveyStartCollectingMessage as LazyXdr>::xdr_validate(
+                &buf[pos as usize..],
+            )?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -93079,7 +93340,9 @@ pub mod lazy {
         /// Access field `signature`.
         #[must_use]
         pub fn signature(&self) -> LazySignature {
-            <LazySignature as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazySignature as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `start_collecting`.
         #[must_use]
@@ -93097,17 +93360,18 @@ pub mod lazy {
     impl LazyXdr for LazyTimeSlicedSurveyStopCollectingMessage {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazyNodeId as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            let next_pos = pos.checked_add(8).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
+            let field_len = <LazyNodeId as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -93149,7 +93413,9 @@ pub mod lazy {
         /// Access field `surveyor_id`.
         #[must_use]
         pub fn surveyor_id(&self) -> LazyNodeId {
-            <LazyNodeId as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyNodeId as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `nonce`.
         #[must_use]
@@ -93176,21 +93442,16 @@ pub mod lazy {
     impl LazyXdr for LazySignedTimeSlicedSurveyStopCollectingMessage {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazySignature as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len =
-                    <LazyTimeSlicedSurveyStopCollectingMessage as LazyXdr>::xdr_validate(
-                        &buf[pos as usize..],
-                    )?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazySignature as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyTimeSlicedSurveyStopCollectingMessage as LazyXdr>::xdr_validate(
+                &buf[pos as usize..],
+            )?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -93234,7 +93495,9 @@ pub mod lazy {
         /// Access field `signature`.
         #[must_use]
         pub fn signature(&self) -> LazySignature {
-            <LazySignature as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazySignature as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `stop_collecting`.
         #[must_use]
@@ -93252,27 +93515,27 @@ pub mod lazy {
     impl LazyXdr for LazySurveyRequestMessage {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazyNodeId as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyNodeId as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            let next_pos = pos.checked_add(40).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            <LazyCurve25519Public as LazyXdr>::xdr_validate(&buf[(pos + 4) as usize..])?;
-            <super::SurveyMessageCommandType as LazyXdr>::xdr_validate(
-                &buf[(pos + 36) as usize..],
-            )?;
-            pos = next_pos;
+            let field_len = <LazyNodeId as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyNodeId as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyCurve25519Public as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <super::SurveyMessageCommandType as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -93315,7 +93578,9 @@ pub mod lazy {
         /// Access field `surveyor_peer_id`.
         #[must_use]
         pub fn surveyor_peer_id(&self) -> LazyNodeId {
-            <LazyNodeId as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyNodeId as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `surveyed_peer_id`.
         #[must_use]
@@ -93362,18 +93627,23 @@ pub mod lazy {
     impl LazyXdr for LazyTimeSlicedSurveyRequestMessage {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len =
-                    <LazySurveyRequestMessage as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            let next_pos = pos.checked_add(12).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
+            let field_len =
+                <LazySurveyRequestMessage as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -93415,7 +93685,9 @@ pub mod lazy {
         /// Access field `request`.
         #[must_use]
         pub fn request(&self) -> LazySurveyRequestMessage {
-            <LazySurveyRequestMessage as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazySurveyRequestMessage as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `nonce`.
         #[must_use]
@@ -93451,20 +93723,16 @@ pub mod lazy {
     impl LazyXdr for LazySignedTimeSlicedSurveyRequestMessage {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazySignature as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyTimeSlicedSurveyRequestMessage as LazyXdr>::xdr_validate(
-                    &buf[pos as usize..],
-                )?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazySignature as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyTimeSlicedSurveyRequestMessage as LazyXdr>::xdr_validate(
+                &buf[pos as usize..],
+            )?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -93506,7 +93774,9 @@ pub mod lazy {
         /// Access field `request_signature`.
         #[must_use]
         pub fn request_signature(&self) -> LazySignature {
-            <LazySignature as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazySignature as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `request`.
         #[must_use]
@@ -93570,30 +93840,27 @@ pub mod lazy {
     impl LazyXdr for LazySurveyResponseMessage {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazyNodeId as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyNodeId as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            let next_pos = pos.checked_add(8).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            <super::SurveyMessageCommandType as LazyXdr>::xdr_validate(&buf[(pos + 4) as usize..])?;
-            pos = next_pos;
-            {
-                let field_len = <LazyEncryptedBody as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazyNodeId as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyNodeId as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <super::SurveyMessageCommandType as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyEncryptedBody as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -93637,7 +93904,9 @@ pub mod lazy {
         /// Access field `surveyor_peer_id`.
         #[must_use]
         pub fn surveyor_peer_id(&self) -> LazyNodeId {
-            <LazyNodeId as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyNodeId as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `surveyed_peer_id`.
         #[must_use]
@@ -93684,18 +93953,15 @@ pub mod lazy {
     impl LazyXdr for LazyTimeSlicedSurveyResponseMessage {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len =
-                    <LazySurveyResponseMessage as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            let next_pos = pos.checked_add(4).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
+            let field_len =
+                <LazySurveyResponseMessage as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -93737,7 +94003,9 @@ pub mod lazy {
         /// Access field `response`.
         #[must_use]
         pub fn response(&self) -> LazySurveyResponseMessage {
-            <LazySurveyResponseMessage as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazySurveyResponseMessage as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `nonce`.
         #[must_use]
@@ -93755,20 +94023,16 @@ pub mod lazy {
     impl LazyXdr for LazySignedTimeSlicedSurveyResponseMessage {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazySignature as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyTimeSlicedSurveyResponseMessage as LazyXdr>::xdr_validate(
-                    &buf[pos as usize..],
-                )?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazySignature as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyTimeSlicedSurveyResponseMessage as LazyXdr>::xdr_validate(
+                &buf[pos as usize..],
+            )?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -93810,7 +94074,9 @@ pub mod lazy {
         /// Access field `response_signature`.
         #[must_use]
         pub fn response_signature(&self) -> LazySignature {
-            <LazySignature as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazySignature as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `response`.
         #[must_use]
@@ -93828,23 +94094,66 @@ pub mod lazy {
     impl LazyXdr for LazyPeerStats {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazyNodeId as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyStringM<100> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            let next_pos = pos.checked_add(104).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
+            let field_len = <LazyNodeId as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyStringM<100> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -93887,7 +94196,9 @@ pub mod lazy {
         /// Access field `id`.
         #[must_use]
         pub fn id(&self) -> LazyNodeId {
-            <LazyNodeId as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyNodeId as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `version_str`.
         #[must_use]
@@ -94036,12 +94347,46 @@ pub mod lazy {
 
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(40).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            <bool as LazyXdr>::xdr_validate(&buf[(pos + 28) as usize..])?;
-            pos = next_pos;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <bool as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -94081,52 +94426,81 @@ pub mod lazy {
         /// Access field `added_authenticated_peers`.
         #[must_use]
         pub fn added_authenticated_peers(&self) -> u32 {
-            <u32 as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <u32 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `dropped_authenticated_peers`.
         #[must_use]
         pub fn dropped_authenticated_peers(&self) -> u32 {
-            <u32 as LazyXdr>::from_xdr_at(&self.0, 4)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 4;
+            <u32 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `total_inbound_peer_count`.
         #[must_use]
         pub fn total_inbound_peer_count(&self) -> u32 {
-            <u32 as LazyXdr>::from_xdr_at(&self.0, 8)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 8;
+            <u32 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `total_outbound_peer_count`.
         #[must_use]
         pub fn total_outbound_peer_count(&self) -> u32 {
-            <u32 as LazyXdr>::from_xdr_at(&self.0, 12)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 12;
+            <u32 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `p75_scp_first_to_self_latency_ms`.
         #[must_use]
         pub fn p75_scp_first_to_self_latency_ms(&self) -> u32 {
-            <u32 as LazyXdr>::from_xdr_at(&self.0, 16)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 16;
+            <u32 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `p75_scp_self_to_other_latency_ms`.
         #[must_use]
         pub fn p75_scp_self_to_other_latency_ms(&self) -> u32 {
-            <u32 as LazyXdr>::from_xdr_at(&self.0, 20)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 20;
+            <u32 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `lost_sync_count`.
         #[must_use]
         pub fn lost_sync_count(&self) -> u32 {
-            <u32 as LazyXdr>::from_xdr_at(&self.0, 24)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 24;
+            <u32 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `is_validator`.
         #[must_use]
         pub fn is_validator(&self) -> bool {
-            <bool as LazyXdr>::from_xdr_at(&self.0, 28)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 28;
+            <bool as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `max_inbound_peer_count`.
         #[must_use]
         pub fn max_inbound_peer_count(&self) -> u32 {
-            <u32 as LazyXdr>::from_xdr_at(&self.0, 32)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 32;
+            <u32 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `max_outbound_peer_count`.
         #[must_use]
         pub fn max_outbound_peer_count(&self) -> u32 {
-            <u32 as LazyXdr>::from_xdr_at(&self.0, 36)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 36;
+            <u32 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     /// Lazy wrapper for [`super::TimeSlicedPeerData`].
@@ -94136,17 +94510,14 @@ pub mod lazy {
     impl LazyXdr for LazyTimeSlicedPeerData {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazyPeerStats as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            let next_pos = pos.checked_add(4).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
+            let field_len = <LazyPeerStats as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -94188,7 +94559,9 @@ pub mod lazy {
         /// Access field `peer_stats`.
         #[must_use]
         pub fn peer_stats(&self) -> LazyPeerStats {
-            <LazyPeerStats as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyPeerStats as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `average_latency_ms`.
         #[must_use]
@@ -94252,26 +94625,21 @@ pub mod lazy {
     impl LazyXdr for LazyTopologyResponseBodyV2 {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len =
-                    <LazyTimeSlicedPeerDataList as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len =
-                    <LazyTimeSlicedPeerDataList as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            let next_pos = pos.checked_add(40).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            <LazyTimeSlicedNodeData as LazyXdr>::xdr_validate(&buf[(pos + 0) as usize..])?;
-            pos = next_pos;
+            let field_len =
+                <LazyTimeSlicedPeerDataList as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyTimeSlicedPeerDataList as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyTimeSlicedNodeData as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -94314,7 +94682,9 @@ pub mod lazy {
         /// Access field `inbound_peers`.
         #[must_use]
         pub fn inbound_peers(&self) -> LazyTimeSlicedPeerDataList {
-            <LazyTimeSlicedPeerDataList as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyTimeSlicedPeerDataList as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `outbound_peers`.
         #[must_use]
@@ -94412,13 +94782,12 @@ pub mod lazy {
         /// Get the discriminant.
         #[must_use]
         pub fn discriminant(&self) -> super::SurveyMessageResponseType {
-            // Validated — unwrap is safe.
-            super::SurveyMessageResponseType::try_from(self.discriminant_i32()).unwrap()
+            <super::SurveyMessageResponseType as LazyXdr>::from_xdr_at(&self.0, 0)
         }
 
         /// Access arm `SurveyTopologyResponseV2`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_surveytopologyresponsev2(&self) -> Option<LazyTopologyResponseBodyV2> {
+        pub fn as_survey_topology_response_v2(&self) -> Option<LazyTopologyResponseBodyV2> {
             if self.discriminant_i32() == 2 {
                 Some(<LazyTopologyResponseBodyV2 as LazyXdr>::from_xdr_at(
                     &self.0, 4,
@@ -94484,13 +94853,10 @@ pub mod lazy {
     impl LazyXdr for LazyFloodAdvert {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len =
-                    <LazyTxAdvertVector as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazyTxAdvertVector as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -94531,7 +94897,9 @@ pub mod lazy {
         /// Access field `tx_hashes`.
         #[must_use]
         pub fn tx_hashes(&self) -> LazyTxAdvertVector {
-            <LazyTxAdvertVector as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyTxAdvertVector as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
 
@@ -94590,13 +94958,10 @@ pub mod lazy {
     impl LazyXdr for LazyFloodDemand {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len =
-                    <LazyTxDemandVector as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazyTxDemandVector as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -94637,7 +95002,9 @@ pub mod lazy {
         /// Access field `tx_hashes`.
         #[must_use]
         pub fn tx_hashes(&self) -> LazyTxDemandVector {
-            <LazyTxDemandVector as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyTxDemandVector as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     /// Lazy wrapper for [`super::StellarMessage`].
@@ -94926,13 +95293,12 @@ pub mod lazy {
         /// Get the discriminant.
         #[must_use]
         pub fn discriminant(&self) -> super::MessageType {
-            // Validated — unwrap is safe.
-            super::MessageType::try_from(self.discriminant_i32()).unwrap()
+            <super::MessageType as LazyXdr>::from_xdr_at(&self.0, 0)
         }
 
         /// Access arm `ErrorMsg`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_errormsg(&self) -> Option<LazySError> {
+        pub fn as_error_msg(&self) -> Option<LazySError> {
             if self.discriminant_i32() == 0 {
                 Some(<LazySError as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -94962,7 +95328,7 @@ pub mod lazy {
 
         /// Access arm `DontHave`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_donthave(&self) -> Option<LazyDontHave> {
+        pub fn as_dont_have(&self) -> Option<LazyDontHave> {
             if self.discriminant_i32() == 3 {
                 Some(<LazyDontHave as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -94984,7 +95350,7 @@ pub mod lazy {
 
         /// Access arm `GetTxSet`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_gettxset(&self) -> Option<LazyUint256> {
+        pub fn as_get_tx_set(&self) -> Option<LazyUint256> {
             if self.discriminant_i32() == 6 {
                 Some(<LazyUint256 as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -94994,7 +95360,7 @@ pub mod lazy {
 
         /// Access arm `TxSet`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_txset(&self) -> Option<LazyTransactionSet> {
+        pub fn as_tx_set(&self) -> Option<LazyTransactionSet> {
             if self.discriminant_i32() == 7 {
                 Some(<LazyTransactionSet as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -95004,7 +95370,7 @@ pub mod lazy {
 
         /// Access arm `GeneralizedTxSet`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_generalizedtxset(&self) -> Option<LazyGeneralizedTransactionSet> {
+        pub fn as_generalized_tx_set(&self) -> Option<LazyGeneralizedTransactionSet> {
             if self.discriminant_i32() == 17 {
                 Some(<LazyGeneralizedTransactionSet as LazyXdr>::from_xdr_at(
                     &self.0, 4,
@@ -95028,7 +95394,7 @@ pub mod lazy {
 
         /// Access arm `TimeSlicedSurveyRequest`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_timeslicedsurveyrequest(
+        pub fn as_time_sliced_survey_request(
             &self,
         ) -> Option<LazySignedTimeSlicedSurveyRequestMessage> {
             if self.discriminant_i32() == 21 {
@@ -95040,7 +95406,7 @@ pub mod lazy {
 
         /// Access arm `TimeSlicedSurveyResponse`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_timeslicedsurveyresponse(
+        pub fn as_time_sliced_survey_response(
             &self,
         ) -> Option<LazySignedTimeSlicedSurveyResponseMessage> {
             if self.discriminant_i32() == 22 {
@@ -95054,7 +95420,7 @@ pub mod lazy {
 
         /// Access arm `TimeSlicedSurveyStartCollecting`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_timeslicedsurveystartcollecting(
+        pub fn as_time_sliced_survey_start_collecting(
             &self,
         ) -> Option<LazySignedTimeSlicedSurveyStartCollectingMessage> {
             if self.discriminant_i32() == 23 {
@@ -95070,7 +95436,7 @@ pub mod lazy {
 
         /// Access arm `TimeSlicedSurveyStopCollecting`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_timeslicedsurveystopcollecting(
+        pub fn as_time_sliced_survey_stop_collecting(
             &self,
         ) -> Option<LazySignedTimeSlicedSurveyStopCollectingMessage> {
             if self.discriminant_i32() == 24 {
@@ -95086,7 +95452,7 @@ pub mod lazy {
 
         /// Access arm `GetScpQuorumset`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_getscpquorumset(&self) -> Option<LazyUint256> {
+        pub fn as_get_scp_quorumset(&self) -> Option<LazyUint256> {
             if self.discriminant_i32() == 9 {
                 Some(<LazyUint256 as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -95096,7 +95462,7 @@ pub mod lazy {
 
         /// Access arm `ScpQuorumset`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_scpquorumset(&self) -> Option<LazyScpQuorumSet> {
+        pub fn as_scp_quorumset(&self) -> Option<LazyScpQuorumSet> {
             if self.discriminant_i32() == 10 {
                 Some(<LazyScpQuorumSet as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -95106,7 +95472,7 @@ pub mod lazy {
 
         /// Access arm `ScpMessage`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_scpmessage(&self) -> Option<LazyScpEnvelope> {
+        pub fn as_scp_message(&self) -> Option<LazyScpEnvelope> {
             if self.discriminant_i32() == 11 {
                 Some(<LazyScpEnvelope as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -95116,7 +95482,7 @@ pub mod lazy {
 
         /// Access arm `GetScpState`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_getscpstate(&self) -> Option<u32> {
+        pub fn as_get_scp_state(&self) -> Option<u32> {
             if self.discriminant_i32() == 12 {
                 Some(<u32 as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -95126,7 +95492,7 @@ pub mod lazy {
 
         /// Access arm `SendMore`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_sendmore(&self) -> Option<LazySendMore> {
+        pub fn as_send_more(&self) -> Option<LazySendMore> {
             if self.discriminant_i32() == 16 {
                 Some(<LazySendMore as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -95136,7 +95502,7 @@ pub mod lazy {
 
         /// Access arm `SendMoreExtended`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_sendmoreextended(&self) -> Option<LazySendMoreExtended> {
+        pub fn as_send_more_extended(&self) -> Option<LazySendMoreExtended> {
             if self.discriminant_i32() == 20 {
                 Some(<LazySendMoreExtended as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -95146,7 +95512,7 @@ pub mod lazy {
 
         /// Access arm `FloodAdvert`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_floodadvert(&self) -> Option<LazyFloodAdvert> {
+        pub fn as_flood_advert(&self) -> Option<LazyFloodAdvert> {
             if self.discriminant_i32() == 18 {
                 Some(<LazyFloodAdvert as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -95156,7 +95522,7 @@ pub mod lazy {
 
         /// Access arm `FloodDemand`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_flooddemand(&self) -> Option<LazyFloodDemand> {
+        pub fn as_flood_demand(&self) -> Option<LazyFloodDemand> {
             if self.discriminant_i32() == 19 {
                 Some(<LazyFloodDemand as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -95171,24 +95537,18 @@ pub mod lazy {
     impl LazyXdr for LazyAuthenticatedMessageV0 {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(8).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
-            {
-                let field_len =
-                    <LazyStellarMessage as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            let next_pos = pos.checked_add(32).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            <LazyHmacSha256Mac as LazyXdr>::xdr_validate(&buf[(pos + 0) as usize..])?;
-            pos = next_pos;
+            let field_len = <u64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyStellarMessage as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyHmacSha256Mac as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -95231,18 +95591,24 @@ pub mod lazy {
         /// Access field `sequence`.
         #[must_use]
         pub fn sequence(&self) -> u64 {
-            <u64 as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <u64 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `message`.
         #[must_use]
         pub fn message(&self) -> LazyStellarMessage {
-            <LazyStellarMessage as LazyXdr>::from_xdr_at(&self.0, 8)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 8;
+            <LazyStellarMessage as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `mac`.
         #[must_use]
         pub fn mac(&self) -> LazyHmacSha256Mac {
             let buf = self.0.as_slice();
-            let mut pos: u32 = 8;
+            let mut pos: u32 = 0;
+            pos += 8;
             pos += <LazyStellarMessage as LazyXdr>::xdr_len(&buf[pos as usize..]);
             <LazyHmacSha256Mac as LazyXdr>::from_xdr_at(&self.0, pos)
         }
@@ -95422,13 +95788,12 @@ pub mod lazy {
         /// Get the discriminant.
         #[must_use]
         pub fn discriminant(&self) -> super::LiquidityPoolType {
-            // Validated — unwrap is safe.
-            super::LiquidityPoolType::try_from(self.discriminant_i32()).unwrap()
+            <super::LiquidityPoolType as LazyXdr>::from_xdr_at(&self.0, 0)
         }
 
         /// Access arm `LiquidityPoolConstantProduct`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_liquiditypoolconstantproduct(
+        pub fn as_liquidity_pool_constant_product(
             &self,
         ) -> Option<LazyLiquidityPoolConstantProductParameters> {
             if self.discriminant_i32() == 0 {
@@ -95451,12 +95816,14 @@ pub mod lazy {
 
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(40).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            <LazyUint256 as LazyXdr>::xdr_validate(&buf[(pos + 8) as usize..])?;
-            pos = next_pos;
+            let field_len = <u64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyUint256 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -95496,12 +95863,17 @@ pub mod lazy {
         /// Access field `id`.
         #[must_use]
         pub fn id(&self) -> u64 {
-            <u64 as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <u64 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `ed25519`.
         #[must_use]
         pub fn ed25519(&self) -> LazyUint256 {
-            <LazyUint256 as LazyXdr>::from_xdr_at(&self.0, 8)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 8;
+            <LazyUint256 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     /// Lazy wrapper for [`super::MuxedAccount`].
@@ -95590,8 +95962,7 @@ pub mod lazy {
         /// Get the discriminant.
         #[must_use]
         pub fn discriminant(&self) -> super::CryptoKeyType {
-            // Validated — unwrap is safe.
-            super::CryptoKeyType::try_from(self.discriminant_i32()).unwrap()
+            <super::CryptoKeyType as LazyXdr>::from_xdr_at(&self.0, 0)
         }
 
         /// Access arm `Ed25519`. Returns `Some` if the discriminant matches.
@@ -95606,7 +95977,7 @@ pub mod lazy {
 
         /// Access arm `MuxedEd25519`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_muxeded25519(&self) -> Option<LazyMuxedAccountMed25519> {
+        pub fn as_muxed_ed25519(&self) -> Option<LazyMuxedAccountMed25519> {
             if self.discriminant_i32() == 256 {
                 Some(<LazyMuxedAccountMed25519 as LazyXdr>::from_xdr_at(
                     &self.0, 4,
@@ -95623,18 +95994,14 @@ pub mod lazy {
     impl LazyXdr for LazyDecoratedSignature {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(4).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            <LazySignatureHint as LazyXdr>::xdr_validate(&buf[(pos + 0) as usize..])?;
-            pos = next_pos;
-            {
-                let field_len = <LazySignature as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazySignatureHint as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazySignature as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -95676,12 +96043,17 @@ pub mod lazy {
         /// Access field `hint`.
         #[must_use]
         pub fn hint(&self) -> LazySignatureHint {
-            <LazySignatureHint as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazySignatureHint as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `signature`.
         #[must_use]
         pub fn signature(&self) -> LazySignature {
-            <LazySignature as LazyXdr>::from_xdr_at(&self.0, 4)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 4;
+            <LazySignature as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     // Enum OperationType: scalar lazy type — impl LazyXdr directly on the enum.
@@ -95717,17 +96089,14 @@ pub mod lazy {
     impl LazyXdr for LazyCreateAccountOp {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazyAccountId as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            let next_pos = pos.checked_add(8).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
+            let field_len = <LazyAccountId as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <i64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -95769,7 +96138,9 @@ pub mod lazy {
         /// Access field `destination`.
         #[must_use]
         pub fn destination(&self) -> LazyAccountId {
-            <LazyAccountId as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyAccountId as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `starting_balance`.
         #[must_use]
@@ -95787,23 +96158,18 @@ pub mod lazy {
     impl LazyXdr for LazyPaymentOp {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazyMuxedAccount as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyAsset as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            let next_pos = pos.checked_add(8).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
+            let field_len = <LazyMuxedAccount as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyAsset as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <i64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -95846,7 +96212,9 @@ pub mod lazy {
         /// Access field `destination`.
         #[must_use]
         pub fn destination(&self) -> LazyMuxedAccount {
-            <LazyMuxedAccount as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyMuxedAccount as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `asset`.
         #[must_use]
@@ -95873,41 +96241,31 @@ pub mod lazy {
     impl LazyXdr for LazyPathPaymentStrictReceiveOp {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazyAsset as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            let next_pos = pos.checked_add(8).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
-            {
-                let field_len = <LazyMuxedAccount as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyAsset as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            let next_pos = pos.checked_add(8).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
-            {
-                let field_len =
-                    <LazyVecM<LazyAsset, 5> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazyAsset as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <i64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyMuxedAccount as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyAsset as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <i64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyVecM<LazyAsset, 5> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -95953,7 +96311,9 @@ pub mod lazy {
         /// Access field `send_asset`.
         #[must_use]
         pub fn send_asset(&self) -> LazyAsset {
-            <LazyAsset as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyAsset as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `send_max`.
         #[must_use]
@@ -96013,41 +96373,31 @@ pub mod lazy {
     impl LazyXdr for LazyPathPaymentStrictSendOp {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazyAsset as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            let next_pos = pos.checked_add(8).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
-            {
-                let field_len = <LazyMuxedAccount as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyAsset as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            let next_pos = pos.checked_add(8).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
-            {
-                let field_len =
-                    <LazyVecM<LazyAsset, 5> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazyAsset as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <i64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyMuxedAccount as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyAsset as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <i64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyVecM<LazyAsset, 5> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -96093,7 +96443,9 @@ pub mod lazy {
         /// Access field `send_asset`.
         #[must_use]
         pub fn send_asset(&self) -> LazyAsset {
-            <LazyAsset as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyAsset as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `send_amount`.
         #[must_use]
@@ -96153,24 +96505,26 @@ pub mod lazy {
     impl LazyXdr for LazyManageSellOfferOp {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazyAsset as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyAsset as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            let next_pos = pos.checked_add(24).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            <LazyPrice as LazyXdr>::xdr_validate(&buf[(pos + 8) as usize..])?;
-            pos = next_pos;
+            let field_len = <LazyAsset as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyAsset as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <i64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyPrice as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <i64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -96213,7 +96567,9 @@ pub mod lazy {
         /// Access field `selling`.
         #[must_use]
         pub fn selling(&self) -> LazyAsset {
-            <LazyAsset as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyAsset as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `buying`.
         #[must_use]
@@ -96260,24 +96616,26 @@ pub mod lazy {
     impl LazyXdr for LazyManageBuyOfferOp {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazyAsset as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyAsset as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            let next_pos = pos.checked_add(24).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            <LazyPrice as LazyXdr>::xdr_validate(&buf[(pos + 8) as usize..])?;
-            pos = next_pos;
+            let field_len = <LazyAsset as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyAsset as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <i64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyPrice as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <i64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -96320,7 +96678,9 @@ pub mod lazy {
         /// Access field `selling`.
         #[must_use]
         pub fn selling(&self) -> LazyAsset {
-            <LazyAsset as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyAsset as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `buying`.
         #[must_use]
@@ -96367,24 +96727,22 @@ pub mod lazy {
     impl LazyXdr for LazyCreatePassiveSellOfferOp {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazyAsset as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyAsset as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            let next_pos = pos.checked_add(16).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            <LazyPrice as LazyXdr>::xdr_validate(&buf[(pos + 8) as usize..])?;
-            pos = next_pos;
+            let field_len = <LazyAsset as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyAsset as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <i64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyPrice as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -96427,7 +96785,9 @@ pub mod lazy {
         /// Access field `selling`.
         #[must_use]
         pub fn selling(&self) -> LazyAsset {
-            <LazyAsset as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyAsset as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `buying`.
         #[must_use]
@@ -96464,63 +96824,45 @@ pub mod lazy {
     impl LazyXdr for LazySetOptionsOp {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len =
-                    <LazyOption<LazyAccountId> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyOption<u32> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyOption<u32> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyOption<u32> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyOption<u32> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyOption<u32> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyOption<u32> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len =
-                    <LazyOption<LazyString32> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len =
-                    <LazyOption<LazySigner> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len =
+                <LazyOption<LazyAccountId> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyOption<u32> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyOption<u32> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyOption<u32> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyOption<u32> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyOption<u32> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyOption<u32> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyOption<LazyString32> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyOption<LazySigner> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -96569,7 +96911,9 @@ pub mod lazy {
         /// Access field `inflation_dest`.
         #[must_use]
         pub fn inflation_dest(&self) -> LazyOption<LazyAccountId> {
-            <LazyOption<LazyAccountId> as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyOption<LazyAccountId> as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `clear_flags`.
         #[must_use]
@@ -96767,13 +97111,12 @@ pub mod lazy {
         /// Get the discriminant.
         #[must_use]
         pub fn discriminant(&self) -> super::AssetType {
-            // Validated — unwrap is safe.
-            super::AssetType::try_from(self.discriminant_i32()).unwrap()
+            <super::AssetType as LazyXdr>::from_xdr_at(&self.0, 0)
         }
 
         /// Access arm `CreditAlphanum4`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_creditalphanum4(&self) -> Option<LazyAlphaNum4> {
+        pub fn as_credit_alphanum4(&self) -> Option<LazyAlphaNum4> {
             if self.discriminant_i32() == 1 {
                 Some(<LazyAlphaNum4 as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -96783,7 +97126,7 @@ pub mod lazy {
 
         /// Access arm `CreditAlphanum12`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_creditalphanum12(&self) -> Option<LazyAlphaNum12> {
+        pub fn as_credit_alphanum12(&self) -> Option<LazyAlphaNum12> {
             if self.discriminant_i32() == 2 {
                 Some(<LazyAlphaNum12 as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -96793,7 +97136,7 @@ pub mod lazy {
 
         /// Access arm `PoolShare`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_poolshare(&self) -> Option<LazyLiquidityPoolParameters> {
+        pub fn as_pool_share(&self) -> Option<LazyLiquidityPoolParameters> {
             if self.discriminant_i32() == 3 {
                 Some(<LazyLiquidityPoolParameters as LazyXdr>::from_xdr_at(
                     &self.0, 4,
@@ -96810,18 +97153,14 @@ pub mod lazy {
     impl LazyXdr for LazyChangeTrustOp {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len =
-                    <LazyChangeTrustAsset as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            let next_pos = pos.checked_add(8).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
+            let field_len = <LazyChangeTrustAsset as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <i64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -96863,7 +97202,9 @@ pub mod lazy {
         /// Access field `line`.
         #[must_use]
         pub fn line(&self) -> LazyChangeTrustAsset {
-            <LazyChangeTrustAsset as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyChangeTrustAsset as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `limit`.
         #[must_use]
@@ -96881,23 +97222,18 @@ pub mod lazy {
     impl LazyXdr for LazyAllowTrustOp {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazyAccountId as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyAssetCode as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            let next_pos = pos.checked_add(4).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
+            let field_len = <LazyAccountId as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyAssetCode as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -96940,7 +97276,9 @@ pub mod lazy {
         /// Access field `trustor`.
         #[must_use]
         pub fn trustor(&self) -> LazyAccountId {
-            <LazyAccountId as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyAccountId as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `asset`.
         #[must_use]
@@ -96967,19 +97305,15 @@ pub mod lazy {
     impl LazyXdr for LazyManageDataOp {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazyString64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len =
-                    <LazyOption<LazyDataValue> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazyString64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyOption<LazyDataValue> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -97021,7 +97355,9 @@ pub mod lazy {
         /// Access field `data_name`.
         #[must_use]
         pub fn data_name(&self) -> LazyString64 {
-            <LazyString64 as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyString64 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `data_value`.
         #[must_use]
@@ -97041,11 +97377,10 @@ pub mod lazy {
 
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(8).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
+            let field_len = <LazySequenceNumber as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -97085,7 +97420,9 @@ pub mod lazy {
         /// Access field `bump_to`.
         #[must_use]
         pub fn bump_to(&self) -> LazySequenceNumber {
-            <LazySequenceNumber as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazySequenceNumber as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     /// Lazy wrapper for [`super::CreateClaimableBalanceOp`].
@@ -97095,24 +97432,19 @@ pub mod lazy {
     impl LazyXdr for LazyCreateClaimableBalanceOp {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazyAsset as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            let next_pos = pos.checked_add(8).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
-            {
-                let field_len =
-                    <LazyVecM<LazyClaimant, 10> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazyAsset as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <i64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyVecM<LazyClaimant, 10> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -97155,7 +97487,9 @@ pub mod lazy {
         /// Access field `asset`.
         #[must_use]
         pub fn asset(&self) -> LazyAsset {
-            <LazyAsset as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyAsset as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `amount`.
         #[must_use]
@@ -97182,13 +97516,11 @@ pub mod lazy {
     impl LazyXdr for LazyClaimClaimableBalanceOp {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len =
-                    <LazyClaimableBalanceId as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len =
+                <LazyClaimableBalanceId as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -97229,7 +97561,9 @@ pub mod lazy {
         /// Access field `balance_id`.
         #[must_use]
         pub fn balance_id(&self) -> LazyClaimableBalanceId {
-            <LazyClaimableBalanceId as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyClaimableBalanceId as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     /// Lazy wrapper for [`super::BeginSponsoringFutureReservesOp`].
@@ -97239,12 +97573,10 @@ pub mod lazy {
     impl LazyXdr for LazyBeginSponsoringFutureReservesOp {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazyAccountId as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazyAccountId as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -97285,7 +97617,9 @@ pub mod lazy {
         /// Access field `sponsored_id`.
         #[must_use]
         pub fn sponsored_id(&self) -> LazyAccountId {
-            <LazyAccountId as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyAccountId as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     // Enum RevokeSponsorshipType: scalar lazy type — impl LazyXdr directly on the enum.
@@ -97321,18 +97655,14 @@ pub mod lazy {
     impl LazyXdr for LazyRevokeSponsorshipOpSigner {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazyAccountId as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazySignerKey as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazyAccountId as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazySignerKey as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -97374,7 +97704,9 @@ pub mod lazy {
         /// Access field `account_id`.
         #[must_use]
         pub fn account_id(&self) -> LazyAccountId {
-            <LazyAccountId as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyAccountId as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `signer_key`.
         #[must_use]
@@ -97473,13 +97805,12 @@ pub mod lazy {
         /// Get the discriminant.
         #[must_use]
         pub fn discriminant(&self) -> super::RevokeSponsorshipType {
-            // Validated — unwrap is safe.
-            super::RevokeSponsorshipType::try_from(self.discriminant_i32()).unwrap()
+            <super::RevokeSponsorshipType as LazyXdr>::from_xdr_at(&self.0, 0)
         }
 
         /// Access arm `LedgerEntry`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_ledgerentry(&self) -> Option<LazyLedgerKey> {
+        pub fn as_ledger_entry(&self) -> Option<LazyLedgerKey> {
             if self.discriminant_i32() == 0 {
                 Some(<LazyLedgerKey as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -97506,23 +97837,18 @@ pub mod lazy {
     impl LazyXdr for LazyClawbackOp {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazyAsset as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyMuxedAccount as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            let next_pos = pos.checked_add(8).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
+            let field_len = <LazyAsset as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyMuxedAccount as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <i64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -97565,7 +97891,9 @@ pub mod lazy {
         /// Access field `asset`.
         #[must_use]
         pub fn asset(&self) -> LazyAsset {
-            <LazyAsset as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyAsset as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `from`.
         #[must_use]
@@ -97592,13 +97920,11 @@ pub mod lazy {
     impl LazyXdr for LazyClawbackClaimableBalanceOp {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len =
-                    <LazyClaimableBalanceId as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len =
+                <LazyClaimableBalanceId as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -97639,7 +97965,9 @@ pub mod lazy {
         /// Access field `balance_id`.
         #[must_use]
         pub fn balance_id(&self) -> LazyClaimableBalanceId {
-            <LazyClaimableBalanceId as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyClaimableBalanceId as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     /// Lazy wrapper for [`super::SetTrustLineFlagsOp`].
@@ -97649,23 +97977,22 @@ pub mod lazy {
     impl LazyXdr for LazySetTrustLineFlagsOp {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazyAccountId as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyAsset as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            let next_pos = pos.checked_add(8).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
+            let field_len = <LazyAccountId as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyAsset as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -97708,7 +98035,9 @@ pub mod lazy {
         /// Access field `trustor`.
         #[must_use]
         pub fn trustor(&self) -> LazyAccountId {
-            <LazyAccountId as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyAccountId as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `asset`.
         #[must_use]
@@ -97748,14 +98077,26 @@ pub mod lazy {
 
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(64).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            <LazyPoolId as LazyXdr>::xdr_validate(&buf[(pos + 0) as usize..])?;
-            <LazyPrice as LazyXdr>::xdr_validate(&buf[(pos + 48) as usize..])?;
-            <LazyPrice as LazyXdr>::xdr_validate(&buf[(pos + 56) as usize..])?;
-            pos = next_pos;
+            let field_len = <LazyPoolId as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <i64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <i64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyPrice as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyPrice as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -97795,27 +98136,41 @@ pub mod lazy {
         /// Access field `liquidity_pool_id`.
         #[must_use]
         pub fn liquidity_pool_id(&self) -> LazyPoolId {
-            <LazyPoolId as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyPoolId as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `max_amount_a`.
         #[must_use]
         pub fn max_amount_a(&self) -> i64 {
-            <i64 as LazyXdr>::from_xdr_at(&self.0, 32)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 32;
+            <i64 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `max_amount_b`.
         #[must_use]
         pub fn max_amount_b(&self) -> i64 {
-            <i64 as LazyXdr>::from_xdr_at(&self.0, 40)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 40;
+            <i64 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `min_price`.
         #[must_use]
         pub fn min_price(&self) -> LazyPrice {
-            <LazyPrice as LazyXdr>::from_xdr_at(&self.0, 48)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 48;
+            <LazyPrice as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `max_price`.
         #[must_use]
         pub fn max_price(&self) -> LazyPrice {
-            <LazyPrice as LazyXdr>::from_xdr_at(&self.0, 56)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 56;
+            <LazyPrice as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     /// Lazy wrapper for [`super::LiquidityPoolWithdrawOp`].
@@ -97827,12 +98182,22 @@ pub mod lazy {
 
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(56).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            <LazyPoolId as LazyXdr>::xdr_validate(&buf[(pos + 0) as usize..])?;
-            pos = next_pos;
+            let field_len = <LazyPoolId as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <i64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <i64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <i64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -97872,22 +98237,33 @@ pub mod lazy {
         /// Access field `liquidity_pool_id`.
         #[must_use]
         pub fn liquidity_pool_id(&self) -> LazyPoolId {
-            <LazyPoolId as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyPoolId as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `amount`.
         #[must_use]
         pub fn amount(&self) -> i64 {
-            <i64 as LazyXdr>::from_xdr_at(&self.0, 32)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 32;
+            <i64 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `min_amount_a`.
         #[must_use]
         pub fn min_amount_a(&self) -> i64 {
-            <i64 as LazyXdr>::from_xdr_at(&self.0, 40)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 40;
+            <i64 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `min_amount_b`.
         #[must_use]
         pub fn min_amount_b(&self) -> i64 {
-            <i64 as LazyXdr>::from_xdr_at(&self.0, 48)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 48;
+            <i64 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     // Enum HostFunctionType: scalar lazy type — impl LazyXdr directly on the enum.
@@ -97949,18 +98325,14 @@ pub mod lazy {
     impl LazyXdr for LazyContractIdPreimageFromAddress {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazyScAddress as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            let next_pos = pos.checked_add(32).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            <LazyUint256 as LazyXdr>::xdr_validate(&buf[(pos + 0) as usize..])?;
-            pos = next_pos;
+            let field_len = <LazyScAddress as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyUint256 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -98002,7 +98374,9 @@ pub mod lazy {
         /// Access field `address`.
         #[must_use]
         pub fn address(&self) -> LazyScAddress {
-            <LazyScAddress as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyScAddress as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `salt`.
         #[must_use]
@@ -98102,8 +98476,7 @@ pub mod lazy {
         /// Get the discriminant.
         #[must_use]
         pub fn discriminant(&self) -> super::ContractIdPreimageType {
-            // Validated — unwrap is safe.
-            super::ContractIdPreimageType::try_from(self.discriminant_i32()).unwrap()
+            <super::ContractIdPreimageType as LazyXdr>::from_xdr_at(&self.0, 0)
         }
 
         /// Access arm `Address`. Returns `Some` if the discriminant matches.
@@ -98135,20 +98508,16 @@ pub mod lazy {
     impl LazyXdr for LazyCreateContractArgs {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len =
-                    <LazyContractIdPreimage as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len =
-                    <LazyContractExecutable as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len =
+                <LazyContractIdPreimage as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyContractExecutable as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -98190,7 +98559,9 @@ pub mod lazy {
         /// Access field `contract_id_preimage`.
         #[must_use]
         pub fn contract_id_preimage(&self) -> LazyContractIdPreimage {
-            <LazyContractIdPreimage as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyContractIdPreimage as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `executable`.
         #[must_use]
@@ -98208,27 +98579,20 @@ pub mod lazy {
     impl LazyXdr for LazyCreateContractArgsV2 {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len =
-                    <LazyContractIdPreimage as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len =
-                    <LazyContractExecutable as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len =
-                    <LazyVecM<LazyScVal> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len =
+                <LazyContractIdPreimage as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyContractExecutable as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyVecM<LazyScVal> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -98271,7 +98635,9 @@ pub mod lazy {
         /// Access field `contract_id_preimage`.
         #[must_use]
         pub fn contract_id_preimage(&self) -> LazyContractIdPreimage {
-            <LazyContractIdPreimage as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyContractIdPreimage as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `executable`.
         #[must_use]
@@ -98298,25 +98664,18 @@ pub mod lazy {
     impl LazyXdr for LazyInvokeContractArgs {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazyScAddress as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyScSymbol as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len =
-                    <LazyVecM<LazyScVal> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazyScAddress as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyScSymbol as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyVecM<LazyScVal> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -98359,7 +98718,9 @@ pub mod lazy {
         /// Access field `contract_address`.
         #[must_use]
         pub fn contract_address(&self) -> LazyScAddress {
-            <LazyScAddress as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyScAddress as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `function_name`.
         #[must_use]
@@ -98485,13 +98846,12 @@ pub mod lazy {
         /// Get the discriminant.
         #[must_use]
         pub fn discriminant(&self) -> super::HostFunctionType {
-            // Validated — unwrap is safe.
-            super::HostFunctionType::try_from(self.discriminant_i32()).unwrap()
+            <super::HostFunctionType as LazyXdr>::from_xdr_at(&self.0, 0)
         }
 
         /// Access arm `InvokeContract`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_invokecontract(&self) -> Option<LazyInvokeContractArgs> {
+        pub fn as_invoke_contract(&self) -> Option<LazyInvokeContractArgs> {
             if self.discriminant_i32() == 0 {
                 Some(<LazyInvokeContractArgs as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -98501,7 +98861,7 @@ pub mod lazy {
 
         /// Access arm `CreateContract`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_createcontract(&self) -> Option<LazyCreateContractArgs> {
+        pub fn as_create_contract(&self) -> Option<LazyCreateContractArgs> {
             if self.discriminant_i32() == 1 {
                 Some(<LazyCreateContractArgs as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -98511,7 +98871,7 @@ pub mod lazy {
 
         /// Access arm `UploadContractWasm`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_uploadcontractwasm(&self) -> Option<LazyBytesM> {
+        pub fn as_upload_contract_wasm(&self) -> Option<LazyBytesM> {
             if self.discriminant_i32() == 2 {
                 Some(<LazyBytesM as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -98521,7 +98881,7 @@ pub mod lazy {
 
         /// Access arm `CreateContractV2`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_createcontractv2(&self) -> Option<LazyCreateContractArgsV2> {
+        pub fn as_create_contract_v2(&self) -> Option<LazyCreateContractArgsV2> {
             if self.discriminant_i32() == 3 {
                 Some(<LazyCreateContractArgsV2 as LazyXdr>::from_xdr_at(
                     &self.0, 4,
@@ -98654,13 +99014,12 @@ pub mod lazy {
         /// Get the discriminant.
         #[must_use]
         pub fn discriminant(&self) -> super::SorobanAuthorizedFunctionType {
-            // Validated — unwrap is safe.
-            super::SorobanAuthorizedFunctionType::try_from(self.discriminant_i32()).unwrap()
+            <super::SorobanAuthorizedFunctionType as LazyXdr>::from_xdr_at(&self.0, 0)
         }
 
         /// Access arm `ContractFn`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_contractfn(&self) -> Option<LazyInvokeContractArgs> {
+        pub fn as_contract_fn(&self) -> Option<LazyInvokeContractArgs> {
             if self.discriminant_i32() == 0 {
                 Some(<LazyInvokeContractArgs as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -98670,7 +99029,7 @@ pub mod lazy {
 
         /// Access arm `CreateContractHostFn`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_createcontracthostfn(&self) -> Option<LazyCreateContractArgs> {
+        pub fn as_create_contract_host_fn(&self) -> Option<LazyCreateContractArgs> {
             if self.discriminant_i32() == 1 {
                 Some(<LazyCreateContractArgs as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -98680,7 +99039,7 @@ pub mod lazy {
 
         /// Access arm `CreateContractV2HostFn`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_createcontractv2hostfn(&self) -> Option<LazyCreateContractArgsV2> {
+        pub fn as_create_contract_v2_host_fn(&self) -> Option<LazyCreateContractArgsV2> {
             if self.discriminant_i32() == 2 {
                 Some(<LazyCreateContractArgsV2 as LazyXdr>::from_xdr_at(
                     &self.0, 4,
@@ -98697,22 +99056,17 @@ pub mod lazy {
     impl LazyXdr for LazySorobanAuthorizedInvocation {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len =
-                    <LazySorobanAuthorizedFunction as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len =
-                    <LazyVecM<LazySorobanAuthorizedInvocation> as LazyXdr>::xdr_validate(
-                        &buf[pos as usize..],
-                    )?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len =
+                <LazySorobanAuthorizedFunction as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyVecM<LazySorobanAuthorizedInvocation> as LazyXdr>::xdr_validate(
+                &buf[pos as usize..],
+            )?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -98756,7 +99110,9 @@ pub mod lazy {
         /// Access field `function`.
         #[must_use]
         pub fn function(&self) -> LazySorobanAuthorizedFunction {
-            <LazySorobanAuthorizedFunction as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazySorobanAuthorizedFunction as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `sub_invocations`.
         #[must_use]
@@ -98774,23 +99130,22 @@ pub mod lazy {
     impl LazyXdr for LazySorobanAddressCredentials {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazyScAddress as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            let next_pos = pos.checked_add(12).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
-            {
-                let field_len = <LazyScVal as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazyScAddress as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <i64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyScVal as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -98833,7 +99188,9 @@ pub mod lazy {
         /// Access field `address`.
         #[must_use]
         pub fn address(&self) -> LazyScAddress {
-            <LazyScAddress as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyScAddress as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `nonce`.
         #[must_use]
@@ -98973,8 +99330,7 @@ pub mod lazy {
         /// Get the discriminant.
         #[must_use]
         pub fn discriminant(&self) -> super::SorobanCredentialsType {
-            // Validated — unwrap is safe.
-            super::SorobanCredentialsType::try_from(self.discriminant_i32()).unwrap()
+            <super::SorobanCredentialsType as LazyXdr>::from_xdr_at(&self.0, 0)
         }
 
         /// Access arm `Address`. Returns `Some` if the discriminant matches.
@@ -98996,21 +99352,16 @@ pub mod lazy {
     impl LazyXdr for LazySorobanAuthorizationEntry {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len =
-                    <LazySorobanCredentials as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazySorobanAuthorizedInvocation as LazyXdr>::xdr_validate(
-                    &buf[pos as usize..],
-                )?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len =
+                <LazySorobanCredentials as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazySorobanAuthorizedInvocation as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -99052,7 +99403,9 @@ pub mod lazy {
         /// Access field `credentials`.
         #[must_use]
         pub fn credentials(&self) -> LazySorobanCredentials {
-            <LazySorobanCredentials as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazySorobanCredentials as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `root_invocation`.
         #[must_use]
@@ -99116,20 +99469,16 @@ pub mod lazy {
     impl LazyXdr for LazyInvokeHostFunctionOp {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazyHostFunction as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyVecM<LazySorobanAuthorizationEntry> as LazyXdr>::xdr_validate(
-                    &buf[pos as usize..],
-                )?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazyHostFunction as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyVecM<LazySorobanAuthorizationEntry> as LazyXdr>::xdr_validate(
+                &buf[pos as usize..],
+            )?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -99172,7 +99521,9 @@ pub mod lazy {
         /// Access field `host_function`.
         #[must_use]
         pub fn host_function(&self) -> LazyHostFunction {
-            <LazyHostFunction as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyHostFunction as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `auth`.
         #[must_use]
@@ -99190,18 +99541,14 @@ pub mod lazy {
     impl LazyXdr for LazyExtendFootprintTtlOp {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len =
-                    <LazyExtensionPoint as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            let next_pos = pos.checked_add(4).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
+            let field_len = <LazyExtensionPoint as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -99243,7 +99590,9 @@ pub mod lazy {
         /// Access field `ext`.
         #[must_use]
         pub fn ext(&self) -> LazyExtensionPoint {
-            <LazyExtensionPoint as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyExtensionPoint as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `extend_to`.
         #[must_use]
@@ -99261,13 +99610,10 @@ pub mod lazy {
     impl LazyXdr for LazyRestoreFootprintOp {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len =
-                    <LazyExtensionPoint as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazyExtensionPoint as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -99308,7 +99654,9 @@ pub mod lazy {
         /// Access field `ext`.
         #[must_use]
         pub fn ext(&self) -> LazyExtensionPoint {
-            <LazyExtensionPoint as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyExtensionPoint as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     /// Lazy wrapper for [`super::OperationBody`].
@@ -99652,13 +100000,12 @@ pub mod lazy {
         /// Get the discriminant.
         #[must_use]
         pub fn discriminant(&self) -> super::OperationType {
-            // Validated — unwrap is safe.
-            super::OperationType::try_from(self.discriminant_i32()).unwrap()
+            <super::OperationType as LazyXdr>::from_xdr_at(&self.0, 0)
         }
 
         /// Access arm `CreateAccount`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_createaccount(&self) -> Option<LazyCreateAccountOp> {
+        pub fn as_create_account(&self) -> Option<LazyCreateAccountOp> {
             if self.discriminant_i32() == 0 {
                 Some(<LazyCreateAccountOp as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -99678,7 +100025,7 @@ pub mod lazy {
 
         /// Access arm `PathPaymentStrictReceive`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_pathpaymentstrictreceive(&self) -> Option<LazyPathPaymentStrictReceiveOp> {
+        pub fn as_path_payment_strict_receive(&self) -> Option<LazyPathPaymentStrictReceiveOp> {
             if self.discriminant_i32() == 2 {
                 Some(<LazyPathPaymentStrictReceiveOp as LazyXdr>::from_xdr_at(
                     &self.0, 4,
@@ -99690,7 +100037,7 @@ pub mod lazy {
 
         /// Access arm `ManageSellOffer`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_manageselloffer(&self) -> Option<LazyManageSellOfferOp> {
+        pub fn as_manage_sell_offer(&self) -> Option<LazyManageSellOfferOp> {
             if self.discriminant_i32() == 3 {
                 Some(<LazyManageSellOfferOp as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -99700,7 +100047,7 @@ pub mod lazy {
 
         /// Access arm `CreatePassiveSellOffer`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_createpassiveselloffer(&self) -> Option<LazyCreatePassiveSellOfferOp> {
+        pub fn as_create_passive_sell_offer(&self) -> Option<LazyCreatePassiveSellOfferOp> {
             if self.discriminant_i32() == 4 {
                 Some(<LazyCreatePassiveSellOfferOp as LazyXdr>::from_xdr_at(
                     &self.0, 4,
@@ -99712,7 +100059,7 @@ pub mod lazy {
 
         /// Access arm `SetOptions`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_setoptions(&self) -> Option<LazySetOptionsOp> {
+        pub fn as_set_options(&self) -> Option<LazySetOptionsOp> {
             if self.discriminant_i32() == 5 {
                 Some(<LazySetOptionsOp as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -99722,7 +100069,7 @@ pub mod lazy {
 
         /// Access arm `ChangeTrust`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_changetrust(&self) -> Option<LazyChangeTrustOp> {
+        pub fn as_change_trust(&self) -> Option<LazyChangeTrustOp> {
             if self.discriminant_i32() == 6 {
                 Some(<LazyChangeTrustOp as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -99732,7 +100079,7 @@ pub mod lazy {
 
         /// Access arm `AllowTrust`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_allowtrust(&self) -> Option<LazyAllowTrustOp> {
+        pub fn as_allow_trust(&self) -> Option<LazyAllowTrustOp> {
             if self.discriminant_i32() == 7 {
                 Some(<LazyAllowTrustOp as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -99742,7 +100089,7 @@ pub mod lazy {
 
         /// Access arm `AccountMerge`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_accountmerge(&self) -> Option<LazyMuxedAccount> {
+        pub fn as_account_merge(&self) -> Option<LazyMuxedAccount> {
             if self.discriminant_i32() == 8 {
                 Some(<LazyMuxedAccount as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -99752,7 +100099,7 @@ pub mod lazy {
 
         /// Access arm `ManageData`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_managedata(&self) -> Option<LazyManageDataOp> {
+        pub fn as_manage_data(&self) -> Option<LazyManageDataOp> {
             if self.discriminant_i32() == 10 {
                 Some(<LazyManageDataOp as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -99762,7 +100109,7 @@ pub mod lazy {
 
         /// Access arm `BumpSequence`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_bumpsequence(&self) -> Option<LazyBumpSequenceOp> {
+        pub fn as_bump_sequence(&self) -> Option<LazyBumpSequenceOp> {
             if self.discriminant_i32() == 11 {
                 Some(<LazyBumpSequenceOp as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -99772,7 +100119,7 @@ pub mod lazy {
 
         /// Access arm `ManageBuyOffer`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_managebuyoffer(&self) -> Option<LazyManageBuyOfferOp> {
+        pub fn as_manage_buy_offer(&self) -> Option<LazyManageBuyOfferOp> {
             if self.discriminant_i32() == 12 {
                 Some(<LazyManageBuyOfferOp as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -99782,7 +100129,7 @@ pub mod lazy {
 
         /// Access arm `PathPaymentStrictSend`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_pathpaymentstrictsend(&self) -> Option<LazyPathPaymentStrictSendOp> {
+        pub fn as_path_payment_strict_send(&self) -> Option<LazyPathPaymentStrictSendOp> {
             if self.discriminant_i32() == 13 {
                 Some(<LazyPathPaymentStrictSendOp as LazyXdr>::from_xdr_at(
                     &self.0, 4,
@@ -99794,7 +100141,7 @@ pub mod lazy {
 
         /// Access arm `CreateClaimableBalance`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_createclaimablebalance(&self) -> Option<LazyCreateClaimableBalanceOp> {
+        pub fn as_create_claimable_balance(&self) -> Option<LazyCreateClaimableBalanceOp> {
             if self.discriminant_i32() == 14 {
                 Some(<LazyCreateClaimableBalanceOp as LazyXdr>::from_xdr_at(
                     &self.0, 4,
@@ -99806,7 +100153,7 @@ pub mod lazy {
 
         /// Access arm `ClaimClaimableBalance`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_claimclaimablebalance(&self) -> Option<LazyClaimClaimableBalanceOp> {
+        pub fn as_claim_claimable_balance(&self) -> Option<LazyClaimClaimableBalanceOp> {
             if self.discriminant_i32() == 15 {
                 Some(<LazyClaimClaimableBalanceOp as LazyXdr>::from_xdr_at(
                     &self.0, 4,
@@ -99818,7 +100165,7 @@ pub mod lazy {
 
         /// Access arm `BeginSponsoringFutureReserves`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_beginsponsoringfuturereserves(
+        pub fn as_begin_sponsoring_future_reserves(
             &self,
         ) -> Option<LazyBeginSponsoringFutureReservesOp> {
             if self.discriminant_i32() == 16 {
@@ -99830,7 +100177,7 @@ pub mod lazy {
 
         /// Access arm `RevokeSponsorship`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_revokesponsorship(&self) -> Option<LazyRevokeSponsorshipOp> {
+        pub fn as_revoke_sponsorship(&self) -> Option<LazyRevokeSponsorshipOp> {
             if self.discriminant_i32() == 18 {
                 Some(<LazyRevokeSponsorshipOp as LazyXdr>::from_xdr_at(
                     &self.0, 4,
@@ -99852,7 +100199,7 @@ pub mod lazy {
 
         /// Access arm `ClawbackClaimableBalance`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_clawbackclaimablebalance(&self) -> Option<LazyClawbackClaimableBalanceOp> {
+        pub fn as_clawback_claimable_balance(&self) -> Option<LazyClawbackClaimableBalanceOp> {
             if self.discriminant_i32() == 20 {
                 Some(<LazyClawbackClaimableBalanceOp as LazyXdr>::from_xdr_at(
                     &self.0, 4,
@@ -99864,7 +100211,7 @@ pub mod lazy {
 
         /// Access arm `SetTrustLineFlags`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_settrustlineflags(&self) -> Option<LazySetTrustLineFlagsOp> {
+        pub fn as_set_trust_line_flags(&self) -> Option<LazySetTrustLineFlagsOp> {
             if self.discriminant_i32() == 21 {
                 Some(<LazySetTrustLineFlagsOp as LazyXdr>::from_xdr_at(
                     &self.0, 4,
@@ -99876,7 +100223,7 @@ pub mod lazy {
 
         /// Access arm `LiquidityPoolDeposit`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_liquiditypooldeposit(&self) -> Option<LazyLiquidityPoolDepositOp> {
+        pub fn as_liquidity_pool_deposit(&self) -> Option<LazyLiquidityPoolDepositOp> {
             if self.discriminant_i32() == 22 {
                 Some(<LazyLiquidityPoolDepositOp as LazyXdr>::from_xdr_at(
                     &self.0, 4,
@@ -99888,7 +100235,7 @@ pub mod lazy {
 
         /// Access arm `LiquidityPoolWithdraw`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_liquiditypoolwithdraw(&self) -> Option<LazyLiquidityPoolWithdrawOp> {
+        pub fn as_liquidity_pool_withdraw(&self) -> Option<LazyLiquidityPoolWithdrawOp> {
             if self.discriminant_i32() == 23 {
                 Some(<LazyLiquidityPoolWithdrawOp as LazyXdr>::from_xdr_at(
                     &self.0, 4,
@@ -99900,7 +100247,7 @@ pub mod lazy {
 
         /// Access arm `InvokeHostFunction`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_invokehostfunction(&self) -> Option<LazyInvokeHostFunctionOp> {
+        pub fn as_invoke_host_function(&self) -> Option<LazyInvokeHostFunctionOp> {
             if self.discriminant_i32() == 24 {
                 Some(<LazyInvokeHostFunctionOp as LazyXdr>::from_xdr_at(
                     &self.0, 4,
@@ -99912,7 +100259,7 @@ pub mod lazy {
 
         /// Access arm `ExtendFootprintTtl`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_extendfootprintttl(&self) -> Option<LazyExtendFootprintTtlOp> {
+        pub fn as_extend_footprint_ttl(&self) -> Option<LazyExtendFootprintTtlOp> {
             if self.discriminant_i32() == 25 {
                 Some(<LazyExtendFootprintTtlOp as LazyXdr>::from_xdr_at(
                     &self.0, 4,
@@ -99924,7 +100271,7 @@ pub mod lazy {
 
         /// Access arm `RestoreFootprint`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_restorefootprint(&self) -> Option<LazyRestoreFootprintOp> {
+        pub fn as_restore_footprint(&self) -> Option<LazyRestoreFootprintOp> {
             if self.discriminant_i32() == 26 {
                 Some(<LazyRestoreFootprintOp as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -99939,19 +100286,15 @@ pub mod lazy {
     impl LazyXdr for LazyOperation {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len =
-                    <LazyOption<LazyMuxedAccount> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyOperationBody as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len =
+                <LazyOption<LazyMuxedAccount> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyOperationBody as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -99993,7 +100336,9 @@ pub mod lazy {
         /// Access field `source_account`.
         #[must_use]
         pub fn source_account(&self) -> LazyOption<LazyMuxedAccount> {
-            <LazyOption<LazyMuxedAccount> as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyOption<LazyMuxedAccount> as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `body`.
         #[must_use]
@@ -100011,17 +100356,18 @@ pub mod lazy {
     impl LazyXdr for LazyHashIdPreimageOperationId {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazyAccountId as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            let next_pos = pos.checked_add(12).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
+            let field_len = <LazyAccountId as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazySequenceNumber as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -100063,7 +100409,9 @@ pub mod lazy {
         /// Access field `source_account`.
         #[must_use]
         pub fn source_account(&self) -> LazyAccountId {
-            <LazyAccountId as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyAccountId as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `seq_num`.
         #[must_use]
@@ -100090,24 +100438,26 @@ pub mod lazy {
     impl LazyXdr for LazyHashIdPreimageRevokeId {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazyAccountId as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            let next_pos = pos.checked_add(44).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            <LazyPoolId as LazyXdr>::xdr_validate(&buf[(pos + 12) as usize..])?;
-            pos = next_pos;
-            {
-                let field_len = <LazyAsset as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazyAccountId as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazySequenceNumber as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyPoolId as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyAsset as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -100150,7 +100500,9 @@ pub mod lazy {
         /// Access field `source_account`.
         #[must_use]
         pub fn source_account(&self) -> LazyAccountId {
-            <LazyAccountId as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyAccountId as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `seq_num`.
         #[must_use]
@@ -100195,19 +100547,15 @@ pub mod lazy {
     impl LazyXdr for LazyHashIdPreimageContractId {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(32).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            <LazyHash as LazyXdr>::xdr_validate(&buf[(pos + 0) as usize..])?;
-            pos = next_pos;
-            {
-                let field_len =
-                    <LazyContractIdPreimage as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazyHash as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyContractIdPreimage as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -100249,12 +100597,17 @@ pub mod lazy {
         /// Access field `network_id`.
         #[must_use]
         pub fn network_id(&self) -> LazyHash {
-            <LazyHash as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyHash as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `contract_id_preimage`.
         #[must_use]
         pub fn contract_id_preimage(&self) -> LazyContractIdPreimage {
-            <LazyContractIdPreimage as LazyXdr>::from_xdr_at(&self.0, 32)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 32;
+            <LazyContractIdPreimage as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     /// Lazy wrapper for [`super::HashIdPreimageSorobanAuthorization`].
@@ -100264,20 +100617,23 @@ pub mod lazy {
     impl LazyXdr for LazyHashIdPreimageSorobanAuthorization {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(44).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            <LazyHash as LazyXdr>::xdr_validate(&buf[(pos + 0) as usize..])?;
-            pos = next_pos;
-            {
-                let field_len = <LazySorobanAuthorizedInvocation as LazyXdr>::xdr_validate(
-                    &buf[pos as usize..],
-                )?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazyHash as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <i64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazySorobanAuthorizedInvocation as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -100319,22 +100675,33 @@ pub mod lazy {
         /// Access field `network_id`.
         #[must_use]
         pub fn network_id(&self) -> LazyHash {
-            <LazyHash as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyHash as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `nonce`.
         #[must_use]
         pub fn nonce(&self) -> i64 {
-            <i64 as LazyXdr>::from_xdr_at(&self.0, 32)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 32;
+            <i64 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `signature_expiration_ledger`.
         #[must_use]
         pub fn signature_expiration_ledger(&self) -> u32 {
-            <u32 as LazyXdr>::from_xdr_at(&self.0, 40)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 40;
+            <u32 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `invocation`.
         #[must_use]
         pub fn invocation(&self) -> LazySorobanAuthorizedInvocation {
-            <LazySorobanAuthorizedInvocation as LazyXdr>::from_xdr_at(&self.0, 44)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 44;
+            <LazySorobanAuthorizedInvocation as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     /// Lazy wrapper for [`super::HashIdPreimage`].
@@ -100452,13 +100819,12 @@ pub mod lazy {
         /// Get the discriminant.
         #[must_use]
         pub fn discriminant(&self) -> super::EnvelopeType {
-            // Validated — unwrap is safe.
-            super::EnvelopeType::try_from(self.discriminant_i32()).unwrap()
+            <super::EnvelopeType as LazyXdr>::from_xdr_at(&self.0, 0)
         }
 
         /// Access arm `OpId`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_opid(&self) -> Option<LazyHashIdPreimageOperationId> {
+        pub fn as_op_id(&self) -> Option<LazyHashIdPreimageOperationId> {
             if self.discriminant_i32() == 6 {
                 Some(<LazyHashIdPreimageOperationId as LazyXdr>::from_xdr_at(
                     &self.0, 4,
@@ -100470,7 +100836,7 @@ pub mod lazy {
 
         /// Access arm `PoolRevokeOpId`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_poolrevokeopid(&self) -> Option<LazyHashIdPreimageRevokeId> {
+        pub fn as_pool_revoke_op_id(&self) -> Option<LazyHashIdPreimageRevokeId> {
             if self.discriminant_i32() == 7 {
                 Some(<LazyHashIdPreimageRevokeId as LazyXdr>::from_xdr_at(
                     &self.0, 4,
@@ -100482,7 +100848,7 @@ pub mod lazy {
 
         /// Access arm `ContractId`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_contractid(&self) -> Option<LazyHashIdPreimageContractId> {
+        pub fn as_contract_id(&self) -> Option<LazyHashIdPreimageContractId> {
             if self.discriminant_i32() == 8 {
                 Some(<LazyHashIdPreimageContractId as LazyXdr>::from_xdr_at(
                     &self.0, 4,
@@ -100494,7 +100860,7 @@ pub mod lazy {
 
         /// Access arm `SorobanAuthorization`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_sorobanauthorization(&self) -> Option<LazyHashIdPreimageSorobanAuthorization> {
+        pub fn as_soroban_authorization(&self) -> Option<LazyHashIdPreimageSorobanAuthorization> {
             if self.discriminant_i32() == 9 {
                 Some(<LazyHashIdPreimageSorobanAuthorization as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -100638,8 +101004,7 @@ pub mod lazy {
         /// Get the discriminant.
         #[must_use]
         pub fn discriminant(&self) -> super::MemoType {
-            // Validated — unwrap is safe.
-            super::MemoType::try_from(self.discriminant_i32()).unwrap()
+            <super::MemoType as LazyXdr>::from_xdr_at(&self.0, 0)
         }
 
         /// Access arm `Text`. Returns `Some` if the discriminant matches.
@@ -100691,11 +101056,14 @@ pub mod lazy {
 
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(16).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
+            let field_len = <LazyTimePoint as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyTimePoint as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -100735,12 +101103,17 @@ pub mod lazy {
         /// Access field `min_time`.
         #[must_use]
         pub fn min_time(&self) -> LazyTimePoint {
-            <LazyTimePoint as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyTimePoint as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `max_time`.
         #[must_use]
         pub fn max_time(&self) -> LazyTimePoint {
-            <LazyTimePoint as LazyXdr>::from_xdr_at(&self.0, 8)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 8;
+            <LazyTimePoint as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     /// Lazy wrapper for [`super::LedgerBounds`].
@@ -100752,11 +101125,14 @@ pub mod lazy {
 
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(8).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -100796,12 +101172,17 @@ pub mod lazy {
         /// Access field `min_ledger`.
         #[must_use]
         pub fn min_ledger(&self) -> u32 {
-            <u32 as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <u32 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `max_ledger`.
         #[must_use]
         pub fn max_ledger(&self) -> u32 {
-            <u32 as LazyXdr>::from_xdr_at(&self.0, 4)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 4;
+            <u32 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     /// Lazy wrapper for [`super::PreconditionsV2`].
@@ -100811,40 +101192,34 @@ pub mod lazy {
     impl LazyXdr for LazyPreconditionsV2 {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len =
-                    <LazyOption<LazyTimeBounds> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len =
-                    <LazyOption<LazyLedgerBounds> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyOption<LazySequenceNumber> as LazyXdr>::xdr_validate(
-                    &buf[pos as usize..],
-                )?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            let next_pos = pos.checked_add(12).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
-            {
-                let field_len =
-                    <LazyVecM<LazySignerKey, 2> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len =
+                <LazyOption<LazyTimeBounds> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyOption<LazyLedgerBounds> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyOption<LazySequenceNumber> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyDuration as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyVecM<LazySignerKey, 2> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -100889,7 +101264,9 @@ pub mod lazy {
         /// Access field `time_bounds`.
         #[must_use]
         pub fn time_bounds(&self) -> LazyOption<LazyTimeBounds> {
-            <LazyOption<LazyTimeBounds> as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyOption<LazyTimeBounds> as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `ledger_bounds`.
         #[must_use]
@@ -101060,8 +101437,7 @@ pub mod lazy {
         /// Get the discriminant.
         #[must_use]
         pub fn discriminant(&self) -> super::PreconditionType {
-            // Validated — unwrap is safe.
-            super::PreconditionType::try_from(self.discriminant_i32()).unwrap()
+            <super::PreconditionType as LazyXdr>::from_xdr_at(&self.0, 0)
         }
 
         /// Access arm `Time`. Returns `Some` if the discriminant matches.
@@ -101091,20 +101467,16 @@ pub mod lazy {
     impl LazyXdr for LazyLedgerFootprint {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len =
-                    <LazyVecM<LazyLedgerKey> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len =
-                    <LazyVecM<LazyLedgerKey> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len =
+                <LazyVecM<LazyLedgerKey> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyVecM<LazyLedgerKey> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -101146,7 +101518,9 @@ pub mod lazy {
         /// Access field `read_only`.
         #[must_use]
         pub fn read_only(&self) -> LazyVecM<LazyLedgerKey> {
-            <LazyVecM<LazyLedgerKey> as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyVecM<LazyLedgerKey> as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `read_write`.
         #[must_use]
@@ -101164,18 +101538,22 @@ pub mod lazy {
     impl LazyXdr for LazySorobanResources {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len =
-                    <LazyLedgerFootprint as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            let next_pos = pos.checked_add(12).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
+            let field_len = <LazyLedgerFootprint as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -101217,7 +101595,9 @@ pub mod lazy {
         /// Access field `footprint`.
         #[must_use]
         pub fn footprint(&self) -> LazyLedgerFootprint {
-            <LazyLedgerFootprint as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyLedgerFootprint as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `instructions`.
         #[must_use]
@@ -101253,12 +101633,10 @@ pub mod lazy {
     impl LazyXdr for LazySorobanResourcesExtV0 {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazyVecM<u32> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazyVecM<u32> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -101299,7 +101677,9 @@ pub mod lazy {
         /// Access field `archived_soroban_entries`.
         #[must_use]
         pub fn archived_soroban_entries(&self) -> LazyVecM<u32> {
-            <LazyVecM<u32> as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyVecM<u32> as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     /// Lazy wrapper for [`super::SorobanTransactionDataExt`].
@@ -101407,25 +101787,19 @@ pub mod lazy {
     impl LazyXdr for LazySorobanTransactionData {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len =
-                    <LazySorobanTransactionDataExt as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len =
-                    <LazySorobanResources as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            let next_pos = pos.checked_add(8).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
+            let field_len =
+                <LazySorobanTransactionDataExt as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazySorobanResources as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <i64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -101468,7 +101842,9 @@ pub mod lazy {
         /// Access field `ext`.
         #[must_use]
         pub fn ext(&self) -> LazySorobanTransactionDataExt {
-            <LazySorobanTransactionDataExt as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazySorobanTransactionDataExt as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `resources`.
         #[must_use]
@@ -101571,39 +101947,36 @@ pub mod lazy {
     impl LazyXdr for LazyTransactionV0 {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(44).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            <LazyUint256 as LazyXdr>::xdr_validate(&buf[(pos + 0) as usize..])?;
-            pos = next_pos;
-            {
-                let field_len =
-                    <LazyOption<LazyTimeBounds> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyMemo as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len =
-                    <LazyVecM<LazyOperation, 100> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len =
-                    <LazyTransactionV0Ext as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazyUint256 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazySequenceNumber as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyOption<LazyTimeBounds> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyMemo as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyVecM<LazyOperation, 100> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyTransactionV0Ext as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -101648,28 +102021,40 @@ pub mod lazy {
         /// Access field `source_account_ed25519`.
         #[must_use]
         pub fn source_account_ed25519(&self) -> LazyUint256 {
-            <LazyUint256 as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyUint256 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `fee`.
         #[must_use]
         pub fn fee(&self) -> u32 {
-            <u32 as LazyXdr>::from_xdr_at(&self.0, 32)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 32;
+            <u32 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `seq_num`.
         #[must_use]
         pub fn seq_num(&self) -> LazySequenceNumber {
-            <LazySequenceNumber as LazyXdr>::from_xdr_at(&self.0, 36)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 36;
+            <LazySequenceNumber as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `time_bounds`.
         #[must_use]
         pub fn time_bounds(&self) -> LazyOption<LazyTimeBounds> {
-            <LazyOption<LazyTimeBounds> as LazyXdr>::from_xdr_at(&self.0, 44)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 44;
+            <LazyOption<LazyTimeBounds> as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `memo`.
         #[must_use]
         pub fn memo(&self) -> LazyMemo {
             let buf = self.0.as_slice();
-            let mut pos: u32 = 44;
+            let mut pos: u32 = 0;
+            pos += 44;
             pos += <LazyOption<LazyTimeBounds> as LazyXdr>::xdr_len(&buf[pos as usize..]);
             <LazyMemo as LazyXdr>::from_xdr_at(&self.0, pos)
         }
@@ -101677,7 +102062,8 @@ pub mod lazy {
         #[must_use]
         pub fn operations(&self) -> LazyVecM<LazyOperation, 100> {
             let buf = self.0.as_slice();
-            let mut pos: u32 = 44;
+            let mut pos: u32 = 0;
+            pos += 44;
             pos += <LazyOption<LazyTimeBounds> as LazyXdr>::xdr_len(&buf[pos as usize..]);
             pos += <LazyMemo as LazyXdr>::xdr_len(&buf[pos as usize..]);
             <LazyVecM<LazyOperation, 100> as LazyXdr>::from_xdr_at(&self.0, pos)
@@ -101686,7 +102072,8 @@ pub mod lazy {
         #[must_use]
         pub fn ext(&self) -> LazyTransactionV0Ext {
             let buf = self.0.as_slice();
-            let mut pos: u32 = 44;
+            let mut pos: u32 = 0;
+            pos += 44;
             pos += <LazyOption<LazyTimeBounds> as LazyXdr>::xdr_len(&buf[pos as usize..]);
             pos += <LazyMemo as LazyXdr>::xdr_len(&buf[pos as usize..]);
             pos += <LazyVecM<LazyOperation, 100> as LazyXdr>::xdr_len(&buf[pos as usize..]);
@@ -101700,20 +102087,16 @@ pub mod lazy {
     impl LazyXdr for LazyTransactionV0Envelope {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazyTransactionV0 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyVecM<LazyDecoratedSignature, 20> as LazyXdr>::xdr_validate(
-                    &buf[pos as usize..],
-                )?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazyTransactionV0 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyVecM<LazyDecoratedSignature, 20> as LazyXdr>::xdr_validate(
+                &buf[pos as usize..],
+            )?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -101755,7 +102138,9 @@ pub mod lazy {
         /// Access field `tx`.
         #[must_use]
         pub fn tx(&self) -> LazyTransactionV0 {
-            <LazyTransactionV0 as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyTransactionV0 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `signatures`.
         #[must_use]
@@ -101872,43 +102257,35 @@ pub mod lazy {
     impl LazyXdr for LazyTransaction {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazyMuxedAccount as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            let next_pos = pos.checked_add(12).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
-            {
-                let field_len = <LazyPreconditions as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyMemo as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len =
-                    <LazyVecM<LazyOperation, 100> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len =
-                    <LazyTransactionExt as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazyMuxedAccount as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazySequenceNumber as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyPreconditions as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyMemo as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyVecM<LazyOperation, 100> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyTransactionExt as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -101954,7 +102331,9 @@ pub mod lazy {
         /// Access field `source_account`.
         #[must_use]
         pub fn source_account(&self) -> LazyMuxedAccount {
-            <LazyMuxedAccount as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyMuxedAccount as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `fee`.
         #[must_use]
@@ -102023,20 +102402,16 @@ pub mod lazy {
     impl LazyXdr for LazyTransactionV1Envelope {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazyTransaction as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyVecM<LazyDecoratedSignature, 20> as LazyXdr>::xdr_validate(
-                    &buf[pos as usize..],
-                )?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazyTransaction as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyVecM<LazyDecoratedSignature, 20> as LazyXdr>::xdr_validate(
+                &buf[pos as usize..],
+            )?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -102078,7 +102453,9 @@ pub mod lazy {
         /// Access field `tx`.
         #[must_use]
         pub fn tx(&self) -> LazyTransaction {
-            <LazyTransaction as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyTransaction as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `signatures`.
         #[must_use]
@@ -102166,8 +102543,7 @@ pub mod lazy {
         /// Get the discriminant.
         #[must_use]
         pub fn discriminant(&self) -> super::EnvelopeType {
-            // Validated — unwrap is safe.
-            super::EnvelopeType::try_from(self.discriminant_i32()).unwrap()
+            <super::EnvelopeType as LazyXdr>::from_xdr_at(&self.0, 0)
         }
 
         /// Access arm `Tx`. Returns `Some` if the discriminant matches.
@@ -102265,31 +102641,24 @@ pub mod lazy {
     impl LazyXdr for LazyFeeBumpTransaction {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazyMuxedAccount as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            let next_pos = pos.checked_add(8).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
-            {
-                let field_len =
-                    <LazyFeeBumpTransactionInnerTx as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len =
-                    <LazyFeeBumpTransactionExt as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazyMuxedAccount as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <i64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyFeeBumpTransactionInnerTx as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyFeeBumpTransactionExt as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -102333,7 +102702,9 @@ pub mod lazy {
         /// Access field `fee_source`.
         #[must_use]
         pub fn fee_source(&self) -> LazyMuxedAccount {
-            <LazyMuxedAccount as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyMuxedAccount as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `fee`.
         #[must_use]
@@ -102370,21 +102741,17 @@ pub mod lazy {
     impl LazyXdr for LazyFeeBumpTransactionEnvelope {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len =
-                    <LazyFeeBumpTransaction as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyVecM<LazyDecoratedSignature, 20> as LazyXdr>::xdr_validate(
-                    &buf[pos as usize..],
-                )?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len =
+                <LazyFeeBumpTransaction as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyVecM<LazyDecoratedSignature, 20> as LazyXdr>::xdr_validate(
+                &buf[pos as usize..],
+            )?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -102426,7 +102793,9 @@ pub mod lazy {
         /// Access field `tx`.
         #[must_use]
         pub fn tx(&self) -> LazyFeeBumpTransaction {
-            <LazyFeeBumpTransaction as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyFeeBumpTransaction as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `signatures`.
         #[must_use]
@@ -102536,13 +102905,12 @@ pub mod lazy {
         /// Get the discriminant.
         #[must_use]
         pub fn discriminant(&self) -> super::EnvelopeType {
-            // Validated — unwrap is safe.
-            super::EnvelopeType::try_from(self.discriminant_i32()).unwrap()
+            <super::EnvelopeType as LazyXdr>::from_xdr_at(&self.0, 0)
         }
 
         /// Access arm `TxV0`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_txv0(&self) -> Option<LazyTransactionV0Envelope> {
+        pub fn as_tx_v0(&self) -> Option<LazyTransactionV0Envelope> {
             if self.discriminant_i32() == 0 {
                 Some(<LazyTransactionV0Envelope as LazyXdr>::from_xdr_at(
                     &self.0, 4,
@@ -102566,7 +102934,7 @@ pub mod lazy {
 
         /// Access arm `TxFeeBump`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_txfeebump(&self) -> Option<LazyFeeBumpTransactionEnvelope> {
+        pub fn as_tx_fee_bump(&self) -> Option<LazyFeeBumpTransactionEnvelope> {
             if self.discriminant_i32() == 5 {
                 Some(<LazyFeeBumpTransactionEnvelope as LazyXdr>::from_xdr_at(
                     &self.0, 4,
@@ -102663,8 +103031,7 @@ pub mod lazy {
         /// Get the discriminant.
         #[must_use]
         pub fn discriminant(&self) -> super::EnvelopeType {
-            // Validated — unwrap is safe.
-            super::EnvelopeType::try_from(self.discriminant_i32()).unwrap()
+            <super::EnvelopeType as LazyXdr>::from_xdr_at(&self.0, 0)
         }
 
         /// Access arm `Tx`. Returns `Some` if the discriminant matches.
@@ -102679,7 +103046,7 @@ pub mod lazy {
 
         /// Access arm `TxFeeBump`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_txfeebump(&self) -> Option<LazyFeeBumpTransaction> {
+        pub fn as_tx_fee_bump(&self) -> Option<LazyFeeBumpTransaction> {
             if self.discriminant_i32() == 5 {
                 Some(<LazyFeeBumpTransaction as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -102694,21 +103061,17 @@ pub mod lazy {
     impl LazyXdr for LazyTransactionSignaturePayload {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(32).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            <LazyHash as LazyXdr>::xdr_validate(&buf[(pos + 0) as usize..])?;
-            pos = next_pos;
-            {
-                let field_len =
-                    <LazyTransactionSignaturePayloadTaggedTransaction as LazyXdr>::xdr_validate(
-                        &buf[pos as usize..],
-                    )?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazyHash as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyTransactionSignaturePayloadTaggedTransaction as LazyXdr>::xdr_validate(
+                    &buf[pos as usize..],
+                )?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -102752,12 +103115,17 @@ pub mod lazy {
         /// Access field `network_id`.
         #[must_use]
         pub fn network_id(&self) -> LazyHash {
-            <LazyHash as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyHash as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `tagged_transaction`.
         #[must_use]
         pub fn tagged_transaction(&self) -> LazyTransactionSignaturePayloadTaggedTransaction {
-            <LazyTransactionSignaturePayloadTaggedTransaction as LazyXdr>::from_xdr_at(&self.0, 32)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 32;
+            <LazyTransactionSignaturePayloadTaggedTransaction as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     // Enum ClaimAtomType: scalar lazy type — impl LazyXdr directly on the enum.
@@ -102793,34 +103161,30 @@ pub mod lazy {
     impl LazyXdr for LazyClaimOfferAtomV0 {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(40).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            <LazyUint256 as LazyXdr>::xdr_validate(&buf[(pos + 0) as usize..])?;
-            pos = next_pos;
-            {
-                let field_len = <LazyAsset as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            let next_pos = pos.checked_add(8).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
-            {
-                let field_len = <LazyAsset as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            let next_pos = pos.checked_add(8).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
+            let field_len = <LazyUint256 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <i64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyAsset as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <i64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyAsset as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <i64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -102865,23 +103229,32 @@ pub mod lazy {
         /// Access field `seller_ed25519`.
         #[must_use]
         pub fn seller_ed25519(&self) -> LazyUint256 {
-            <LazyUint256 as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyUint256 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `offer_id`.
         #[must_use]
         pub fn offer_id(&self) -> i64 {
-            <i64 as LazyXdr>::from_xdr_at(&self.0, 32)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 32;
+            <i64 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `asset_sold`.
         #[must_use]
         pub fn asset_sold(&self) -> LazyAsset {
-            <LazyAsset as LazyXdr>::from_xdr_at(&self.0, 40)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 40;
+            <LazyAsset as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `amount_sold`.
         #[must_use]
         pub fn amount_sold(&self) -> i64 {
             let buf = self.0.as_slice();
-            let mut pos: u32 = 40;
+            let mut pos: u32 = 0;
+            pos += 40;
             pos += <LazyAsset as LazyXdr>::xdr_len(&buf[pos as usize..]);
             <i64 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
@@ -102889,7 +103262,8 @@ pub mod lazy {
         #[must_use]
         pub fn asset_bought(&self) -> LazyAsset {
             let buf = self.0.as_slice();
-            let mut pos: u32 = 40;
+            let mut pos: u32 = 0;
+            pos += 40;
             pos += <LazyAsset as LazyXdr>::xdr_len(&buf[pos as usize..]);
             pos += 8;
             <LazyAsset as LazyXdr>::from_xdr_at(&self.0, pos)
@@ -102898,7 +103272,8 @@ pub mod lazy {
         #[must_use]
         pub fn amount_bought(&self) -> i64 {
             let buf = self.0.as_slice();
-            let mut pos: u32 = 40;
+            let mut pos: u32 = 0;
+            pos += 40;
             pos += <LazyAsset as LazyXdr>::xdr_len(&buf[pos as usize..]);
             pos += 8;
             pos += <LazyAsset as LazyXdr>::xdr_len(&buf[pos as usize..]);
@@ -102912,39 +103287,30 @@ pub mod lazy {
     impl LazyXdr for LazyClaimOfferAtom {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazyAccountId as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            let next_pos = pos.checked_add(8).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
-            {
-                let field_len = <LazyAsset as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            let next_pos = pos.checked_add(8).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
-            {
-                let field_len = <LazyAsset as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            let next_pos = pos.checked_add(8).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
+            let field_len = <LazyAccountId as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <i64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyAsset as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <i64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyAsset as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <i64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -102990,7 +103356,9 @@ pub mod lazy {
         /// Access field `seller_id`.
         #[must_use]
         pub fn seller_id(&self) -> LazyAccountId {
-            <LazyAccountId as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyAccountId as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `offer_id`.
         #[must_use]
@@ -103050,34 +103418,26 @@ pub mod lazy {
     impl LazyXdr for LazyClaimLiquidityAtom {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(32).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            <LazyPoolId as LazyXdr>::xdr_validate(&buf[(pos + 0) as usize..])?;
-            pos = next_pos;
-            {
-                let field_len = <LazyAsset as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            let next_pos = pos.checked_add(8).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
-            {
-                let field_len = <LazyAsset as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            let next_pos = pos.checked_add(8).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
+            let field_len = <LazyPoolId as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyAsset as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <i64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyAsset as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <i64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -103122,18 +103482,24 @@ pub mod lazy {
         /// Access field `liquidity_pool_id`.
         #[must_use]
         pub fn liquidity_pool_id(&self) -> LazyPoolId {
-            <LazyPoolId as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyPoolId as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `asset_sold`.
         #[must_use]
         pub fn asset_sold(&self) -> LazyAsset {
-            <LazyAsset as LazyXdr>::from_xdr_at(&self.0, 32)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 32;
+            <LazyAsset as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `amount_sold`.
         #[must_use]
         pub fn amount_sold(&self) -> i64 {
             let buf = self.0.as_slice();
-            let mut pos: u32 = 32;
+            let mut pos: u32 = 0;
+            pos += 32;
             pos += <LazyAsset as LazyXdr>::xdr_len(&buf[pos as usize..]);
             <i64 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
@@ -103141,7 +103507,8 @@ pub mod lazy {
         #[must_use]
         pub fn asset_bought(&self) -> LazyAsset {
             let buf = self.0.as_slice();
-            let mut pos: u32 = 32;
+            let mut pos: u32 = 0;
+            pos += 32;
             pos += <LazyAsset as LazyXdr>::xdr_len(&buf[pos as usize..]);
             pos += 8;
             <LazyAsset as LazyXdr>::from_xdr_at(&self.0, pos)
@@ -103150,7 +103517,8 @@ pub mod lazy {
         #[must_use]
         pub fn amount_bought(&self) -> i64 {
             let buf = self.0.as_slice();
-            let mut pos: u32 = 32;
+            let mut pos: u32 = 0;
+            pos += 32;
             pos += <LazyAsset as LazyXdr>::xdr_len(&buf[pos as usize..]);
             pos += 8;
             pos += <LazyAsset as LazyXdr>::xdr_len(&buf[pos as usize..]);
@@ -103254,8 +103622,7 @@ pub mod lazy {
         /// Get the discriminant.
         #[must_use]
         pub fn discriminant(&self) -> super::ClaimAtomType {
-            // Validated — unwrap is safe.
-            super::ClaimAtomType::try_from(self.discriminant_i32()).unwrap()
+            <super::ClaimAtomType as LazyXdr>::from_xdr_at(&self.0, 0)
         }
 
         /// Access arm `V0`. Returns `Some` if the discriminant matches.
@@ -103270,7 +103637,7 @@ pub mod lazy {
 
         /// Access arm `OrderBook`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_orderbook(&self) -> Option<LazyClaimOfferAtom> {
+        pub fn as_order_book(&self) -> Option<LazyClaimOfferAtom> {
             if self.discriminant_i32() == 1 {
                 Some(<LazyClaimOfferAtom as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -103280,7 +103647,7 @@ pub mod lazy {
 
         /// Access arm `LiquidityPool`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_liquiditypool(&self) -> Option<LazyClaimLiquidityAtom> {
+        pub fn as_liquidity_pool(&self) -> Option<LazyClaimLiquidityAtom> {
             if self.discriminant_i32() == 2 {
                 Some(<LazyClaimLiquidityAtom as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -103411,8 +103778,7 @@ pub mod lazy {
         /// Get the discriminant.
         #[must_use]
         pub fn discriminant(&self) -> super::CreateAccountResultCode {
-            // Validated — unwrap is safe.
-            super::CreateAccountResultCode::try_from(self.discriminant_i32()).unwrap()
+            <super::CreateAccountResultCode as LazyXdr>::from_xdr_at(&self.0, 0)
         }
     }
     // Enum PaymentResultCode: scalar lazy type — impl LazyXdr directly on the enum.
@@ -103568,8 +103934,7 @@ pub mod lazy {
         /// Get the discriminant.
         #[must_use]
         pub fn discriminant(&self) -> super::PaymentResultCode {
-            // Validated — unwrap is safe.
-            super::PaymentResultCode::try_from(self.discriminant_i32()).unwrap()
+            <super::PaymentResultCode as LazyXdr>::from_xdr_at(&self.0, 0)
         }
     }
     // Enum PathPaymentStrictReceiveResultCode: scalar lazy type — impl LazyXdr directly on the enum.
@@ -103605,23 +103970,18 @@ pub mod lazy {
     impl LazyXdr for LazySimplePaymentResult {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazyAccountId as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyAsset as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            let next_pos = pos.checked_add(8).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
+            let field_len = <LazyAccountId as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyAsset as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <i64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -103664,7 +104024,9 @@ pub mod lazy {
         /// Access field `destination`.
         #[must_use]
         pub fn destination(&self) -> LazyAccountId {
-            <LazyAccountId as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyAccountId as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `asset`.
         #[must_use]
@@ -103691,20 +104053,16 @@ pub mod lazy {
     impl LazyXdr for LazyPathPaymentStrictReceiveResultSuccess {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len =
-                    <LazyVecM<LazyClaimAtom> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len =
-                    <LazySimplePaymentResult as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len =
+                <LazyVecM<LazyClaimAtom> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazySimplePaymentResult as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -103746,7 +104104,9 @@ pub mod lazy {
         /// Access field `offers`.
         #[must_use]
         pub fn offers(&self) -> LazyVecM<LazyClaimAtom> {
-            <LazyVecM<LazyClaimAtom> as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyVecM<LazyClaimAtom> as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `last`.
         #[must_use]
@@ -103913,8 +104273,7 @@ pub mod lazy {
         /// Get the discriminant.
         #[must_use]
         pub fn discriminant(&self) -> super::PathPaymentStrictReceiveResultCode {
-            // Validated — unwrap is safe.
-            super::PathPaymentStrictReceiveResultCode::try_from(self.discriminant_i32()).unwrap()
+            <super::PathPaymentStrictReceiveResultCode as LazyXdr>::from_xdr_at(&self.0, 0)
         }
 
         /// Access arm `Success`. Returns `Some` if the discriminant matches.
@@ -103931,7 +104290,7 @@ pub mod lazy {
 
         /// Access arm `NoIssuer`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_noissuer(&self) -> Option<LazyAsset> {
+        pub fn as_no_issuer(&self) -> Option<LazyAsset> {
             if self.discriminant_i32() == -9 {
                 Some(<LazyAsset as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -103972,20 +104331,16 @@ pub mod lazy {
     impl LazyXdr for LazyPathPaymentStrictSendResultSuccess {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len =
-                    <LazyVecM<LazyClaimAtom> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len =
-                    <LazySimplePaymentResult as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len =
+                <LazyVecM<LazyClaimAtom> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazySimplePaymentResult as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -104027,7 +104382,9 @@ pub mod lazy {
         /// Access field `offers`.
         #[must_use]
         pub fn offers(&self) -> LazyVecM<LazyClaimAtom> {
-            <LazyVecM<LazyClaimAtom> as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyVecM<LazyClaimAtom> as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `last`.
         #[must_use]
@@ -104194,8 +104551,7 @@ pub mod lazy {
         /// Get the discriminant.
         #[must_use]
         pub fn discriminant(&self) -> super::PathPaymentStrictSendResultCode {
-            // Validated — unwrap is safe.
-            super::PathPaymentStrictSendResultCode::try_from(self.discriminant_i32()).unwrap()
+            <super::PathPaymentStrictSendResultCode as LazyXdr>::from_xdr_at(&self.0, 0)
         }
 
         /// Access arm `Success`. Returns `Some` if the discriminant matches.
@@ -104210,7 +104566,7 @@ pub mod lazy {
 
         /// Access arm `NoIssuer`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_noissuer(&self) -> Option<LazyAsset> {
+        pub fn as_no_issuer(&self) -> Option<LazyAsset> {
             if self.discriminant_i32() == -9 {
                 Some(<LazyAsset as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -104363,8 +104719,7 @@ pub mod lazy {
         /// Get the discriminant.
         #[must_use]
         pub fn discriminant(&self) -> super::ManageOfferEffect {
-            // Validated — unwrap is safe.
-            super::ManageOfferEffect::try_from(self.discriminant_i32()).unwrap()
+            <super::ManageOfferEffect as LazyXdr>::from_xdr_at(&self.0, 0)
         }
 
         /// Access arm `Created`. Returns `Some` if the discriminant matches.
@@ -104394,21 +104749,16 @@ pub mod lazy {
     impl LazyXdr for LazyManageOfferSuccessResult {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len =
-                    <LazyVecM<LazyClaimAtom> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len = <LazyManageOfferSuccessResultOffer as LazyXdr>::xdr_validate(
-                    &buf[pos as usize..],
-                )?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len =
+                <LazyVecM<LazyClaimAtom> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyManageOfferSuccessResultOffer as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -104450,7 +104800,9 @@ pub mod lazy {
         /// Access field `offers_claimed`.
         #[must_use]
         pub fn offers_claimed(&self) -> LazyVecM<LazyClaimAtom> {
-            <LazyVecM<LazyClaimAtom> as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyVecM<LazyClaimAtom> as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `offer`.
         #[must_use]
@@ -104611,8 +104963,7 @@ pub mod lazy {
         /// Get the discriminant.
         #[must_use]
         pub fn discriminant(&self) -> super::ManageSellOfferResultCode {
-            // Validated — unwrap is safe.
-            super::ManageSellOfferResultCode::try_from(self.discriminant_i32()).unwrap()
+            <super::ManageSellOfferResultCode as LazyXdr>::from_xdr_at(&self.0, 0)
         }
 
         /// Access arm `Success`. Returns `Some` if the discriminant matches.
@@ -104803,8 +105154,7 @@ pub mod lazy {
         /// Get the discriminant.
         #[must_use]
         pub fn discriminant(&self) -> super::ManageBuyOfferResultCode {
-            // Validated — unwrap is safe.
-            super::ManageBuyOfferResultCode::try_from(self.discriminant_i32()).unwrap()
+            <super::ManageBuyOfferResultCode as LazyXdr>::from_xdr_at(&self.0, 0)
         }
 
         /// Access arm `Success`. Returns `Some` if the discriminant matches.
@@ -104978,8 +105328,7 @@ pub mod lazy {
         /// Get the discriminant.
         #[must_use]
         pub fn discriminant(&self) -> super::SetOptionsResultCode {
-            // Validated — unwrap is safe.
-            super::SetOptionsResultCode::try_from(self.discriminant_i32()).unwrap()
+            <super::SetOptionsResultCode as LazyXdr>::from_xdr_at(&self.0, 0)
         }
     }
     // Enum ChangeTrustResultCode: scalar lazy type — impl LazyXdr directly on the enum.
@@ -105129,8 +105478,7 @@ pub mod lazy {
         /// Get the discriminant.
         #[must_use]
         pub fn discriminant(&self) -> super::ChangeTrustResultCode {
-            // Validated — unwrap is safe.
-            super::ChangeTrustResultCode::try_from(self.discriminant_i32()).unwrap()
+            <super::ChangeTrustResultCode as LazyXdr>::from_xdr_at(&self.0, 0)
         }
     }
     // Enum AllowTrustResultCode: scalar lazy type — impl LazyXdr directly on the enum.
@@ -105268,8 +105616,7 @@ pub mod lazy {
         /// Get the discriminant.
         #[must_use]
         pub fn discriminant(&self) -> super::AllowTrustResultCode {
-            // Validated — unwrap is safe.
-            super::AllowTrustResultCode::try_from(self.discriminant_i32()).unwrap()
+            <super::AllowTrustResultCode as LazyXdr>::from_xdr_at(&self.0, 0)
         }
     }
     // Enum AccountMergeResultCode: scalar lazy type — impl LazyXdr directly on the enum.
@@ -105416,8 +105763,7 @@ pub mod lazy {
         /// Get the discriminant.
         #[must_use]
         pub fn discriminant(&self) -> super::AccountMergeResultCode {
-            // Validated — unwrap is safe.
-            super::AccountMergeResultCode::try_from(self.discriminant_i32()).unwrap()
+            <super::AccountMergeResultCode as LazyXdr>::from_xdr_at(&self.0, 0)
         }
 
         /// Access arm `Success`. Returns `Some` if the discriminant matches.
@@ -105463,17 +105809,14 @@ pub mod lazy {
     impl LazyXdr for LazyInflationPayout {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            {
-                let field_len = <LazyAccountId as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            let next_pos = pos.checked_add(8).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
+            let field_len = <LazyAccountId as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <i64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -105515,7 +105858,9 @@ pub mod lazy {
         /// Access field `destination`.
         #[must_use]
         pub fn destination(&self) -> LazyAccountId {
-            <LazyAccountId as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyAccountId as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `amount`.
         #[must_use]
@@ -105611,8 +105956,7 @@ pub mod lazy {
         /// Get the discriminant.
         #[must_use]
         pub fn discriminant(&self) -> super::InflationResultCode {
-            // Validated — unwrap is safe.
-            super::InflationResultCode::try_from(self.discriminant_i32()).unwrap()
+            <super::InflationResultCode as LazyXdr>::from_xdr_at(&self.0, 0)
         }
 
         /// Access arm `Success`. Returns `Some` if the discriminant matches.
@@ -105750,8 +106094,7 @@ pub mod lazy {
         /// Get the discriminant.
         #[must_use]
         pub fn discriminant(&self) -> super::ManageDataResultCode {
-            // Validated — unwrap is safe.
-            super::ManageDataResultCode::try_from(self.discriminant_i32()).unwrap()
+            <super::ManageDataResultCode as LazyXdr>::from_xdr_at(&self.0, 0)
         }
     }
     // Enum BumpSequenceResultCode: scalar lazy type — impl LazyXdr directly on the enum.
@@ -105859,8 +106202,7 @@ pub mod lazy {
         /// Get the discriminant.
         #[must_use]
         pub fn discriminant(&self) -> super::BumpSequenceResultCode {
-            // Validated — unwrap is safe.
-            super::BumpSequenceResultCode::try_from(self.discriminant_i32()).unwrap()
+            <super::BumpSequenceResultCode as LazyXdr>::from_xdr_at(&self.0, 0)
         }
     }
     // Enum CreateClaimableBalanceResultCode: scalar lazy type — impl LazyXdr directly on the enum.
@@ -105996,8 +106338,7 @@ pub mod lazy {
         /// Get the discriminant.
         #[must_use]
         pub fn discriminant(&self) -> super::CreateClaimableBalanceResultCode {
-            // Validated — unwrap is safe.
-            super::CreateClaimableBalanceResultCode::try_from(self.discriminant_i32()).unwrap()
+            <super::CreateClaimableBalanceResultCode as LazyXdr>::from_xdr_at(&self.0, 0)
         }
 
         /// Access arm `Success`. Returns `Some` if the discriminant matches.
@@ -106145,8 +106486,7 @@ pub mod lazy {
         /// Get the discriminant.
         #[must_use]
         pub fn discriminant(&self) -> super::ClaimClaimableBalanceResultCode {
-            // Validated — unwrap is safe.
-            super::ClaimClaimableBalanceResultCode::try_from(self.discriminant_i32()).unwrap()
+            <super::ClaimClaimableBalanceResultCode as LazyXdr>::from_xdr_at(&self.0, 0)
         }
     }
     // Enum BeginSponsoringFutureReservesResultCode: scalar lazy type — impl LazyXdr directly on the enum.
@@ -106266,9 +106606,7 @@ pub mod lazy {
         /// Get the discriminant.
         #[must_use]
         pub fn discriminant(&self) -> super::BeginSponsoringFutureReservesResultCode {
-            // Validated — unwrap is safe.
-            super::BeginSponsoringFutureReservesResultCode::try_from(self.discriminant_i32())
-                .unwrap()
+            <super::BeginSponsoringFutureReservesResultCode as LazyXdr>::from_xdr_at(&self.0, 0)
         }
     }
     // Enum EndSponsoringFutureReservesResultCode: scalar lazy type — impl LazyXdr directly on the enum.
@@ -106376,8 +106714,7 @@ pub mod lazy {
         /// Get the discriminant.
         #[must_use]
         pub fn discriminant(&self) -> super::EndSponsoringFutureReservesResultCode {
-            // Validated — unwrap is safe.
-            super::EndSponsoringFutureReservesResultCode::try_from(self.discriminant_i32()).unwrap()
+            <super::EndSponsoringFutureReservesResultCode as LazyXdr>::from_xdr_at(&self.0, 0)
         }
     }
     // Enum RevokeSponsorshipResultCode: scalar lazy type — impl LazyXdr directly on the enum.
@@ -106509,8 +106846,7 @@ pub mod lazy {
         /// Get the discriminant.
         #[must_use]
         pub fn discriminant(&self) -> super::RevokeSponsorshipResultCode {
-            // Validated — unwrap is safe.
-            super::RevokeSponsorshipResultCode::try_from(self.discriminant_i32()).unwrap()
+            <super::RevokeSponsorshipResultCode as LazyXdr>::from_xdr_at(&self.0, 0)
         }
     }
     // Enum ClawbackResultCode: scalar lazy type — impl LazyXdr directly on the enum.
@@ -106636,8 +106972,7 @@ pub mod lazy {
         /// Get the discriminant.
         #[must_use]
         pub fn discriminant(&self) -> super::ClawbackResultCode {
-            // Validated — unwrap is safe.
-            super::ClawbackResultCode::try_from(self.discriminant_i32()).unwrap()
+            <super::ClawbackResultCode as LazyXdr>::from_xdr_at(&self.0, 0)
         }
     }
     // Enum ClawbackClaimableBalanceResultCode: scalar lazy type — impl LazyXdr directly on the enum.
@@ -106757,8 +107092,7 @@ pub mod lazy {
         /// Get the discriminant.
         #[must_use]
         pub fn discriminant(&self) -> super::ClawbackClaimableBalanceResultCode {
-            // Validated — unwrap is safe.
-            super::ClawbackClaimableBalanceResultCode::try_from(self.discriminant_i32()).unwrap()
+            <super::ClawbackClaimableBalanceResultCode as LazyXdr>::from_xdr_at(&self.0, 0)
         }
     }
     // Enum SetTrustLineFlagsResultCode: scalar lazy type — impl LazyXdr directly on the enum.
@@ -106890,8 +107224,7 @@ pub mod lazy {
         /// Get the discriminant.
         #[must_use]
         pub fn discriminant(&self) -> super::SetTrustLineFlagsResultCode {
-            // Validated — unwrap is safe.
-            super::SetTrustLineFlagsResultCode::try_from(self.discriminant_i32()).unwrap()
+            <super::SetTrustLineFlagsResultCode as LazyXdr>::from_xdr_at(&self.0, 0)
         }
     }
     // Enum LiquidityPoolDepositResultCode: scalar lazy type — impl LazyXdr directly on the enum.
@@ -107041,8 +107374,7 @@ pub mod lazy {
         /// Get the discriminant.
         #[must_use]
         pub fn discriminant(&self) -> super::LiquidityPoolDepositResultCode {
-            // Validated — unwrap is safe.
-            super::LiquidityPoolDepositResultCode::try_from(self.discriminant_i32()).unwrap()
+            <super::LiquidityPoolDepositResultCode as LazyXdr>::from_xdr_at(&self.0, 0)
         }
     }
     // Enum LiquidityPoolWithdrawResultCode: scalar lazy type — impl LazyXdr directly on the enum.
@@ -107180,8 +107512,7 @@ pub mod lazy {
         /// Get the discriminant.
         #[must_use]
         pub fn discriminant(&self) -> super::LiquidityPoolWithdrawResultCode {
-            // Validated — unwrap is safe.
-            super::LiquidityPoolWithdrawResultCode::try_from(self.discriminant_i32()).unwrap()
+            <super::LiquidityPoolWithdrawResultCode as LazyXdr>::from_xdr_at(&self.0, 0)
         }
     }
     // Enum InvokeHostFunctionResultCode: scalar lazy type — impl LazyXdr directly on the enum.
@@ -107316,8 +107647,7 @@ pub mod lazy {
         /// Get the discriminant.
         #[must_use]
         pub fn discriminant(&self) -> super::InvokeHostFunctionResultCode {
-            // Validated — unwrap is safe.
-            super::InvokeHostFunctionResultCode::try_from(self.discriminant_i32()).unwrap()
+            <super::InvokeHostFunctionResultCode as LazyXdr>::from_xdr_at(&self.0, 0)
         }
 
         /// Access arm `Success`. Returns `Some` if the discriminant matches.
@@ -107447,8 +107777,7 @@ pub mod lazy {
         /// Get the discriminant.
         #[must_use]
         pub fn discriminant(&self) -> super::ExtendFootprintTtlResultCode {
-            // Validated — unwrap is safe.
-            super::ExtendFootprintTtlResultCode::try_from(self.discriminant_i32()).unwrap()
+            <super::ExtendFootprintTtlResultCode as LazyXdr>::from_xdr_at(&self.0, 0)
         }
     }
     // Enum RestoreFootprintResultCode: scalar lazy type — impl LazyXdr directly on the enum.
@@ -107568,8 +107897,7 @@ pub mod lazy {
         /// Get the discriminant.
         #[must_use]
         pub fn discriminant(&self) -> super::RestoreFootprintResultCode {
-            // Validated — unwrap is safe.
-            super::RestoreFootprintResultCode::try_from(self.discriminant_i32()).unwrap()
+            <super::RestoreFootprintResultCode as LazyXdr>::from_xdr_at(&self.0, 0)
         }
     }
     // Enum OperationResultCode: scalar lazy type — impl LazyXdr directly on the enum.
@@ -107965,13 +108293,12 @@ pub mod lazy {
         /// Get the discriminant.
         #[must_use]
         pub fn discriminant(&self) -> super::OperationType {
-            // Validated — unwrap is safe.
-            super::OperationType::try_from(self.discriminant_i32()).unwrap()
+            <super::OperationType as LazyXdr>::from_xdr_at(&self.0, 0)
         }
 
         /// Access arm `CreateAccount`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_createaccount(&self) -> Option<LazyCreateAccountResult> {
+        pub fn as_create_account(&self) -> Option<LazyCreateAccountResult> {
             if self.discriminant_i32() == 0 {
                 Some(<LazyCreateAccountResult as LazyXdr>::from_xdr_at(
                     &self.0, 4,
@@ -107993,7 +108320,7 @@ pub mod lazy {
 
         /// Access arm `PathPaymentStrictReceive`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_pathpaymentstrictreceive(&self) -> Option<LazyPathPaymentStrictReceiveResult> {
+        pub fn as_path_payment_strict_receive(&self) -> Option<LazyPathPaymentStrictReceiveResult> {
             if self.discriminant_i32() == 2 {
                 Some(<LazyPathPaymentStrictReceiveResult as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -108003,7 +108330,7 @@ pub mod lazy {
 
         /// Access arm `ManageSellOffer`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_manageselloffer(&self) -> Option<LazyManageSellOfferResult> {
+        pub fn as_manage_sell_offer(&self) -> Option<LazyManageSellOfferResult> {
             if self.discriminant_i32() == 3 {
                 Some(<LazyManageSellOfferResult as LazyXdr>::from_xdr_at(
                     &self.0, 4,
@@ -108015,7 +108342,7 @@ pub mod lazy {
 
         /// Access arm `CreatePassiveSellOffer`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_createpassiveselloffer(&self) -> Option<LazyManageSellOfferResult> {
+        pub fn as_create_passive_sell_offer(&self) -> Option<LazyManageSellOfferResult> {
             if self.discriminant_i32() == 4 {
                 Some(<LazyManageSellOfferResult as LazyXdr>::from_xdr_at(
                     &self.0, 4,
@@ -108027,7 +108354,7 @@ pub mod lazy {
 
         /// Access arm `SetOptions`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_setoptions(&self) -> Option<LazySetOptionsResult> {
+        pub fn as_set_options(&self) -> Option<LazySetOptionsResult> {
             if self.discriminant_i32() == 5 {
                 Some(<LazySetOptionsResult as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -108037,7 +108364,7 @@ pub mod lazy {
 
         /// Access arm `ChangeTrust`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_changetrust(&self) -> Option<LazyChangeTrustResult> {
+        pub fn as_change_trust(&self) -> Option<LazyChangeTrustResult> {
             if self.discriminant_i32() == 6 {
                 Some(<LazyChangeTrustResult as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -108047,7 +108374,7 @@ pub mod lazy {
 
         /// Access arm `AllowTrust`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_allowtrust(&self) -> Option<LazyAllowTrustResult> {
+        pub fn as_allow_trust(&self) -> Option<LazyAllowTrustResult> {
             if self.discriminant_i32() == 7 {
                 Some(<LazyAllowTrustResult as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -108057,7 +108384,7 @@ pub mod lazy {
 
         /// Access arm `AccountMerge`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_accountmerge(&self) -> Option<LazyAccountMergeResult> {
+        pub fn as_account_merge(&self) -> Option<LazyAccountMergeResult> {
             if self.discriminant_i32() == 8 {
                 Some(<LazyAccountMergeResult as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -108077,7 +108404,7 @@ pub mod lazy {
 
         /// Access arm `ManageData`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_managedata(&self) -> Option<LazyManageDataResult> {
+        pub fn as_manage_data(&self) -> Option<LazyManageDataResult> {
             if self.discriminant_i32() == 10 {
                 Some(<LazyManageDataResult as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -108087,7 +108414,7 @@ pub mod lazy {
 
         /// Access arm `BumpSequence`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_bumpsequence(&self) -> Option<LazyBumpSequenceResult> {
+        pub fn as_bump_sequence(&self) -> Option<LazyBumpSequenceResult> {
             if self.discriminant_i32() == 11 {
                 Some(<LazyBumpSequenceResult as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -108097,7 +108424,7 @@ pub mod lazy {
 
         /// Access arm `ManageBuyOffer`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_managebuyoffer(&self) -> Option<LazyManageBuyOfferResult> {
+        pub fn as_manage_buy_offer(&self) -> Option<LazyManageBuyOfferResult> {
             if self.discriminant_i32() == 12 {
                 Some(<LazyManageBuyOfferResult as LazyXdr>::from_xdr_at(
                     &self.0, 4,
@@ -108109,7 +108436,7 @@ pub mod lazy {
 
         /// Access arm `PathPaymentStrictSend`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_pathpaymentstrictsend(&self) -> Option<LazyPathPaymentStrictSendResult> {
+        pub fn as_path_payment_strict_send(&self) -> Option<LazyPathPaymentStrictSendResult> {
             if self.discriminant_i32() == 13 {
                 Some(<LazyPathPaymentStrictSendResult as LazyXdr>::from_xdr_at(
                     &self.0, 4,
@@ -108121,7 +108448,7 @@ pub mod lazy {
 
         /// Access arm `CreateClaimableBalance`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_createclaimablebalance(&self) -> Option<LazyCreateClaimableBalanceResult> {
+        pub fn as_create_claimable_balance(&self) -> Option<LazyCreateClaimableBalanceResult> {
             if self.discriminant_i32() == 14 {
                 Some(<LazyCreateClaimableBalanceResult as LazyXdr>::from_xdr_at(
                     &self.0, 4,
@@ -108133,7 +108460,7 @@ pub mod lazy {
 
         /// Access arm `ClaimClaimableBalance`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_claimclaimablebalance(&self) -> Option<LazyClaimClaimableBalanceResult> {
+        pub fn as_claim_claimable_balance(&self) -> Option<LazyClaimClaimableBalanceResult> {
             if self.discriminant_i32() == 15 {
                 Some(<LazyClaimClaimableBalanceResult as LazyXdr>::from_xdr_at(
                     &self.0, 4,
@@ -108145,7 +108472,7 @@ pub mod lazy {
 
         /// Access arm `BeginSponsoringFutureReserves`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_beginsponsoringfuturereserves(
+        pub fn as_begin_sponsoring_future_reserves(
             &self,
         ) -> Option<LazyBeginSponsoringFutureReservesResult> {
             if self.discriminant_i32() == 16 {
@@ -108157,7 +108484,7 @@ pub mod lazy {
 
         /// Access arm `EndSponsoringFutureReserves`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_endsponsoringfuturereserves(
+        pub fn as_end_sponsoring_future_reserves(
             &self,
         ) -> Option<LazyEndSponsoringFutureReservesResult> {
             if self.discriminant_i32() == 17 {
@@ -108169,7 +108496,7 @@ pub mod lazy {
 
         /// Access arm `RevokeSponsorship`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_revokesponsorship(&self) -> Option<LazyRevokeSponsorshipResult> {
+        pub fn as_revoke_sponsorship(&self) -> Option<LazyRevokeSponsorshipResult> {
             if self.discriminant_i32() == 18 {
                 Some(<LazyRevokeSponsorshipResult as LazyXdr>::from_xdr_at(
                     &self.0, 4,
@@ -108191,7 +108518,7 @@ pub mod lazy {
 
         /// Access arm `ClawbackClaimableBalance`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_clawbackclaimablebalance(&self) -> Option<LazyClawbackClaimableBalanceResult> {
+        pub fn as_clawback_claimable_balance(&self) -> Option<LazyClawbackClaimableBalanceResult> {
             if self.discriminant_i32() == 20 {
                 Some(<LazyClawbackClaimableBalanceResult as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -108201,7 +108528,7 @@ pub mod lazy {
 
         /// Access arm `SetTrustLineFlags`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_settrustlineflags(&self) -> Option<LazySetTrustLineFlagsResult> {
+        pub fn as_set_trust_line_flags(&self) -> Option<LazySetTrustLineFlagsResult> {
             if self.discriminant_i32() == 21 {
                 Some(<LazySetTrustLineFlagsResult as LazyXdr>::from_xdr_at(
                     &self.0, 4,
@@ -108213,7 +108540,7 @@ pub mod lazy {
 
         /// Access arm `LiquidityPoolDeposit`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_liquiditypooldeposit(&self) -> Option<LazyLiquidityPoolDepositResult> {
+        pub fn as_liquidity_pool_deposit(&self) -> Option<LazyLiquidityPoolDepositResult> {
             if self.discriminant_i32() == 22 {
                 Some(<LazyLiquidityPoolDepositResult as LazyXdr>::from_xdr_at(
                     &self.0, 4,
@@ -108225,7 +108552,7 @@ pub mod lazy {
 
         /// Access arm `LiquidityPoolWithdraw`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_liquiditypoolwithdraw(&self) -> Option<LazyLiquidityPoolWithdrawResult> {
+        pub fn as_liquidity_pool_withdraw(&self) -> Option<LazyLiquidityPoolWithdrawResult> {
             if self.discriminant_i32() == 23 {
                 Some(<LazyLiquidityPoolWithdrawResult as LazyXdr>::from_xdr_at(
                     &self.0, 4,
@@ -108237,7 +108564,7 @@ pub mod lazy {
 
         /// Access arm `InvokeHostFunction`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_invokehostfunction(&self) -> Option<LazyInvokeHostFunctionResult> {
+        pub fn as_invoke_host_function(&self) -> Option<LazyInvokeHostFunctionResult> {
             if self.discriminant_i32() == 24 {
                 Some(<LazyInvokeHostFunctionResult as LazyXdr>::from_xdr_at(
                     &self.0, 4,
@@ -108249,7 +108576,7 @@ pub mod lazy {
 
         /// Access arm `ExtendFootprintTtl`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_extendfootprintttl(&self) -> Option<LazyExtendFootprintTtlResult> {
+        pub fn as_extend_footprint_ttl(&self) -> Option<LazyExtendFootprintTtlResult> {
             if self.discriminant_i32() == 25 {
                 Some(<LazyExtendFootprintTtlResult as LazyXdr>::from_xdr_at(
                     &self.0, 4,
@@ -108261,7 +108588,7 @@ pub mod lazy {
 
         /// Access arm `RestoreFootprint`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_restorefootprint(&self) -> Option<LazyRestoreFootprintResult> {
+        pub fn as_restore_footprint(&self) -> Option<LazyRestoreFootprintResult> {
             if self.discriminant_i32() == 26 {
                 Some(<LazyRestoreFootprintResult as LazyXdr>::from_xdr_at(
                     &self.0, 4,
@@ -108384,13 +108711,12 @@ pub mod lazy {
         /// Get the discriminant.
         #[must_use]
         pub fn discriminant(&self) -> super::OperationResultCode {
-            // Validated — unwrap is safe.
-            super::OperationResultCode::try_from(self.discriminant_i32()).unwrap()
+            <super::OperationResultCode as LazyXdr>::from_xdr_at(&self.0, 0)
         }
 
         /// Access arm `OpInner`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_opinner(&self) -> Option<LazyOperationResultTr> {
+        pub fn as_op_inner(&self) -> Option<LazyOperationResultTr> {
             if self.discriminant_i32() == 0 {
                 Some(<LazyOperationResultTr as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -108611,13 +108937,12 @@ pub mod lazy {
         /// Get the discriminant.
         #[must_use]
         pub fn discriminant(&self) -> super::TransactionResultCode {
-            // Validated — unwrap is safe.
-            super::TransactionResultCode::try_from(self.discriminant_i32()).unwrap()
+            <super::TransactionResultCode as LazyXdr>::from_xdr_at(&self.0, 0)
         }
 
         /// Access arm `TxSuccess`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_txsuccess(&self) -> Option<LazyVecM<LazyOperationResult>> {
+        pub fn as_tx_success(&self) -> Option<LazyVecM<LazyOperationResult>> {
             if self.discriminant_i32() == 0 {
                 Some(<LazyVecM<LazyOperationResult> as LazyXdr>::from_xdr_at(
                     &self.0, 4,
@@ -108629,7 +108954,7 @@ pub mod lazy {
 
         /// Access arm `TxFailed`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_txfailed(&self) -> Option<LazyVecM<LazyOperationResult>> {
+        pub fn as_tx_failed(&self) -> Option<LazyVecM<LazyOperationResult>> {
             if self.discriminant_i32() == -1 {
                 Some(<LazyVecM<LazyOperationResult> as LazyXdr>::from_xdr_at(
                     &self.0, 4,
@@ -108722,26 +109047,20 @@ pub mod lazy {
     impl LazyXdr for LazyInnerTransactionResult {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(8).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
-            {
-                let field_len = <LazyInnerTransactionResultResult as LazyXdr>::xdr_validate(
-                    &buf[pos as usize..],
-                )?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len =
-                    <LazyInnerTransactionResultExt as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <i64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyInnerTransactionResultResult as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyInnerTransactionResultExt as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -108784,18 +109103,24 @@ pub mod lazy {
         /// Access field `fee_charged`.
         #[must_use]
         pub fn fee_charged(&self) -> i64 {
-            <i64 as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <i64 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `result`.
         #[must_use]
         pub fn result(&self) -> LazyInnerTransactionResultResult {
-            <LazyInnerTransactionResultResult as LazyXdr>::from_xdr_at(&self.0, 8)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 8;
+            <LazyInnerTransactionResultResult as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `ext`.
         #[must_use]
         pub fn ext(&self) -> LazyInnerTransactionResultExt {
             let buf = self.0.as_slice();
-            let mut pos: u32 = 8;
+            let mut pos: u32 = 0;
+            pos += 8;
             pos += <LazyInnerTransactionResultResult as LazyXdr>::xdr_len(&buf[pos as usize..]);
             <LazyInnerTransactionResultExt as LazyXdr>::from_xdr_at(&self.0, pos)
         }
@@ -108807,19 +109132,15 @@ pub mod lazy {
     impl LazyXdr for LazyInnerTransactionResultPair {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(32).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            <LazyHash as LazyXdr>::xdr_validate(&buf[(pos + 0) as usize..])?;
-            pos = next_pos;
-            {
-                let field_len =
-                    <LazyInnerTransactionResult as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazyHash as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyInnerTransactionResult as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -108861,12 +109182,17 @@ pub mod lazy {
         /// Access field `transaction_hash`.
         #[must_use]
         pub fn transaction_hash(&self) -> LazyHash {
-            <LazyHash as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyHash as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `result`.
         #[must_use]
         pub fn result(&self) -> LazyInnerTransactionResult {
-            <LazyInnerTransactionResult as LazyXdr>::from_xdr_at(&self.0, 32)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 32;
+            <LazyInnerTransactionResult as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     /// Lazy wrapper for [`super::TransactionResultResult`].
@@ -109080,13 +109406,12 @@ pub mod lazy {
         /// Get the discriminant.
         #[must_use]
         pub fn discriminant(&self) -> super::TransactionResultCode {
-            // Validated — unwrap is safe.
-            super::TransactionResultCode::try_from(self.discriminant_i32()).unwrap()
+            <super::TransactionResultCode as LazyXdr>::from_xdr_at(&self.0, 0)
         }
 
         /// Access arm `TxFeeBumpInnerSuccess`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_txfeebumpinnersuccess(&self) -> Option<LazyInnerTransactionResultPair> {
+        pub fn as_tx_fee_bump_inner_success(&self) -> Option<LazyInnerTransactionResultPair> {
             if self.discriminant_i32() == 1 {
                 Some(<LazyInnerTransactionResultPair as LazyXdr>::from_xdr_at(
                     &self.0, 4,
@@ -109098,7 +109423,7 @@ pub mod lazy {
 
         /// Access arm `TxFeeBumpInnerFailed`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_txfeebumpinnerfailed(&self) -> Option<LazyInnerTransactionResultPair> {
+        pub fn as_tx_fee_bump_inner_failed(&self) -> Option<LazyInnerTransactionResultPair> {
             if self.discriminant_i32() == -13 {
                 Some(<LazyInnerTransactionResultPair as LazyXdr>::from_xdr_at(
                     &self.0, 4,
@@ -109110,7 +109435,7 @@ pub mod lazy {
 
         /// Access arm `TxSuccess`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_txsuccess(&self) -> Option<LazyVecM<LazyOperationResult>> {
+        pub fn as_tx_success(&self) -> Option<LazyVecM<LazyOperationResult>> {
             if self.discriminant_i32() == 0 {
                 Some(<LazyVecM<LazyOperationResult> as LazyXdr>::from_xdr_at(
                     &self.0, 4,
@@ -109122,7 +109447,7 @@ pub mod lazy {
 
         /// Access arm `TxFailed`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_txfailed(&self) -> Option<LazyVecM<LazyOperationResult>> {
+        pub fn as_tx_failed(&self) -> Option<LazyVecM<LazyOperationResult>> {
             if self.discriminant_i32() == -1 {
                 Some(<LazyVecM<LazyOperationResult> as LazyXdr>::from_xdr_at(
                     &self.0, 4,
@@ -109215,25 +109540,20 @@ pub mod lazy {
     impl LazyXdr for LazyTransactionResult {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(8).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            pos = next_pos;
-            {
-                let field_len =
-                    <LazyTransactionResultResult as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
-            {
-                let field_len =
-                    <LazyTransactionResultExt as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <i64 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyTransactionResultResult as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len =
+                <LazyTransactionResultExt as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -109276,18 +109596,24 @@ pub mod lazy {
         /// Access field `fee_charged`.
         #[must_use]
         pub fn fee_charged(&self) -> i64 {
-            <i64 as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <i64 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `result`.
         #[must_use]
         pub fn result(&self) -> LazyTransactionResultResult {
-            <LazyTransactionResultResult as LazyXdr>::from_xdr_at(&self.0, 8)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 8;
+            <LazyTransactionResultResult as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `ext`.
         #[must_use]
         pub fn ext(&self) -> LazyTransactionResultExt {
             let buf = self.0.as_slice();
-            let mut pos: u32 = 8;
+            let mut pos: u32 = 0;
+            pos += 8;
             pos += <LazyTransactionResultResult as LazyXdr>::xdr_len(&buf[pos as usize..]);
             <LazyTransactionResultExt as LazyXdr>::from_xdr_at(&self.0, pos)
         }
@@ -109698,13 +110024,12 @@ pub mod lazy {
         /// Get the discriminant.
         #[must_use]
         pub fn discriminant(&self) -> super::PublicKeyType {
-            // Validated — unwrap is safe.
-            super::PublicKeyType::try_from(self.discriminant_i32()).unwrap()
+            <super::PublicKeyType as LazyXdr>::from_xdr_at(&self.0, 0)
         }
 
         /// Access arm `PublicKeyTypeEd25519`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_publickeytypeed25519(&self) -> Option<LazyUint256> {
+        pub fn as_public_key_type_ed25519(&self) -> Option<LazyUint256> {
             if self.discriminant_i32() == 0 {
                 Some(<LazyUint256 as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -109719,18 +110044,14 @@ pub mod lazy {
     impl LazyXdr for LazySignerKeyEd25519SignedPayload {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(32).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            <LazyUint256 as LazyXdr>::xdr_validate(&buf[(pos + 0) as usize..])?;
-            pos = next_pos;
-            {
-                let field_len = <LazyBytesM<64> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len = <LazyUint256 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyBytesM<64> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -109772,12 +110093,17 @@ pub mod lazy {
         /// Access field `ed25519`.
         #[must_use]
         pub fn ed25519(&self) -> LazyUint256 {
-            <LazyUint256 as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyUint256 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `payload`.
         #[must_use]
         pub fn payload(&self) -> LazyBytesM<64> {
-            <LazyBytesM<64> as LazyXdr>::from_xdr_at(&self.0, 32)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 32;
+            <LazyBytesM<64> as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     /// Lazy wrapper for [`super::SignerKey`].
@@ -109887,8 +110213,7 @@ pub mod lazy {
         /// Get the discriminant.
         #[must_use]
         pub fn discriminant(&self) -> super::SignerKeyType {
-            // Validated — unwrap is safe.
-            super::SignerKeyType::try_from(self.discriminant_i32()).unwrap()
+            <super::SignerKeyType as LazyXdr>::from_xdr_at(&self.0, 0)
         }
 
         /// Access arm `Ed25519`. Returns `Some` if the discriminant matches.
@@ -109903,7 +110228,7 @@ pub mod lazy {
 
         /// Access arm `PreAuthTx`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_preauthtx(&self) -> Option<LazyUint256> {
+        pub fn as_pre_auth_tx(&self) -> Option<LazyUint256> {
             if self.discriminant_i32() == 1 {
                 Some(<LazyUint256 as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -109913,7 +110238,7 @@ pub mod lazy {
 
         /// Access arm `HashX`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_hashx(&self) -> Option<LazyUint256> {
+        pub fn as_hash_x(&self) -> Option<LazyUint256> {
             if self.discriminant_i32() == 2 {
                 Some(<LazyUint256 as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {
@@ -109923,7 +110248,7 @@ pub mod lazy {
 
         /// Access arm `Ed25519SignedPayload`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_ed25519signedpayload(&self) -> Option<LazySignerKeyEd25519SignedPayload> {
+        pub fn as_ed25519_signed_payload(&self) -> Option<LazySignerKeyEd25519SignedPayload> {
             if self.discriminant_i32() == 3 {
                 Some(<LazySignerKeyEd25519SignedPayload as LazyXdr>::from_xdr_at(
                     &self.0, 4,
@@ -110174,12 +110499,10 @@ pub mod lazy {
 
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(32).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            <LazyOpaqueFixed<32> as LazyXdr>::xdr_validate(&buf[(pos + 0) as usize..])?;
-            pos = next_pos;
+            let field_len = <LazyOpaqueFixed<32> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -110219,7 +110542,9 @@ pub mod lazy {
         /// Access field `key`.
         #[must_use]
         pub fn key(&self) -> LazyOpaqueFixed<32> {
-            <LazyOpaqueFixed<32> as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyOpaqueFixed<32> as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     /// Lazy wrapper for [`super::Curve25519Public`].
@@ -110231,12 +110556,10 @@ pub mod lazy {
 
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(32).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            <LazyOpaqueFixed<32> as LazyXdr>::xdr_validate(&buf[(pos + 0) as usize..])?;
-            pos = next_pos;
+            let field_len = <LazyOpaqueFixed<32> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -110276,7 +110599,9 @@ pub mod lazy {
         /// Access field `key`.
         #[must_use]
         pub fn key(&self) -> LazyOpaqueFixed<32> {
-            <LazyOpaqueFixed<32> as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyOpaqueFixed<32> as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     /// Lazy wrapper for [`super::HmacSha256Key`].
@@ -110288,12 +110613,10 @@ pub mod lazy {
 
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(32).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            <LazyOpaqueFixed<32> as LazyXdr>::xdr_validate(&buf[(pos + 0) as usize..])?;
-            pos = next_pos;
+            let field_len = <LazyOpaqueFixed<32> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -110333,7 +110656,9 @@ pub mod lazy {
         /// Access field `key`.
         #[must_use]
         pub fn key(&self) -> LazyOpaqueFixed<32> {
-            <LazyOpaqueFixed<32> as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyOpaqueFixed<32> as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     /// Lazy wrapper for [`super::HmacSha256Mac`].
@@ -110345,12 +110670,10 @@ pub mod lazy {
 
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(32).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            <LazyOpaqueFixed<32> as LazyXdr>::xdr_validate(&buf[(pos + 0) as usize..])?;
-            pos = next_pos;
+            let field_len = <LazyOpaqueFixed<32> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -110390,7 +110713,9 @@ pub mod lazy {
         /// Access field `mac`.
         #[must_use]
         pub fn mac(&self) -> LazyOpaqueFixed<32> {
-            <LazyOpaqueFixed<32> as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyOpaqueFixed<32> as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     /// Lazy wrapper for [`super::ShortHashSeed`].
@@ -110402,12 +110727,10 @@ pub mod lazy {
 
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(16).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            <LazyOpaqueFixed<16> as LazyXdr>::xdr_validate(&buf[(pos + 0) as usize..])?;
-            pos = next_pos;
+            let field_len = <LazyOpaqueFixed<16> as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -110447,7 +110770,9 @@ pub mod lazy {
         /// Access field `seed`.
         #[must_use]
         pub fn seed(&self) -> LazyOpaqueFixed<16> {
-            <LazyOpaqueFixed<16> as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <LazyOpaqueFixed<16> as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     // Enum BinaryFuseFilterType: scalar lazy type — impl LazyXdr directly on the enum.
@@ -110483,20 +110808,43 @@ pub mod lazy {
     impl LazyXdr for LazySerializedBinaryFuseFilter {
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
             let mut pos: u32 = 0;
-            let next_pos = pos.checked_add(56).ok_or(super::Error::LengthExceedsMax)?;
-            if buf.len() < next_pos as usize {
-                return Err(super::Error::Invalid);
-            }
-            <super::BinaryFuseFilterType as LazyXdr>::xdr_validate(&buf[(pos + 0) as usize..])?;
-            <LazyShortHashSeed as LazyXdr>::xdr_validate(&buf[(pos + 4) as usize..])?;
-            <LazyShortHashSeed as LazyXdr>::xdr_validate(&buf[(pos + 20) as usize..])?;
-            pos = next_pos;
-            {
-                let field_len = <LazyBytesM as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
-                pos = pos
-                    .checked_add(field_len)
-                    .ok_or(super::Error::LengthExceedsMax)?;
-            }
+            let field_len =
+                <super::BinaryFuseFilterType as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyShortHashSeed as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyShortHashSeed as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
+            let field_len = <LazyBytesM as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+            pos = pos
+                .checked_add(field_len)
+                .ok_or(super::Error::LengthExceedsMax)?;
             Ok(pos)
         }
 
@@ -110538,47 +110886,73 @@ pub mod lazy {
         /// Access field `type_`.
         #[must_use]
         pub fn type_(&self) -> super::BinaryFuseFilterType {
-            <super::BinaryFuseFilterType as LazyXdr>::from_xdr_at(&self.0, 0)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            <super::BinaryFuseFilterType as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `input_hash_seed`.
         #[must_use]
         pub fn input_hash_seed(&self) -> LazyShortHashSeed {
-            <LazyShortHashSeed as LazyXdr>::from_xdr_at(&self.0, 4)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 4;
+            <LazyShortHashSeed as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `filter_seed`.
         #[must_use]
         pub fn filter_seed(&self) -> LazyShortHashSeed {
-            <LazyShortHashSeed as LazyXdr>::from_xdr_at(&self.0, 20)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 20;
+            <LazyShortHashSeed as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `segment_length`.
         #[must_use]
         pub fn segment_length(&self) -> u32 {
-            <u32 as LazyXdr>::from_xdr_at(&self.0, 36)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 36;
+            <u32 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `segement_length_mask`.
         #[must_use]
         pub fn segement_length_mask(&self) -> u32 {
-            <u32 as LazyXdr>::from_xdr_at(&self.0, 40)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 40;
+            <u32 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `segment_count`.
         #[must_use]
         pub fn segment_count(&self) -> u32 {
-            <u32 as LazyXdr>::from_xdr_at(&self.0, 44)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 44;
+            <u32 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `segment_count_length`.
         #[must_use]
         pub fn segment_count_length(&self) -> u32 {
-            <u32 as LazyXdr>::from_xdr_at(&self.0, 48)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 48;
+            <u32 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `fingerprint_length`.
         #[must_use]
         pub fn fingerprint_length(&self) -> u32 {
-            <u32 as LazyXdr>::from_xdr_at(&self.0, 52)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 52;
+            <u32 as LazyXdr>::from_xdr_at(&self.0, pos)
         }
         /// Access field `fingerprints`.
         #[must_use]
         pub fn fingerprints(&self) -> LazyBytesM {
-            <LazyBytesM as LazyXdr>::from_xdr_at(&self.0, 56)
+            let buf = self.0.as_slice();
+            let mut pos: u32 = 0;
+            pos += 56;
+            <LazyBytesM as LazyXdr>::from_xdr_at(&self.0, pos)
         }
     }
     /// Lazy wrapper for [`super::PoolId`].
@@ -110729,13 +111103,12 @@ pub mod lazy {
         /// Get the discriminant.
         #[must_use]
         pub fn discriminant(&self) -> super::ClaimableBalanceIdType {
-            // Validated — unwrap is safe.
-            super::ClaimableBalanceIdType::try_from(self.discriminant_i32()).unwrap()
+            <super::ClaimableBalanceIdType as LazyXdr>::from_xdr_at(&self.0, 0)
         }
 
         /// Access arm `ClaimableBalanceIdTypeV0`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_claimablebalanceidtypev0(&self) -> Option<LazyHash> {
+        pub fn as_claimable_balance_id_type_v0(&self) -> Option<LazyHash> {
             if self.discriminant_i32() == 0 {
                 Some(<LazyHash as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {

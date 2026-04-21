@@ -1,6 +1,6 @@
     /// Lazy wrapper for [`super::{{ t.name }}`].
     #[derive(Clone, Debug)]
-    pub struct {{ t.lazy_name }}({{ t.lazy_inner_type }});
+    pub struct {{ t.lazy_name }}({{ t.lazy_inner_type.rust_type() }});
 
     impl LazyXdr for {{ t.lazy_name }} {
 {%- if let Some(fs) = t.lazy_fixed_size %}
@@ -8,23 +8,23 @@
 {%- endif %}
 
         fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
-            <{{ t.lazy_inner_type }} as LazyXdr>::xdr_validate(buf)
+            <{{ t.lazy_inner_type.rust_type() }} as LazyXdr>::xdr_validate(buf)
         }
 
         #[inline]
         fn xdr_len(buf: &[u8]) -> u32 {
-            <{{ t.lazy_inner_type }} as LazyXdr>::xdr_len(buf)
+            <{{ t.lazy_inner_type.rust_type() }} as LazyXdr>::xdr_len(buf)
         }
 
         fn from_xdr_at(parent: &LazyHandle, offset: u32) -> Self {
-            Self(<{{ t.lazy_inner_type }} as LazyXdr>::from_xdr_at(parent, offset))
+            Self(<{{ t.lazy_inner_type.rust_type() }} as LazyXdr>::from_xdr_at(parent, offset))
         }
     }
 
-{%- if !t.lazy_inner_is_scalar %}
+{%- if !t.lazy_inner_type.is_scalar() %}
     impl From<LazyHandle> for {{ t.lazy_name }} {
         fn from(h: LazyHandle) -> Self {
-            Self(<{{ t.lazy_inner_type }}>::from(h))
+            Self(<{{ t.lazy_inner_type.rust_type() }}>::from(h))
         }
     }
 
@@ -38,7 +38,7 @@
         type Error = super::Error;
         fn try_from(buf: Arc<[u8]>) -> Result<Self, super::Error> {
             let len = Self::xdr_validate(&buf)?;
-            Ok(Self(<{{ t.lazy_inner_type }}>::from(LazyHandle::from_arc(buf, 0, len))))
+            Ok(Self(<{{ t.lazy_inner_type.rust_type() }}>::from(LazyHandle::from_arc(buf, 0, len))))
         }
     }
 {%- else %}
@@ -52,7 +52,7 @@
 {%- endif %}
 
     impl core::ops::Deref for {{ t.lazy_name }} {
-        type Target = {{ t.lazy_inner_type }};
+        type Target = {{ t.lazy_inner_type.rust_type() }};
         fn deref(&self) -> &Self::Target {
             &self.0
         }

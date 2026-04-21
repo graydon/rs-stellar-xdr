@@ -8,7 +8,7 @@
             }
         }
 
-{%- if t.lazy_inner_is_scalar %}
+{%- if t.lazy_inner_type.is_scalar() %}
         impl From<&{{ t.lazy_name }}> for super::super::{{ t.name }} {
             fn from(lazy: &{{ t.lazy_name }}) -> Self {
                 super::super::{{ t.name }}(**lazy)

@@ -17,7 +17,7 @@
 {%- if arm.is_void %}
                     // void — no additional data
 {%- else %}
-                    let field_len = <{{ arm.lazy_type.as_ref().unwrap() }} as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+                    let field_len = {{ arm.lazy_type.as_ref().unwrap().validate_expr("buf", "pos") }};
                     pos = pos.checked_add(field_len).ok_or(super::Error::LengthExceedsMax)?;
 {%- endif %}
                 }
@@ -38,7 +38,7 @@
 {%- if arm.is_void %}
                     // void
 {%- else %}
-                    pos += <{{ arm.lazy_type.as_ref().unwrap() }} as LazyXdr>::xdr_len(&buf[pos as usize..]);
+                    pos += {{ arm.lazy_type.as_ref().unwrap().len_expr("buf", "pos") }};
 {%- endif %}
                 }
 {%- endfor %}
@@ -83,22 +83,17 @@
 
         /// Get the discriminant.
         #[must_use]
-        pub fn discriminant(&self) -> {{ u.lazy_discriminant_type }} {
-{%- if u.lazy_discriminant_is_enum %}
-            // Validated — unwrap is safe.
-            super::{{ u.discriminant_type }}::try_from(self.discriminant_i32()).unwrap()
-{%- else %}
-            <{{ u.lazy_discriminant_type }} as LazyXdr>::from_xdr_at(&self.0, 0)
-{%- endif %}
+        pub fn discriminant(&self) -> {{ u.lazy_discriminant.rust_type() }} {
+            {{ u.lazy_discriminant.from_parent_expr("&self.0", "0") }}
         }
 {%- for arm in u.arms %}
 {%- if !arm.is_void %}
 
         /// Access arm `{{ arm.case_name }}`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_{{ arm.case_name|lower }}(&self) -> Option<{{ arm.lazy_type.as_ref().unwrap() }}> {
+        pub fn {{ arm.lazy_method_name }}(&self) -> Option<{{ arm.lazy_type.as_ref().unwrap().rust_type() }}> {
             if self.discriminant_i32() == {{ arm.case_value_i32 }} {
-                Some(<{{ arm.lazy_type.as_ref().unwrap() }} as LazyXdr>::from_xdr_at(&self.0, 4))
+                Some({{ arm.lazy_type.as_ref().unwrap().from_parent_expr("&self.0", "4") }})
             } else {
                 None
             }

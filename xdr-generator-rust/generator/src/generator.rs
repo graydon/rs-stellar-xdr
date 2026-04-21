@@ -8,11 +8,10 @@ use xdr_parser::types::{is_builtin_type, is_fixed_array, is_fixed_opaque, is_var
 use crate::naming::{case_value, field_name, source_comment, type_name};
 use crate::options::RustOptions;
 use crate::output::{
-    ConstOutput, CxxBridgeDefinition, CxxBridgeStruct, CxxBridgeStructMember,
-    CxxBridgeTemplate, CxxBridgeTypedefNewtype, CxxBridgeUnion, CxxBridgeUnionArm,
-    DefinitionOutput, EnumOutput, EnumStructMemberOutput, GeneratedTemplate, LazyAccessor,
-    LazyContentValidation, LazyValidateFixedGroup, LazyValidateStep, LazyValidateVariable,
-    LazyVarSkip, StructMemberOutput, StructOutput, TypeEnumOutput, TypedefAliasOutput,
+    ConstOutput, CxxBridgeDefinition, CxxBridgeStruct, CxxBridgeStructMember, CxxBridgeTemplate,
+    CxxBridgeTypedefNewtype, CxxBridgeUnion, CxxBridgeUnionArm, DefinitionOutput, EnumOutput,
+    EnumStructMemberOutput, GeneratedTemplate, LazyScanStepOutput, LazyTypeOutput,
+    LazyValueOutput, StructMemberOutput, StructOutput, TypeEnumOutput, TypedefAliasOutput,
     TypedefNewtypeOutput, UnionArmOutput, UnionOutput,
 };
 use crate::types::{base_type_ref, resolve_type, size_to_string, type_ref};
@@ -82,18 +81,10 @@ impl RustGenerator {
                         .iter()
                         .map(|m| {
                             let mname = field_name(&m.name);
-                            let lazy_type = self.lazy_type_ref(&m.type_);
-                            let scalar = self.is_lazy_scalar(&m.type_);
-                            let cxx_scalar_type = if scalar {
-                                self.cxx_scalar_type_name(&m.type_)
-                            } else {
-                                String::new()
-                            };
+                            let lazy_type = self.lazy_type_output(&m.type_);
                             CxxBridgeStructMember {
                                 name: mname,
                                 lazy_type,
-                                lazy_is_scalar: scalar,
-                                cxx_scalar_type,
                             }
                         })
                         .collect();
@@ -134,9 +125,9 @@ impl RustGenerator {
                                     dp,
                                 );
                                 let lazy_type =
-                                    arm.type_.as_ref().map(|t| self.lazy_type_ref(t));
+                                    arm.type_.as_ref().map(|t| self.lazy_type_output(t));
                                 CxxBridgeUnionArm {
-                                    case_name: cn,
+                                    lazy_method_name: format!("as_{}", field_name(&cn)),
                                     is_void: arm.type_.is_none(),
                                     lazy_type,
                                 }
@@ -160,32 +151,6 @@ impl RustGenerator {
         }
 
         CxxBridgeTemplate { definitions }
-    }
-
-    /// Map an XDR type to its CXX-compatible scalar type name.
-    fn cxx_scalar_type_name(&self, type_: &xdr_parser::ast::Type) -> String {
-        use xdr_parser::ast::Type;
-        match type_ {
-            Type::Int => "i32".to_string(),
-            Type::UnsignedInt => "u32".to_string(),
-            Type::Hyper => "i64".to_string(),
-            Type::UnsignedHyper => "u64".to_string(),
-            Type::Float => "f32".to_string(),
-            Type::Double => "f64".to_string(),
-            Type::Bool => "bool".to_string(),
-            Type::Ident(name) => {
-                if let Some(def) = self.type_info.definitions.get(name.as_str()) {
-                    if let Definition::Typedef(t) = def {
-                        return self.cxx_scalar_type_name(&t.type_);
-                    }
-                    if let Definition::Enum(_) = def {
-                        return "i32".to_string();
-                    }
-                }
-                "i32".to_string() // fallback
-            }
-            _ => "i32".to_string(), // fallback
-        }
     }
 
     /// Generate output for the entire spec.
@@ -233,17 +198,6 @@ impl RustGenerator {
         let custom_default = self.options.custom_default_impl.contains(&name);
         let custom_str = self.options.custom_str_impl.contains(&name);
 
-        // Compute lazy per-field info up front.
-        let mut field_infos: Vec<(String, String, bool, Option<u32>)> = Vec::new();
-        for m in &s.members {
-            let fname = field_name(&m.name);
-            let ltype = self.lazy_type_ref(&m.type_);
-            let scalar = self.is_lazy_scalar(&m.type_);
-            let fixed = self.xdr_fixed_size(&m.type_);
-            field_infos.push((fname, ltype, scalar, fixed));
-        }
-        let accessors = self.build_field_accessors(&field_infos);
-
         let members: Vec<StructMemberOutput> = s
             .members
             .iter()
@@ -251,26 +205,14 @@ impl RustGenerator {
             .map(|(i, m)| {
                 let mname = field_name(&m.name);
                 let resolved = resolve_type(&m.type_, Some(&name), &self.type_info, custom_str);
-                let (_, ref ltype, scalar, _) = field_infos[i];
-                let acc = &accessors[i];
                 StructMemberOutput {
                     name: mname,
                     type_ref: resolved.type_ref,
                     turbofish_type: resolved.turbofish_type,
                     serde_as_type: resolved.serde_as_type,
-                    lazy_type: ltype.clone(),
-                    lazy_is_scalar: scalar,
-                    lazy_accessor: LazyAccessor {
-                        initial_fixed: acc.initial_fixed,
-                        var_skips: acc
-                            .var_skips
-                            .iter()
-                            .map(|v| LazyVarSkip {
-                                lazy_type: v.lazy_type.clone(),
-                                post_fixed: v.post_fixed,
-                            })
-                            .collect(),
-                    },
+                    lazy_type: self.lazy_type_output(&m.type_),
+                    lazy_scan_steps: self
+                        .build_scan_steps(s.members[..i].iter().map(|member| &member.type_)),
                 }
             })
             .collect();
@@ -289,7 +231,7 @@ impl RustGenerator {
 
         let lazy_name = format!("Lazy{name}");
         let lazy_fixed_size = self.compute_total_fixed_size(&s.members);
-        let lazy_validate_steps = self.build_validate_steps(&s.members);
+        let lazy_len_steps = self.build_scan_steps(s.members.iter().map(|member| &member.type_));
 
         StructOutput {
             name,
@@ -300,7 +242,7 @@ impl RustGenerator {
             member_names,
             lazy_name,
             lazy_fixed_size,
-            lazy_validate_steps,
+            lazy_len_steps,
         }
     }
 
@@ -369,8 +311,7 @@ impl RustGenerator {
         let type_kind = if u.is_nested { "NestedUnion" } else { "Union" };
 
         let lazy_name = format!("Lazy{name}");
-        let lazy_discriminant_type = self.lazy_type_ref(&u.discriminant.type_);
-        let lazy_discriminant_is_enum = !discriminant_is_builtin;
+        let lazy_discriminant = self.lazy_value_output(&u.discriminant.type_);
 
         UnionOutput {
             name,
@@ -380,8 +321,7 @@ impl RustGenerator {
             discriminant_type,
             arms,
             lazy_name,
-            lazy_discriminant_type,
-            lazy_discriminant_is_enum,
+            lazy_discriminant,
         }
     }
 
@@ -389,7 +329,7 @@ impl RustGenerator {
         let name = type_name(&t.name);
 
         if is_builtin_type(&t.type_) {
-            let lazy_type = self.lazy_type_ref(&t.type_);
+            let lazy_type = self.lazy_type_output(&t.type_);
             return DefinitionOutput::TypedefAlias(TypedefAliasOutput {
                 name,
                 source_comment: source_comment(&t.source, "Typedef"),
@@ -414,9 +354,8 @@ impl RustGenerator {
         };
 
         let lazy_name = format!("Lazy{name}");
-        let lazy_inner_type = self.lazy_type_ref(&t.type_);
+        let lazy_inner_type = self.lazy_type_output(&t.type_);
         let lazy_fixed_size = self.xdr_fixed_size(&t.type_);
-        let lazy_inner_is_scalar = self.is_lazy_scalar(&t.type_);
 
         DefinitionOutput::TypedefNewtype(TypedefNewtypeOutput {
             name,
@@ -437,7 +376,6 @@ impl RustGenerator {
             lazy_name,
             lazy_inner_type,
             lazy_fixed_size,
-            lazy_inner_is_scalar,
         })
     }
 
@@ -479,26 +417,25 @@ impl RustGenerator {
                     .as_ref()
                     .map(|t| resolve_type(t, Some(parent), &self.type_info, custom_str));
 
-                let lazy_type = arm.type_.as_ref().map(|t| self.lazy_type_ref(t));
+                let lazy_type = arm.type_.as_ref().map(|t| self.lazy_type_output(t));
                 let case_value_i32 = match &case.value {
                     xdr_parser::ast::UnionCaseValue::Literal(n) => n.to_string(),
-                    xdr_parser::ast::UnionCaseValue::Ident(ident) => {
-                        // Look up the enum member value as an i32 literal.
-                        self.resolve_enum_member_value(ident)
-                            .map(|v| v.to_string())
-                            .unwrap_or_else(|| case_value_expr.clone())
-                    }
+                    xdr_parser::ast::UnionCaseValue::Ident(ident) => self
+                        .resolve_enum_member_value(ident)
+                        .map(|value| value.to_string())
+                        .unwrap_or_else(|| case_value_expr.clone()),
                 };
 
                 UnionArmOutput {
+                    lazy_method_name: format!("as_{}", field_name(&case_name)),
                     case_name,
                     case_value: case_value_expr,
+                    case_value_i32,
                     is_void: arm.type_.is_none(),
                     type_ref: resolved.as_ref().map(|r| r.type_ref.clone()),
                     turbofish_type: resolved.as_ref().map(|r| r.turbofish_type.clone()),
                     serde_as_type: resolved.and_then(|r| r.serde_as_type),
                     lazy_type,
-                    case_value_i32,
                 }
             })
             .collect()
@@ -508,13 +445,12 @@ impl RustGenerator {
     // Lazy type generation helpers
     // =====================================================================
 
-    /// Look up the i32 value of an enum member by its XDR identifier name.
     fn resolve_enum_member_value(&self, ident: &str) -> Option<i32> {
         for def in self.type_info.definitions.values() {
             if let Definition::Enum(e) = def {
-                for m in &e.members {
-                    if m.name == ident {
-                        return Some(m.value);
+                for member in &e.members {
+                    if member.name == ident {
+                        return Some(member.value);
                     }
                 }
             }
@@ -583,202 +519,106 @@ impl RustGenerator {
         Some(total)
     }
 
-    // ---- Lazy type name mapping ----
+    // ---- Lazy type mapping ----
 
-    /// Return the Rust lazy type name for an XDR type.
-    ///
-    /// Scalars map to themselves. Complex types map to `Lazy*` wrappers.
-    fn lazy_type_ref(&self, type_: &xdr_parser::ast::Type) -> String {
+    fn lazy_type_output(&self, type_: &xdr_parser::ast::Type) -> LazyTypeOutput {
         use xdr_parser::ast::Type;
         match type_ {
-            Type::Int => "i32".to_string(),
-            Type::UnsignedInt => "u32".to_string(),
-            Type::Hyper => "i64".to_string(),
-            Type::UnsignedHyper => "u64".to_string(),
-            Type::Float => "f32".to_string(),
-            Type::Double => "f64".to_string(),
-            Type::Bool => "bool".to_string(),
-            Type::OpaqueFixed(size) => {
-                format!("LazyOpaqueFixed::<{}>", self.resolve_size_str(size))
-            }
-            Type::OpaqueVar(max) => match max {
-                Some(size) => format!("LazyBytesM::<{}>", self.resolve_size_str(size)),
-                None => "LazyBytesM".to_string(),
+            Type::Int => LazyTypeOutput::I32,
+            Type::UnsignedInt => LazyTypeOutput::U32,
+            Type::Hyper => LazyTypeOutput::I64,
+            Type::UnsignedHyper => LazyTypeOutput::U64,
+            Type::Float => LazyTypeOutput::F32,
+            Type::Double => LazyTypeOutput::F64,
+            Type::Bool => LazyTypeOutput::Bool,
+            Type::OpaqueFixed(size) => LazyTypeOutput::FixedOpaque {
+                size: self.resolve_size_str(size),
             },
-            Type::String(max) => match max {
-                Some(size) => format!("LazyStringM::<{}>", self.resolve_size_str(size)),
-                None => "LazyStringM".to_string(),
+            Type::OpaqueVar(max) => LazyTypeOutput::VarOpaque {
+                max_size: max.as_ref().map(|size| self.resolve_size_str(size)),
+            },
+            Type::String(max) => LazyTypeOutput::String {
+                max_size: max.as_ref().map(|size| self.resolve_size_str(size)),
             },
             Type::Ident(ident_name) => {
                 let resolved_name = type_name(ident_name);
                 match self.type_info.definitions.get(&resolved_name) {
-                    Some(Definition::Enum(_)) => {
-                        // Enums are scalars — reference the parent module's enum.
-                        format!("super::{resolved_name}")
-                    }
+                    Some(Definition::Enum(_)) => LazyTypeOutput::NamedEnum { name: resolved_name },
                     Some(Definition::Typedef(t)) if is_builtin_type(&t.type_) => {
-                        // Typedef alias to builtin — use the scalar type.
-                        self.lazy_type_ref(&t.type_)
+                        self.lazy_type_output(&t.type_)
                     }
-                    _ => {
-                        // Struct, union, typedef wrapping complex → Lazy wrapper.
-                        format!("Lazy{resolved_name}")
-                    }
+                    _ => LazyTypeOutput::NamedLazy { name: resolved_name },
                 }
             }
-            Type::Optional(inner) => {
-                let inner_lazy = self.lazy_type_ref(inner);
-                format!("LazyOption::<{inner_lazy}>")
-            }
-            Type::Array { element_type, size } => {
-                let elem_lazy = self.lazy_type_ref(element_type);
-                format!(
-                    "LazyFixedArray::<{elem_lazy}, {}>",
-                    self.resolve_size_str(size)
-                )
-            }
+            Type::Optional(inner) => LazyTypeOutput::Optional {
+                inner: Box::new(self.lazy_type_output(inner)),
+            },
+            Type::Array { element_type, size } => LazyTypeOutput::Array {
+                element: Box::new(self.lazy_type_output(element_type)),
+                size: self.resolve_size_str(size),
+            },
             Type::VarArray {
                 element_type,
                 max_size,
-            } => {
-                let elem_lazy = self.lazy_type_ref(element_type);
-                match max_size {
-                    Some(size) => {
-                        format!(
-                            "LazyVecM::<{elem_lazy}, {}>",
-                            self.resolve_size_str(size)
-                        )
-                    }
-                    None => format!("LazyVecM::<{elem_lazy}>"),
-                }
-            }
+            } => LazyTypeOutput::VarArray {
+                element: Box::new(self.lazy_type_output(element_type)),
+                max_size: max_size.as_ref().map(|size| self.resolve_size_str(size)),
+            },
         }
     }
 
-    /// Whether a type maps to a scalar (non-handle) lazy type.
-    fn is_lazy_scalar(&self, type_: &xdr_parser::ast::Type) -> bool {
+    fn lazy_value_output(&self, type_: &xdr_parser::ast::Type) -> LazyValueOutput {
         use xdr_parser::ast::Type;
         match type_ {
-            Type::Int | Type::UnsignedInt | Type::Hyper | Type::UnsignedHyper | Type::Float
-            | Type::Double | Type::Bool => true,
+            Type::Int => LazyValueOutput::I32,
+            Type::UnsignedInt => LazyValueOutput::U32,
+            Type::Hyper => LazyValueOutput::I64,
+            Type::UnsignedHyper => LazyValueOutput::U64,
+            Type::Bool => LazyValueOutput::Bool,
             Type::Ident(ident_name) => {
                 let resolved_name = type_name(ident_name);
                 match self.type_info.definitions.get(&resolved_name) {
-                    Some(Definition::Enum(_)) => true,
+                    Some(Definition::Enum(_)) => LazyValueOutput::NamedEnum { name: resolved_name },
                     Some(Definition::Typedef(t)) if is_builtin_type(&t.type_) => {
-                        self.is_lazy_scalar(&t.type_)
+                        self.lazy_value_output(&t.type_)
                     }
-                    _ => false,
+                    _ => panic!("non-scalar value type used in lazy generation"),
                 }
             }
-            _ => false,
+            _ => panic!("unsupported scalar value type in lazy generation"),
         }
     }
 
-    /// Whether a type needs content validation beyond a size check.
-    fn needs_content_validation(&self, type_: &xdr_parser::ast::Type) -> bool {
-        use xdr_parser::ast::Type;
-        match type_ {
-            Type::Int | Type::UnsignedInt | Type::Hyper | Type::UnsignedHyper | Type::Float
-            | Type::Double => false,
-            Type::Bool => true,
-            Type::OpaqueFixed(_) => true, // padding check
-            Type::OpaqueVar(_) | Type::String(_) => true, // length + padding
-            Type::Ident(ident_name) => {
-                let resolved_name = type_name(ident_name);
-                match self.type_info.definitions.get(&resolved_name) {
-                    Some(Definition::Enum(_)) => true,
-                    Some(Definition::Struct(_)) => true,
-                    Some(Definition::Union(_)) => true,
-                    Some(Definition::Typedef(t)) => self.needs_content_validation(&t.type_),
-                    _ => true,
-                }
-            }
-            Type::Optional(_) => true,
-            Type::Array { element_type, .. } => self.needs_content_validation(element_type),
-            Type::VarArray { .. } => true,
-        }
-    }
-
-    // ---- Validation step builder ----
-
-    fn build_validate_steps(&self, members: &[StructMember]) -> Vec<LazyValidateStep> {
-        let mut steps: Vec<LazyValidateStep> = Vec::new();
-
-        // Accumulate consecutive fixed-size fields into groups.
-        let mut current_fixed: u32 = 0;
-        let mut current_validations: Vec<LazyContentValidation> = Vec::new();
-
-        for m in members {
-            let fixed = self.xdr_fixed_size(&m.type_);
-            if let Some(fsize) = fixed {
-                // Fixed-size field — accumulate.
-                if self.needs_content_validation(&m.type_) {
-                    current_validations.push(LazyContentValidation {
-                        offset: current_fixed,
-                        lazy_type: self.lazy_type_ref(&m.type_),
-                    });
-                }
-                current_fixed += fsize;
-            } else {
-                // Variable-size field — flush any accumulated fixed group first.
-                if current_fixed > 0 || !current_validations.is_empty() {
-                    steps.push(LazyValidateStep::FixedGroup(LazyValidateFixedGroup {
-                        total_fixed: current_fixed,
-                        content_validations: std::mem::take(&mut current_validations),
-                    }));
-                    current_fixed = 0;
-                }
-                steps.push(LazyValidateStep::Variable(LazyValidateVariable {
-                    lazy_type: self.lazy_type_ref(&m.type_),
-                }));
-            }
-        }
-
-        // Flush trailing fixed group.
-        if current_fixed > 0 || !current_validations.is_empty() {
-            steps.push(LazyValidateStep::FixedGroup(LazyValidateFixedGroup {
-                total_fixed: current_fixed,
-                content_validations: current_validations,
-            }));
-        }
-
-        steps
-    }
-
-    // ---- Field accessor builder ----
-
-    fn build_field_accessors(
+    fn build_scan_steps<'a>(
         &self,
-        field_infos: &[(String, String, bool, Option<u32>)],
-    ) -> Vec<LazyAccessor> {
+        types: impl Iterator<Item = &'a xdr_parser::ast::Type>,
+    ) -> Vec<LazyScanStepOutput> {
         let mut result = Vec::new();
+        let mut current_fixed: u32 = 0;
 
-        for i in 0..field_infos.len() {
-            let mut initial_fixed: u32 = 0;
-            let mut var_skips: Vec<LazyVarSkip> = Vec::new();
-            let mut in_var = false;
-
-            for j in 0..i {
-                let (_, ref prev_lazy_type, _, prev_fixed) = field_infos[j];
-                if let Some(fsize) = prev_fixed {
-                    if in_var {
-                        var_skips.last_mut().unwrap().post_fixed += fsize;
-                    } else {
-                        initial_fixed += fsize;
-                    }
-                } else {
-                    var_skips.push(LazyVarSkip {
-                        lazy_type: prev_lazy_type.clone(),
-                        post_fixed: 0,
-                    });
-                    in_var = true;
-                }
+        for type_ in types {
+            if let Some(fixed_size) = self.xdr_fixed_size(type_) {
+                current_fixed = current_fixed
+                    .checked_add(fixed_size)
+                    .expect("fixed-size scan plan overflow");
+                continue;
             }
 
-            result.push(LazyAccessor {
-                initial_fixed,
-                var_skips,
+            if current_fixed > 0 {
+                result.push(LazyScanStepOutput::Fixed {
+                    len_expr: current_fixed.to_string(),
+                });
+                current_fixed = 0;
+            }
+
+            result.push(LazyScanStepOutput::Variable {
+                type_output: self.lazy_type_output(type_),
+            });
+        }
+
+        if current_fixed > 0 {
+            result.push(LazyScanStepOutput::Fixed {
+                len_expr: current_fixed.to_string(),
             });
         }
 

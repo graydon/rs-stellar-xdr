@@ -19,12 +19,12 @@ impl {{ s.lazy_name }} {
         Ok(Box::new(lazy))
     }
 {%- for m in s.members %}
-{%- if m.lazy_is_scalar %}
-    pub fn cxx_{{ m.name }}(self: &{{ s.lazy_name }}) -> {{ m.lazy_type }} {
-        self.{{ m.name }}()
+{%- if m.lazy_type.is_scalar() %}
+    pub fn cxx_{{ m.name }}(self: &{{ s.lazy_name }}) -> {{ m.lazy_type.cxx_bridge_type() }} {
+        self.{{ m.name }}(){{ m.lazy_type.cxx_scalar_cast_suffix() }}
     }
 {%- else %}
-    pub fn cxx_{{ m.name }}(self: &{{ s.lazy_name }}) -> Box<{{ m.lazy_type }}> {
+    pub fn cxx_{{ m.name }}(self: &{{ s.lazy_name }}) -> Box<{{ m.lazy_type.rust_type() }}> {
         Box::new(self.{{ m.name }}())
     }
 {%- endif %}
@@ -45,11 +45,19 @@ impl {{ u.lazy_name }} {
 {%- for arm in u.arms %}
 {%- if !arm.is_void %}
 
-    pub fn cxx_as_{{ arm.case_name|lower }}(self: &{{ u.lazy_name }}) -> Result<Box<{{ arm.lazy_type.as_ref().unwrap() }}>, crate::generated::Error> {
-        self.as_{{ arm.case_name|lower }}()
+{%- if arm.lazy_type.as_ref().unwrap().is_scalar() %}
+    pub fn cxx_{{ arm.lazy_method_name }}(self: &{{ u.lazy_name }}) -> Result<{{ arm.lazy_type.as_ref().unwrap().cxx_bridge_type() }}, crate::generated::Error> {
+        self.{{ arm.lazy_method_name }}()
+            .map(|value| value{{ arm.lazy_type.as_ref().unwrap().cxx_scalar_cast_suffix() }})
+            .ok_or(crate::generated::Error::Invalid)
+    }
+{%- else %}
+    pub fn cxx_{{ arm.lazy_method_name }}(self: &{{ u.lazy_name }}) -> Result<Box<{{ arm.lazy_type.as_ref().unwrap().rust_type() }}>, crate::generated::Error> {
+        self.{{ arm.lazy_method_name }}()
             .map(Box::new)
             .ok_or(crate::generated::Error::Invalid)
     }
+{%- endif %}
 {%- endif %}
 {%- endfor %}
 }
@@ -78,10 +86,10 @@ mod ffi {
         type {{ s.lazy_name }};
         fn cxx_from_bytes(buf: &[u8]) -> Result<Box<{{ s.lazy_name }}>>;
 {%- for m in s.members %}
-{%- if m.lazy_is_scalar %}
-        fn cxx_{{ m.name }}(self: &{{ s.lazy_name }}) -> {{ m.cxx_scalar_type }};
+{%- if m.lazy_type.is_scalar() %}
+    fn cxx_{{ m.name }}(self: &{{ s.lazy_name }}) -> {{ m.lazy_type.cxx_bridge_type() }};
 {%- else %}
-        fn cxx_{{ m.name }}(self: &{{ s.lazy_name }}) -> Box<{{ m.lazy_type }}>;
+    fn cxx_{{ m.name }}(self: &{{ s.lazy_name }}) -> Box<{{ m.lazy_type.rust_type() }}>;
 {%- endif %}
 {%- endfor %}
 {%- when CxxBridgeDefinition::Union(u) %}
@@ -92,7 +100,11 @@ mod ffi {
         fn cxx_discriminant_i32(self: &{{ u.lazy_name }}) -> i32;
 {%- for arm in u.arms %}
 {%- if !arm.is_void %}
-        fn cxx_as_{{ arm.case_name|lower }}(self: &{{ u.lazy_name }}) -> Result<Box<{{ arm.lazy_type.as_ref().unwrap() }}>>;
+    {%- if arm.lazy_type.as_ref().unwrap().is_scalar() %}
+        fn cxx_{{ arm.lazy_method_name }}(self: &{{ u.lazy_name }}) -> Result<{{ arm.lazy_type.as_ref().unwrap().cxx_bridge_type() }}>;
+    {%- else %}
+        fn cxx_{{ arm.lazy_method_name }}(self: &{{ u.lazy_name }}) -> Result<Box<{{ arm.lazy_type.as_ref().unwrap().rust_type() }}>>;
+    {%- endif %}
 {%- endif %}
 {%- endfor %}
 {%- when CxxBridgeDefinition::TypedefNewtype(t) %}

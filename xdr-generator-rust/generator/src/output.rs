@@ -29,10 +29,7 @@ pub struct CxxBridgeStruct {
 
 pub struct CxxBridgeStructMember {
     pub name: String,
-    pub lazy_type: String,
-    pub lazy_is_scalar: bool,
-    /// CXX-compatible scalar type name (e.g. `i32`, `u64`, `bool`).
-    pub cxx_scalar_type: String,
+    pub lazy_type: LazyTypeOutput,
 }
 
 pub struct CxxBridgeUnion {
@@ -41,9 +38,9 @@ pub struct CxxBridgeUnion {
 }
 
 pub struct CxxBridgeUnionArm {
-    pub case_name: String,
     pub is_void: bool,
-    pub lazy_type: Option<String>,
+    pub lazy_type: Option<LazyTypeOutput>,
+    pub lazy_method_name: String,
 }
 
 pub struct CxxBridgeTypedefNewtype {
@@ -69,7 +66,7 @@ pub struct StructOutput {
     // Lazy fields
     pub lazy_name: String,
     pub lazy_fixed_size: Option<u32>,
-    pub lazy_validate_steps: Vec<LazyValidateStep>,
+    pub lazy_len_steps: Vec<LazyScanStepOutput>,
 }
 
 pub struct StructMemberOutput {
@@ -78,9 +75,8 @@ pub struct StructMemberOutput {
     pub turbofish_type: String,
     pub serde_as_type: Option<String>,
     // Lazy fields
-    pub lazy_type: String,
-    pub lazy_is_scalar: bool,
-    pub lazy_accessor: LazyAccessor,
+    pub lazy_type: LazyTypeOutput,
+    pub lazy_scan_steps: Vec<LazyScanStepOutput>,
 }
 
 pub struct EnumOutput {
@@ -106,20 +102,20 @@ pub struct UnionOutput {
     pub arms: Vec<UnionArmOutput>,
     // Lazy fields
     pub lazy_name: String,
-    pub lazy_discriminant_type: String,
-    pub lazy_discriminant_is_enum: bool,
+    pub lazy_discriminant: LazyValueOutput,
 }
 
 pub struct UnionArmOutput {
     pub case_name: String,
     pub case_value: String,
+    pub case_value_i32: String,
     pub is_void: bool,
     pub type_ref: Option<String>,
     pub turbofish_type: Option<String>,
     pub serde_as_type: Option<String>,
     // Lazy fields
-    pub lazy_type: Option<String>,
-    pub case_value_i32: String,
+    pub lazy_type: Option<LazyTypeOutput>,
+    pub lazy_method_name: String,
 }
 
 pub struct TypedefAliasOutput {
@@ -127,7 +123,7 @@ pub struct TypedefAliasOutput {
     pub source_comment: String,
     pub type_ref: String,
     // Lazy fields
-    pub lazy_type: String,
+    pub lazy_type: LazyTypeOutput,
 }
 
 pub struct TypedefNewtypeOutput {
@@ -148,9 +144,8 @@ pub struct TypedefNewtypeOutput {
     pub custom_schemars: bool,
     // Lazy fields
     pub lazy_name: String,
-    pub lazy_inner_type: String,
+    pub lazy_inner_type: LazyTypeOutput,
     pub lazy_fixed_size: Option<u32>,
-    pub lazy_inner_is_scalar: bool,
 }
 
 pub struct ConstOutput {
@@ -168,31 +163,150 @@ pub struct TypeEnumOutput {
 // Lazy support types (used as fields in the above)
 // =========================================================================
 
-pub enum LazyValidateStep {
-    FixedGroup(LazyValidateFixedGroup),
-    Variable(LazyValidateVariable),
+#[derive(Clone, Debug)]
+pub enum LazyScanStepOutput {
+    Fixed { len_expr: String },
+    Variable { type_output: LazyTypeOutput },
 }
 
-pub struct LazyValidateFixedGroup {
-    pub total_fixed: u32,
-    pub content_validations: Vec<LazyContentValidation>,
+#[derive(Clone, Debug)]
+pub enum LazyTypeOutput {
+    I32,
+    U32,
+    I64,
+    U64,
+    Bool,
+    F32,
+    F64,
+    FixedOpaque { size: String },
+    VarOpaque { max_size: Option<String> },
+    String { max_size: Option<String> },
+    NamedEnum { name: String },
+    NamedLazy { name: String },
+    Optional { inner: Box<LazyTypeOutput> },
+    Array { element: Box<LazyTypeOutput>, size: String },
+    VarArray {
+        element: Box<LazyTypeOutput>,
+        max_size: Option<String>,
+    },
 }
 
-pub struct LazyContentValidation {
-    pub offset: u32,
-    pub lazy_type: String,
+impl LazyTypeOutput {
+    pub fn rust_type(&self) -> String {
+        match self {
+            Self::I32 => "i32".to_string(),
+            Self::U32 => "u32".to_string(),
+            Self::I64 => "i64".to_string(),
+            Self::U64 => "u64".to_string(),
+            Self::Bool => "bool".to_string(),
+            Self::F32 => "f32".to_string(),
+            Self::F64 => "f64".to_string(),
+            Self::FixedOpaque { size } => format!("LazyOpaqueFixed::<{size}>"),
+            Self::VarOpaque { max_size } => match max_size {
+                Some(size) => format!("LazyBytesM::<{size}>"),
+                None => "LazyBytesM".to_string(),
+            },
+            Self::String { max_size } => match max_size {
+                Some(size) => format!("LazyStringM::<{size}>"),
+                None => "LazyStringM".to_string(),
+            },
+            Self::NamedEnum { name } => format!("super::{name}"),
+            Self::NamedLazy { name } => format!("Lazy{name}"),
+            Self::Optional { inner } => format!("LazyOption::<{}>", inner.rust_type()),
+            Self::Array { element, size } => {
+                format!("LazyFixedArray::<{}, {size}>", element.rust_type())
+            }
+            Self::VarArray { element, max_size } => match max_size {
+                Some(size) => format!("LazyVecM::<{}, {size}>", element.rust_type()),
+                None => format!("LazyVecM::<{}>", element.rust_type()),
+            },
+        }
+    }
+
+    pub fn is_scalar(&self) -> bool {
+        matches!(
+            self,
+            Self::I32
+                | Self::U32
+                | Self::I64
+                | Self::U64
+                | Self::Bool
+                | Self::F32
+                | Self::F64
+                | Self::NamedEnum { .. }
+        )
+    }
+
+    pub fn cxx_bridge_type(&self) -> String {
+        match self {
+            Self::I32 => "i32".to_string(),
+            Self::U32 => "u32".to_string(),
+            Self::I64 => "i64".to_string(),
+            Self::U64 => "u64".to_string(),
+            Self::Bool => "bool".to_string(),
+            Self::F32 => "f32".to_string(),
+            Self::F64 => "f64".to_string(),
+            Self::NamedEnum { .. } => "i32".to_string(),
+            _ => self.rust_type(),
+        }
+    }
+
+    pub fn cxx_scalar_cast_suffix(&self) -> &'static str {
+        match self {
+            Self::NamedEnum { .. } => " as i32",
+            _ => "",
+        }
+    }
+
+    pub fn validate_expr(&self, buf: &str, offset: &str) -> String {
+        format!(
+            "<{} as LazyXdr>::xdr_validate(&{buf}[{offset} as usize..])?",
+            self.rust_type()
+        )
+    }
+
+    pub fn len_expr(&self, buf: &str, offset: &str) -> String {
+        format!(
+            "<{} as LazyXdr>::xdr_len(&{buf}[{offset} as usize..])",
+            self.rust_type()
+        )
+    }
+
+    pub fn from_parent_expr(&self, parent: &str, offset: &str) -> String {
+        format!(
+            "<{} as LazyXdr>::from_xdr_at({parent}, {offset})",
+            self.rust_type()
+        )
+    }
 }
 
-pub struct LazyValidateVariable {
-    pub lazy_type: String,
+#[derive(Clone, Debug)]
+pub enum LazyValueOutput {
+    I32,
+    U32,
+    I64,
+    U64,
+    Bool,
+    NamedEnum { name: String },
 }
 
-pub struct LazyAccessor {
-    pub initial_fixed: u32,
-    pub var_skips: Vec<LazyVarSkip>,
+impl LazyValueOutput {
+    pub fn rust_type(&self) -> String {
+        match self {
+            Self::I32 => "i32".to_string(),
+            Self::U32 => "u32".to_string(),
+            Self::I64 => "i64".to_string(),
+            Self::U64 => "u64".to_string(),
+            Self::Bool => "bool".to_string(),
+            Self::NamedEnum { name } => format!("super::{name}"),
+        }
+    }
+
+    pub fn from_parent_expr(&self, parent: &str, offset: &str) -> String {
+        format!(
+            "<{} as LazyXdr>::from_xdr_at({parent}, {offset})",
+            self.rust_type()
+        )
+    }
 }
 
-pub struct LazyVarSkip {
-    pub lazy_type: String,
-    pub post_fixed: u32,
-}
