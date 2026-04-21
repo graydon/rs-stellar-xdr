@@ -1,0 +1,76 @@
+#[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
+pub struct {{ t.name }}(LazyHandle);
+
+impl {{ t.name }} {
+    #[allow(unused_variables)]
+    pub fn inner(&self) -> Result<{{ t.lazy_type.accessor_type() }}, Error> {
+        let buf = self.0.buf.as_ref();
+        let offset = self.0.pos;
+    {%- if t.lazy_type.access_needs_ref() %}
+        let inner_len = {{ t.lazy_type.trusted_len_expr("buf", "offset") }};
+        let inner_ref = LazyHandle::new(self.0.buf.clone(), self.0.pos, inner_len)?;
+        Ok({{ t.lazy_type.access_result_expr("buf", "offset", "inner_ref") }})
+    {%- else %}
+        Ok({{ t.lazy_type.access_result_expr("buf", "offset", "inner_ref") }})
+    {%- endif %}
+    }
+
+    pub fn get(&self) -> Result<{{ t.lazy_value.eager_type() }}, Error> {
+        let buf = self.0.buf.as_ref();
+        let offset = self.0.pos;
+        {{ t.lazy_value.read_result_expr("buf", "offset") }}
+    }
+}
+
+impl AsRef<LazyHandle> for {{ t.name }} {
+    fn as_ref(&self) -> &LazyHandle {
+        &self.0
+    }
+}
+
+impl TryFrom<LazyHandle> for {{ t.name }} {
+    type Error = Error;
+
+    fn try_from(xdr: LazyHandle) -> Result<Self, Self::Error> {
+        Ok(Self(xdr))
+    }
+}
+
+impl TryFrom<Arc<[u8]>> for {{ t.name }} {
+    type Error = Error;
+
+    fn try_from(buf: Arc<[u8]>) -> Result<Self, Self::Error> {
+        lazy_from_arc(buf)
+    }
+}
+
+impl TryFrom<Vec<u8>> for {{ t.name }} {
+    type Error = Error;
+
+    fn try_from(bytes: Vec<u8>) -> Result<Self, Self::Error> {
+        lazy_from_vec(bytes)
+    }
+}
+
+#[cfg(feature = "std")]
+impl TryFrom<&super::{{ t.name }}> for {{ t.name }} {
+    type Error = Error;
+
+    fn try_from(value: &super::{{ t.name }}) -> Result<Self, Self::Error> {
+        lazy_from_eager_ref(value)
+    }
+}
+
+impl LazyXdr for {{ t.name }} {
+    type Eager = super::{{ t.name }};
+
+    #[allow(unused_variables)]
+    fn lazy_validate(buf: &[u8], offset: u32, limits: &mut Limits) -> Result<u32, Error> {
+        {{ t.lazy_type.validate_result_expr("buf", "offset", "limits") }}
+    }
+
+    #[allow(unused_variables)]
+    fn lazy_len(buf: &[u8], offset: u32) -> Result<u32, Error> {
+        Ok({{ t.lazy_type.trusted_len_expr("buf", "offset") }})
+    }
+}

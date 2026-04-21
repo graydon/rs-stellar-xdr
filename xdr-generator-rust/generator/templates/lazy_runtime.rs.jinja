@@ -1,0 +1,846 @@
+#[allow(clippy::too_many_lines, clippy::missing_errors_doc)]
+
+use core::fmt;
+
+#[cfg(feature = "std")]
+use std::{boxed::Box, sync::Arc, vec::Vec};
+
+#[cfg(all(not(feature = "std"), feature = "alloc"))]
+use alloc::{boxed::Box, sync::Arc, vec::Vec};
+
+#[derive(Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
+pub struct LazyHandle {
+    buf: Arc<[u8]>,
+    pos: u32,
+    end: u32,
+}
+
+impl fmt::Debug for LazyHandle {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("LazyHandle")
+            .field("pos", &self.pos)
+            .field("end", &self.end)
+            .finish()
+    }
+}
+
+impl LazyHandle {
+    pub fn new(buf: Arc<[u8]>, pos: u32, len: u32) -> Result<Self, Error> {
+        let end = pos.checked_add(len).ok_or(Error::LengthExceedsMax)?;
+        if end as usize > buf.len() {
+            return Err(Error::Invalid);
+        }
+        Ok(Self { buf, pos, end })
+    }
+
+    pub fn from_bounds(buf: Arc<[u8]>, pos: u32, end: u32) -> Result<Self, Error> {
+        if pos > end || end as usize > buf.len() {
+            return Err(Error::Invalid);
+        }
+        Ok(Self { buf, pos, end })
+    }
+
+    pub fn from_serialized_vec(bytes: Vec<u8>) -> Result<Self, Error> {
+        let arc: Arc<[u8]> = Arc::from(bytes);
+        let end = u32::try_from(arc.len()).map_err(|_| Error::LengthExceedsMax)?;
+        Self::from_bounds(arc, 0, end)
+    }
+
+    #[must_use]
+    pub fn buf_arc(&self) -> Arc<[u8]> {
+        self.buf.clone()
+    }
+
+    #[must_use]
+    pub const fn pos(&self) -> u32 {
+        self.pos
+    }
+
+    #[must_use]
+    pub const fn end(&self) -> u32 {
+        self.end
+    }
+
+    #[must_use]
+    pub const fn len(&self) -> u32 {
+        self.end - self.pos
+    }
+
+    #[must_use]
+    pub const fn is_empty(&self) -> bool {
+        self.pos == self.end
+    }
+
+    pub fn as_slice(&self) -> Result<&[u8], Error> {
+        let start = self.pos as usize;
+        let end = self.end as usize;
+        if end > self.buf.len() || start > end {
+            return Err(Error::Invalid);
+        }
+        Ok(&self.buf[start..end])
+    }
+}
+
+pub trait LazyXdr: Sized + TryFrom<LazyHandle, Error = Error> {
+    type Eager;
+
+    fn lazy_validate(buf: &[u8], offset: u32, limits: &mut Limits) -> Result<u32, Error>;
+
+    fn lazy_len(buf: &[u8], offset: u32) -> Result<u32, Error>;
+}
+
+#[inline]
+pub fn lazy_from_arc<T: LazyXdr>(buf: Arc<[u8]>) -> Result<T, Error> {
+    let mut limits = Limits::none();
+    let len = T::lazy_validate(buf.as_ref(), 0, &mut limits)?;
+    let end = u32::try_from(buf.len()).map_err(|_| Error::LengthExceedsMax)?;
+    if len != end {
+        return Err(Error::Invalid);
+    }
+    T::try_from(LazyHandle::from_bounds(buf, 0, end)?)
+}
+
+#[inline]
+pub fn lazy_from_vec<T: LazyXdr>(bytes: Vec<u8>) -> Result<T, Error> {
+    lazy_from_arc(Arc::from(bytes))
+}
+
+#[inline]
+pub fn lazy_to_xdr_vec<T>(value: &T) -> Result<Vec<u8>, Error>
+where
+    T: AsRef<LazyHandle>,
+{
+    Ok(value.as_ref().as_slice()?.to_vec())
+}
+
+#[cfg(feature = "std")]
+pub fn lazy_to_eager<T>(value: &T) -> Result<T::Eager, Error>
+where
+    T: LazyXdr + AsRef<LazyHandle>,
+    T::Eager: ReadXdr,
+{
+    <T::Eager as ReadXdr>::from_xdr(
+        value.as_ref().as_slice()?,
+        Limits::len(value.as_ref().len() as usize),
+    )
+}
+
+#[cfg(feature = "std")]
+pub fn lazy_from_eager_ref<T>(value: &T::Eager) -> Result<T, Error>
+where
+    T: LazyXdr,
+    T::Eager: WriteXdr,
+{
+    lazy_from_vec(value.to_xdr(Limits::none())?)
+}
+
+pub fn lazy_boxed_from_xdr<T: LazyXdr>(bytes: Vec<u8>) -> Result<Box<T>, Error> {
+    Ok(Box::new(lazy_from_vec(bytes)?))
+}
+
+#[inline]
+pub const fn pad_len_ref(len: u32) -> u32 {
+    (4u32.wrapping_sub(len % 4)) % 4
+}
+
+#[inline]
+pub fn read_bytes_at(buf: &[u8], offset: u32, len: u32) -> Result<&[u8], Error> {
+    let off = offset as usize;
+    let end = off.checked_add(len as usize).ok_or(Error::LengthExceedsMax)?;
+    if end > buf.len() {
+        return Err(Error::Invalid);
+    }
+    Ok(&buf[off..end])
+}
+
+#[inline]
+pub fn read_u32_at(buf: &[u8], offset: u32) -> Result<u32, Error> {
+    let bytes = read_bytes_at(buf, offset, 4)?;
+    let arr: [u8; 4] = bytes.try_into().map_err(|_| Error::Invalid)?;
+    Ok(u32::from_be_bytes(arr))
+}
+
+#[inline]
+pub fn read_i32_at(buf: &[u8], offset: u32) -> Result<i32, Error> {
+    let bytes = read_bytes_at(buf, offset, 4)?;
+    let arr: [u8; 4] = bytes.try_into().map_err(|_| Error::Invalid)?;
+    Ok(i32::from_be_bytes(arr))
+}
+
+#[inline]
+pub fn read_u64_at(buf: &[u8], offset: u32) -> Result<u64, Error> {
+    let bytes = read_bytes_at(buf, offset, 8)?;
+    let arr: [u8; 8] = bytes.try_into().map_err(|_| Error::Invalid)?;
+    Ok(u64::from_be_bytes(arr))
+}
+
+#[inline]
+pub fn read_i64_at(buf: &[u8], offset: u32) -> Result<i64, Error> {
+    let bytes = read_bytes_at(buf, offset, 8)?;
+    let arr: [u8; 8] = bytes.try_into().map_err(|_| Error::Invalid)?;
+    Ok(i64::from_be_bytes(arr))
+}
+
+#[inline]
+pub fn read_bool_at(buf: &[u8], offset: u32) -> Result<bool, Error> {
+    match read_u32_at(buf, offset)? {
+        0 => Ok(false),
+        1 => Ok(true),
+        _ => Err(Error::Invalid),
+    }
+}
+
+#[inline]
+pub fn check_bounds(buf: &[u8], offset: u32, additional: u32) -> Result<(), Error> {
+    let end = (offset as usize)
+        .checked_add(additional as usize)
+        .ok_or(Error::LengthExceedsMax)?;
+    if end > buf.len() {
+        Err(Error::Invalid)
+    } else {
+        Ok(())
+    }
+}
+
+#[inline]
+pub fn check_padding(buf: &[u8], offset: u32, pad: u32) -> Result<(), Error> {
+    if pad == 0 {
+        return Ok(());
+    }
+    let bytes = read_bytes_at(buf, offset, pad)?;
+    if bytes.iter().any(|&b| b != 0) {
+        return Err(Error::NonZeroPadding);
+    }
+    Ok(())
+}
+
+#[inline]
+pub fn var_opaque_xdr_len(buf: &[u8], offset: u32, max: u32) -> Result<(u32, u32), Error> {
+    let data_len = read_u32_at(buf, offset)?;
+    if data_len > max {
+        return Err(Error::LengthExceedsMax);
+    }
+    let pad = pad_len_ref(data_len);
+    let total = 4u32
+        .checked_add(data_len)
+        .and_then(|v| v.checked_add(pad))
+        .ok_or(Error::LengthExceedsMax)?;
+    check_bounds(buf, offset, total)?;
+    let pad_offset = offset
+        .checked_add(4)
+        .and_then(|v| v.checked_add(data_len))
+        .ok_or(Error::LengthExceedsMax)?;
+    check_padding(buf, pad_offset, pad)?;
+    Ok((data_len, total))
+}
+
+#[inline]
+pub fn var_opaque_len_trusted(buf: &[u8], offset: u32) -> Result<u32, Error> {
+    let data_len = read_u32_at(buf, offset)?;
+    let pad = pad_len_ref(data_len);
+    let total = 4u32
+        .checked_add(data_len)
+        .and_then(|value| value.checked_add(pad))
+        .ok_or(Error::LengthExceedsMax)?;
+    check_bounds(buf, offset, total)?;
+    Ok(total)
+}
+
+#[inline]
+pub fn checked_add_u32(lhs: u32, rhs: u32) -> Result<u32, Error> {
+    lhs.checked_add(rhs).ok_or(Error::LengthExceedsMax)
+}
+
+#[inline]
+pub fn checked_mul_u32(lhs: u32, rhs: u32) -> Result<u32, Error> {
+    lhs.checked_mul(rhs).ok_or(Error::LengthExceedsMax)
+}
+
+#[inline]
+pub fn size_as_u32<T>(value: T) -> Result<u32, Error>
+where
+    u32: TryFrom<T>,
+{
+    u32::try_from(value).map_err(|_| Error::LengthExceedsMax)
+}
+
+#[inline]
+pub fn fixed_opaque_len<T>(size: T) -> Result<u32, Error>
+where
+    u32: TryFrom<T>,
+{
+    let len = size_as_u32(size)?;
+    checked_add_u32(len, pad_len_ref(len))
+}
+
+impl LazyHandle {
+    pub fn get_i32(&self) -> Result<i32, Error> {
+        read_i32_at(self.buf.as_ref(), self.pos)
+    }
+
+    pub fn get_u32(&self) -> Result<u32, Error> {
+        read_u32_at(self.buf.as_ref(), self.pos)
+    }
+
+    pub fn get_i64(&self) -> Result<i64, Error> {
+        read_i64_at(self.buf.as_ref(), self.pos)
+    }
+
+    pub fn get_u64(&self) -> Result<u64, Error> {
+        read_u64_at(self.buf.as_ref(), self.pos)
+    }
+
+    pub fn get_bool(&self) -> Result<bool, Error> {
+        read_bool_at(self.buf.as_ref(), self.pos)
+    }
+
+    pub fn get_fixed<const N: usize>(&self) -> Result<[u8; N], Error> {
+        let bytes = read_bytes_at(self.buf.as_ref(), self.pos, N as u32)?;
+        bytes.try_into().map_err(|_| Error::Invalid)
+    }
+
+    pub fn as_fixed_bytes<const N: usize>(&self) -> Result<&[u8], Error> {
+        read_bytes_at(self.buf.as_ref(), self.pos, N as u32)
+    }
+}
+
+impl LazyXdr for i32 {
+    type Eager = i32;
+
+    fn lazy_validate(buf: &[u8], offset: u32, _limits: &mut Limits) -> Result<u32, Error> {
+        check_bounds(buf, offset, 4)?;
+        Ok(4)
+    }
+
+    fn lazy_len(_buf: &[u8], _offset: u32) -> Result<u32, Error> {
+        Ok(4)
+    }
+}
+
+impl TryFrom<LazyHandle> for i32 {
+    type Error = Error;
+
+    fn try_from(xdr: LazyHandle) -> Result<Self, Self::Error> {
+        xdr.get_i32()
+    }
+}
+
+impl LazyXdr for u32 {
+    type Eager = u32;
+
+    fn lazy_validate(buf: &[u8], offset: u32, _limits: &mut Limits) -> Result<u32, Error> {
+        check_bounds(buf, offset, 4)?;
+        Ok(4)
+    }
+
+    fn lazy_len(_buf: &[u8], _offset: u32) -> Result<u32, Error> {
+        Ok(4)
+    }
+}
+
+impl TryFrom<LazyHandle> for u32 {
+    type Error = Error;
+
+    fn try_from(xdr: LazyHandle) -> Result<Self, Self::Error> {
+        xdr.get_u32()
+    }
+}
+
+impl LazyXdr for i64 {
+    type Eager = i64;
+
+    fn lazy_validate(buf: &[u8], offset: u32, _limits: &mut Limits) -> Result<u32, Error> {
+        check_bounds(buf, offset, 8)?;
+        Ok(8)
+    }
+
+    fn lazy_len(_buf: &[u8], _offset: u32) -> Result<u32, Error> {
+        Ok(8)
+    }
+}
+
+impl TryFrom<LazyHandle> for i64 {
+    type Error = Error;
+
+    fn try_from(xdr: LazyHandle) -> Result<Self, Self::Error> {
+        xdr.get_i64()
+    }
+}
+
+impl LazyXdr for u64 {
+    type Eager = u64;
+
+    fn lazy_validate(buf: &[u8], offset: u32, _limits: &mut Limits) -> Result<u32, Error> {
+        check_bounds(buf, offset, 8)?;
+        Ok(8)
+    }
+
+    fn lazy_len(_buf: &[u8], _offset: u32) -> Result<u32, Error> {
+        Ok(8)
+    }
+}
+
+impl TryFrom<LazyHandle> for u64 {
+    type Error = Error;
+
+    fn try_from(xdr: LazyHandle) -> Result<Self, Self::Error> {
+        xdr.get_u64()
+    }
+}
+
+impl LazyXdr for bool {
+    type Eager = bool;
+
+    fn lazy_validate(buf: &[u8], offset: u32, _limits: &mut Limits) -> Result<u32, Error> {
+        let _ = read_bool_at(buf, offset)?;
+        Ok(4)
+    }
+
+    fn lazy_len(_buf: &[u8], _offset: u32) -> Result<u32, Error> {
+        Ok(4)
+    }
+}
+
+impl TryFrom<LazyHandle> for bool {
+    type Error = Error;
+
+    fn try_from(xdr: LazyHandle) -> Result<Self, Self::Error> {
+        xdr.get_bool()
+    }
+}
+
+impl<const N: usize> LazyXdr for [u8; N] {
+    type Eager = [u8; N];
+
+    fn lazy_validate(buf: &[u8], offset: u32, _limits: &mut Limits) -> Result<u32, Error> {
+        let n = N as u32;
+        let pad = pad_len_ref(n);
+        let total = n.checked_add(pad).ok_or(Error::LengthExceedsMax)?;
+        check_bounds(buf, offset, total)?;
+        let pad_offset = offset.checked_add(n).ok_or(Error::LengthExceedsMax)?;
+        check_padding(buf, pad_offset, pad)?;
+        Ok(total)
+    }
+
+    fn lazy_len(_buf: &[u8], _offset: u32) -> Result<u32, Error> {
+        let n = N as u32;
+        n.checked_add(pad_len_ref(n)).ok_or(Error::LengthExceedsMax)
+    }
+}
+
+impl<const N: usize> TryFrom<LazyHandle> for [u8; N] {
+    type Error = Error;
+
+    fn try_from(xdr: LazyHandle) -> Result<Self, Self::Error> {
+        xdr.get_fixed::<N>()
+    }
+}
+
+#[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
+pub struct LazyOption<T: LazyXdr>(LazyHandle, core::marker::PhantomData<fn() -> T>);
+
+impl<T: LazyXdr> LazyOption<T> {
+    pub fn new(xdr: LazyHandle) -> Self {
+        Self(xdr, core::marker::PhantomData)
+    }
+
+    pub fn is_some(&self) -> Result<bool, Error> {
+        Ok(read_u32_at(self.0.buf.as_ref(), self.0.pos)? == 1)
+    }
+
+    pub fn value(&self) -> Result<Option<T>, Error> {
+        match read_u32_at(self.0.buf.as_ref(), self.0.pos)? {
+            0 => Ok(None),
+            1 => {
+                let inner_pos = self.0.pos.checked_add(4).ok_or(Error::LengthExceedsMax)?;
+                let inner = LazyHandle::from_bounds(self.0.buf.clone(), inner_pos, self.0.end)?;
+                Ok(Some(T::try_from(inner)?))
+            }
+            _ => Err(Error::Invalid),
+        }
+    }
+
+    #[cfg(feature = "std")]
+    pub fn to_eager(&self) -> Result<Option<T::Eager>, Error>
+    where
+        Option<T::Eager>: ReadXdr,
+    {
+        Option::<T::Eager>::from_xdr(self.0.as_slice()?, Limits::len(self.0.len() as usize))
+    }
+
+    pub fn to_xdr_vec(&self) -> Result<Vec<u8>, Error> {
+        Ok(self.0.as_slice()?.to_vec())
+    }
+}
+
+impl<T: LazyXdr> LazyXdr for LazyOption<T> {
+    type Eager = Option<T::Eager>;
+
+    fn lazy_validate(buf: &[u8], offset: u32, limits: &mut Limits) -> Result<u32, Error> {
+        match read_u32_at(buf, offset)? {
+            0 => Ok(4),
+            1 => {
+                let inner_pos = offset.checked_add(4).ok_or(Error::LengthExceedsMax)?;
+                let inner_len = T::lazy_validate(buf, inner_pos, limits)?;
+                4u32.checked_add(inner_len).ok_or(Error::LengthExceedsMax)
+            }
+            _ => Err(Error::Invalid),
+        }
+    }
+
+    fn lazy_len(buf: &[u8], offset: u32) -> Result<u32, Error> {
+        match read_u32_at(buf, offset)? {
+            0 => Ok(4),
+            1 => {
+                let inner_pos = offset.checked_add(4).ok_or(Error::LengthExceedsMax)?;
+                let inner_len = T::lazy_len(buf, inner_pos)?;
+                4u32.checked_add(inner_len).ok_or(Error::LengthExceedsMax)
+            }
+            _ => Err(Error::Invalid),
+        }
+    }
+
+}
+
+impl<T: LazyXdr> TryFrom<LazyHandle> for LazyOption<T> {
+    type Error = Error;
+
+    fn try_from(xdr: LazyHandle) -> Result<Self, Self::Error> {
+        Ok(LazyOption::new(xdr))
+    }
+}
+
+impl<T: LazyXdr> AsRef<LazyHandle> for LazyOption<T> {
+    fn as_ref(&self) -> &LazyHandle {
+        &self.0
+    }
+}
+
+#[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
+pub struct LazyBox<T: LazyXdr>(LazyHandle, core::marker::PhantomData<fn() -> T>);
+
+impl<T: LazyXdr> LazyBox<T> {
+    pub fn new(xdr: LazyHandle) -> Self {
+        Self(xdr, core::marker::PhantomData)
+    }
+
+    pub fn inner(&self) -> Result<T, Error> {
+        T::try_from(self.0.clone())
+    }
+
+    #[cfg(feature = "std")]
+    pub fn to_eager(&self) -> Result<Box<T::Eager>, Error>
+    where
+        Box<T::Eager>: ReadXdr,
+    {
+        Box::<T::Eager>::from_xdr(self.0.as_slice()?, Limits::len(self.0.len() as usize))
+    }
+
+    pub fn to_xdr_vec(&self) -> Result<Vec<u8>, Error> {
+        Ok(self.0.as_slice()?.to_vec())
+    }
+}
+
+impl<T: LazyXdr> LazyXdr for LazyBox<T> {
+    type Eager = Box<T::Eager>;
+
+    fn lazy_validate(buf: &[u8], offset: u32, limits: &mut Limits) -> Result<u32, Error> {
+        T::lazy_validate(buf, offset, limits)
+    }
+
+    fn lazy_len(buf: &[u8], offset: u32) -> Result<u32, Error> {
+        T::lazy_len(buf, offset)
+    }
+
+}
+
+impl<T: LazyXdr> TryFrom<LazyHandle> for LazyBox<T> {
+    type Error = Error;
+
+    fn try_from(xdr: LazyHandle) -> Result<Self, Self::Error> {
+        Ok(LazyBox::new(xdr))
+    }
+}
+
+impl<T: LazyXdr> AsRef<LazyHandle> for LazyBox<T> {
+    fn as_ref(&self) -> &LazyHandle {
+        &self.0
+    }
+}
+
+#[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
+pub struct LazyVecM<T: LazyXdr, const MAX: u32 = { u32::MAX }>(LazyHandle, core::marker::PhantomData<fn() -> T>);
+
+impl<T: LazyXdr, const MAX: u32> LazyVecM<T, MAX> {
+    pub fn new(xdr: LazyHandle) -> Self {
+        Self(xdr, core::marker::PhantomData)
+    }
+
+    pub fn len(&self) -> Result<u32, Error> {
+        read_u32_at(self.0.buf.as_ref(), self.0.pos)
+    }
+
+    pub fn get(&self, index: u32) -> Result<T, Error> {
+        let count = self.len()?;
+        if index >= count {
+            return Err(Error::Invalid);
+        }
+        let mut pos = self.0.pos.checked_add(4).ok_or(Error::LengthExceedsMax)?;
+        for _ in 0..index {
+            let item_len = T::lazy_len(self.0.buf.as_ref(), pos)?;
+            pos = pos.checked_add(item_len).ok_or(Error::LengthExceedsMax)?;
+        }
+        let item_len = T::lazy_len(self.0.buf.as_ref(), pos)?;
+        let item_ref = LazyHandle::new(self.0.buf.clone(), pos, item_len)?;
+        T::try_from(item_ref)
+    }
+
+    #[cfg(feature = "std")]
+    pub fn to_eager(&self) -> Result<super::VecM<T::Eager, MAX>, Error>
+    where
+        super::VecM<T::Eager, MAX>: ReadXdr,
+    {
+        super::VecM::<T::Eager, MAX>::from_xdr(
+            self.0.as_slice()?,
+            Limits::len(self.0.len() as usize),
+        )
+    }
+
+    pub fn to_xdr_vec(&self) -> Result<Vec<u8>, Error> {
+        Ok(self.0.as_slice()?.to_vec())
+    }
+}
+
+impl<T: LazyXdr, const MAX: u32> LazyXdr for LazyVecM<T, MAX> {
+    type Eager = super::VecM<T::Eager, MAX>;
+
+    fn lazy_validate(buf: &[u8], offset: u32, limits: &mut Limits) -> Result<u32, Error> {
+        let count = read_u32_at(buf, offset)?;
+        if count > MAX {
+            return Err(Error::LengthExceedsMax);
+        }
+        let mut pos = offset.checked_add(4).ok_or(Error::LengthExceedsMax)?;
+        for _ in 0..count {
+            let item_len = T::lazy_validate(buf, pos, limits)?;
+            pos = pos.checked_add(item_len).ok_or(Error::LengthExceedsMax)?;
+        }
+        pos.checked_sub(offset).ok_or(Error::Invalid)
+    }
+
+    fn lazy_len(buf: &[u8], offset: u32) -> Result<u32, Error> {
+        let count = read_u32_at(buf, offset)?;
+        let mut pos = offset.checked_add(4).ok_or(Error::LengthExceedsMax)?;
+        for _ in 0..count {
+            let item_len = T::lazy_len(buf, pos)?;
+            pos = pos.checked_add(item_len).ok_or(Error::LengthExceedsMax)?;
+        }
+        pos.checked_sub(offset).ok_or(Error::Invalid)
+    }
+
+}
+
+impl<T: LazyXdr, const MAX: u32> TryFrom<LazyHandle> for LazyVecM<T, MAX> {
+    type Error = Error;
+
+    fn try_from(xdr: LazyHandle) -> Result<Self, Self::Error> {
+        Ok(LazyVecM::new(xdr))
+    }
+}
+
+impl<T: LazyXdr, const MAX: u32> AsRef<LazyHandle> for LazyVecM<T, MAX> {
+    fn as_ref(&self) -> &LazyHandle {
+        &self.0
+    }
+}
+
+#[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
+pub struct LazyBytesM<const MAX: u32 = { u32::MAX }>(LazyHandle);
+
+impl<const MAX: u32> LazyBytesM<MAX> {
+    pub fn len(&self) -> Result<u32, Error> {
+        read_u32_at(self.0.buf.as_ref(), self.0.pos)
+    }
+
+    pub fn as_bytes(&self) -> Result<&[u8], Error> {
+        let data_len = self.len()?;
+        let data_pos = self.0.pos.checked_add(4).ok_or(Error::LengthExceedsMax)?;
+        read_bytes_at(self.0.buf.as_ref(), data_pos, data_len)
+    }
+
+    #[cfg(feature = "std")]
+    pub fn to_eager(&self) -> Result<super::BytesM<MAX>, Error>
+    where
+        super::BytesM<MAX>: ReadXdr,
+    {
+        super::BytesM::<MAX>::from_xdr(self.0.as_slice()?, Limits::len(self.0.len() as usize))
+    }
+
+    pub fn to_xdr_vec(&self) -> Result<Vec<u8>, Error> {
+        Ok(self.0.as_slice()?.to_vec())
+    }
+}
+
+impl<const MAX: u32> LazyXdr for LazyBytesM<MAX> {
+    type Eager = super::BytesM<MAX>;
+
+    fn lazy_validate(buf: &[u8], offset: u32, _limits: &mut Limits) -> Result<u32, Error> {
+        Ok(var_opaque_xdr_len(buf, offset, MAX)?.1)
+    }
+
+    fn lazy_len(buf: &[u8], offset: u32) -> Result<u32, Error> {
+        var_opaque_len_trusted(buf, offset)
+    }
+
+}
+
+impl<const MAX: u32> TryFrom<LazyHandle> for LazyBytesM<MAX> {
+    type Error = Error;
+
+    fn try_from(xdr: LazyHandle) -> Result<Self, Self::Error> {
+        Ok(LazyBytesM(xdr))
+    }
+}
+
+impl<const MAX: u32> AsRef<LazyHandle> for LazyBytesM<MAX> {
+    fn as_ref(&self) -> &LazyHandle {
+        &self.0
+    }
+}
+
+#[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
+pub struct LazyStringM<const MAX: u32 = { u32::MAX }>(LazyHandle);
+
+impl<const MAX: u32> LazyStringM<MAX> {
+    pub fn len(&self) -> Result<u32, Error> {
+        read_u32_at(self.0.buf.as_ref(), self.0.pos)
+    }
+
+    pub fn as_bytes(&self) -> Result<&[u8], Error> {
+        let data_len = self.len()?;
+        let data_pos = self.0.pos.checked_add(4).ok_or(Error::LengthExceedsMax)?;
+        read_bytes_at(self.0.buf.as_ref(), data_pos, data_len)
+    }
+
+    pub fn as_str(&self) -> Result<&str, Error> {
+        Ok(core::str::from_utf8(self.as_bytes()?)?)
+    }
+
+    #[cfg(feature = "std")]
+    pub fn to_eager(&self) -> Result<super::StringM<MAX>, Error>
+    where
+        super::StringM<MAX>: ReadXdr,
+    {
+        super::StringM::<MAX>::from_xdr(self.0.as_slice()?, Limits::len(self.0.len() as usize))
+    }
+
+    pub fn to_xdr_vec(&self) -> Result<Vec<u8>, Error> {
+        Ok(self.0.as_slice()?.to_vec())
+    }
+}
+
+impl<const MAX: u32> LazyXdr for LazyStringM<MAX> {
+    type Eager = super::StringM<MAX>;
+
+    fn lazy_validate(buf: &[u8], offset: u32, _limits: &mut Limits) -> Result<u32, Error> {
+        let (data_len, total) = var_opaque_xdr_len(buf, offset, MAX)?;
+        let data_pos = offset.checked_add(4).ok_or(Error::LengthExceedsMax)?;
+        let data = read_bytes_at(buf, data_pos, data_len)?;
+        let _ = core::str::from_utf8(data)?;
+        Ok(total)
+    }
+
+    fn lazy_len(buf: &[u8], offset: u32) -> Result<u32, Error> {
+        var_opaque_len_trusted(buf, offset)
+    }
+
+}
+
+impl<const MAX: u32> TryFrom<LazyHandle> for LazyStringM<MAX> {
+    type Error = Error;
+
+    fn try_from(xdr: LazyHandle) -> Result<Self, Self::Error> {
+        Ok(LazyStringM(xdr))
+    }
+}
+
+impl<const MAX: u32> AsRef<LazyHandle> for LazyStringM<MAX> {
+    fn as_ref(&self) -> &LazyHandle {
+        &self.0
+    }
+}
+
+#[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
+pub struct LazyArray<T: LazyXdr, const N: usize>(LazyHandle, core::marker::PhantomData<fn() -> T>);
+
+impl<T: LazyXdr, const N: usize> LazyArray<T, N> {
+    pub fn new(xdr: LazyHandle) -> Self {
+        Self(xdr, core::marker::PhantomData)
+    }
+
+    pub const fn len(&self) -> usize {
+        N
+    }
+
+    pub fn get(&self, index: usize) -> Result<T, Error> {
+        if index >= N {
+            return Err(Error::Invalid);
+        }
+        let mut pos = self.0.pos;
+        for _ in 0..index {
+            let item_len = T::lazy_len(self.0.buf.as_ref(), pos)?;
+            pos = pos.checked_add(item_len).ok_or(Error::LengthExceedsMax)?;
+        }
+        let item_len = T::lazy_len(self.0.buf.as_ref(), pos)?;
+        let item_ref = LazyHandle::new(self.0.buf.clone(), pos, item_len)?;
+        T::try_from(item_ref)
+    }
+
+    #[cfg(feature = "std")]
+    pub fn to_eager(&self) -> Result<[T::Eager; N], Error>
+    where
+        [T::Eager; N]: ReadXdr,
+    {
+        <[T::Eager; N]>::from_xdr(self.0.as_slice()?, Limits::len(self.0.len() as usize))
+    }
+
+    pub fn to_xdr_vec(&self) -> Result<Vec<u8>, Error> {
+        Ok(self.0.as_slice()?.to_vec())
+    }
+}
+
+impl<T: LazyXdr, const N: usize> LazyXdr for LazyArray<T, N> {
+    type Eager = [T::Eager; N];
+
+    fn lazy_validate(buf: &[u8], offset: u32, limits: &mut Limits) -> Result<u32, Error> {
+        let mut pos = offset;
+        for _ in 0..N {
+            let item_len = T::lazy_validate(buf, pos, limits)?;
+            pos = pos.checked_add(item_len).ok_or(Error::LengthExceedsMax)?;
+        }
+        pos.checked_sub(offset).ok_or(Error::Invalid)
+    }
+
+    fn lazy_len(buf: &[u8], offset: u32) -> Result<u32, Error> {
+        let mut pos = offset;
+        for _ in 0..N {
+            let item_len = T::lazy_len(buf, pos)?;
+            pos = pos.checked_add(item_len).ok_or(Error::LengthExceedsMax)?;
+        }
+        pos.checked_sub(offset).ok_or(Error::Invalid)
+    }
+
+}
+
+impl<T: LazyXdr, const N: usize> TryFrom<LazyHandle> for LazyArray<T, N> {
+    type Error = Error;
+
+    fn try_from(xdr: LazyHandle) -> Result<Self, Self::Error> {
+        Ok(LazyArray::new(xdr))
+    }
+}
+
+impl<T: LazyXdr, const N: usize> AsRef<LazyHandle> for LazyArray<T, N> {
+    fn as_ref(&self) -> &LazyHandle {
+        &self.0
+    }
+}

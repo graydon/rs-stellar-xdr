@@ -248,7 +248,6 @@ where
 
 /// `Limits` contains the limits that a limited reader or writer will be
 /// constrained to.
-#[cfg(feature = "std")]
 #[derive(Debug, Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Limits {
     /// Defines the maximum depth for recursive calls in `Read/WriteXdr` to
@@ -265,7 +264,6 @@ pub struct Limits {
     pub len: usize,
 }
 
-#[cfg(feature = "std")]
 impl Limits {
     #[must_use]
     pub fn none() -> Self {
@@ -288,6 +286,20 @@ impl Limits {
         Limits {
             len,
             ..Limits::none()
+        }
+    }
+
+    pub fn with_limited_depth<T, F>(&mut self, f: F) -> Result<T, Error>
+    where
+        F: FnOnce(&mut Self) -> Result<T, Error>,
+    {
+        if let Some(depth) = self.depth.checked_sub(1) {
+            self.depth = depth;
+            let result = f(self);
+            self.depth = self.depth.saturating_add(1);
+            result
+        } else {
+            Err(Error::DepthLimitExceeded)
         }
     }
 }

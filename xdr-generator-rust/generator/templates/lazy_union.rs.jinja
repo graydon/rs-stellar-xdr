@@ -1,0 +1,121 @@
+#[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
+pub struct {{ u.name }}(LazyHandle);
+
+impl {{ u.name }} {
+    pub fn discriminant(&self) -> Result<{{ u.lazy_discriminant.eager_type() }}, Error> {
+        {{ u.lazy_discriminant.read_result_expr("self.0.buf.as_ref()", "self.0.pos") }}
+    }
+
+{%- for arm in u.arms %}
+{%- if arm.is_void %}
+    pub fn {{ arm.lazy_method_name }}(&self) -> Result<bool, Error> {
+        Ok(self.discriminant()? == {{ arm.lazy_case.render_expr() }})
+    }
+{%- else %}
+    #[allow(unused_variables)]
+    pub fn {{ arm.lazy_method_name }}(&self) -> Result<Option<{{ arm.lazy_type.as_ref().unwrap().accessor_type() }}>, Error> {
+        let disc = self.discriminant()?;
+        if disc != {{ arm.lazy_case.render_expr() }} {
+            return Ok(None);
+        }
+        let buf = self.0.buf.as_ref();
+        let arm_pos = self.0.pos.checked_add(4).ok_or(Error::LengthExceedsMax)?;
+    {%- if arm.lazy_type.as_ref().unwrap().access_needs_ref() %}
+        let arm_len = {{ arm.lazy_type.as_ref().unwrap().trusted_len_expr("buf", "arm_pos") }};
+        let arm_ref = LazyHandle::new(self.0.buf.clone(), arm_pos, arm_len)?;
+        Ok(Some({{ arm.lazy_type.as_ref().unwrap().access_result_expr("buf", "arm_pos", "arm_ref") }}))
+    {%- else %}
+        Ok(Some({{ arm.lazy_type.as_ref().unwrap().access_result_expr("buf", "arm_pos", "arm_ref") }}))
+    {%- endif %}
+    }
+{%- endif %}
+
+{%- endfor %}
+}
+
+impl AsRef<LazyHandle> for {{ u.name }} {
+    fn as_ref(&self) -> &LazyHandle {
+        &self.0
+    }
+}
+
+impl TryFrom<LazyHandle> for {{ u.name }} {
+    type Error = Error;
+
+    fn try_from(xdr: LazyHandle) -> Result<Self, Self::Error> {
+        Ok(Self(xdr))
+    }
+}
+
+impl TryFrom<Arc<[u8]>> for {{ u.name }} {
+    type Error = Error;
+
+    fn try_from(buf: Arc<[u8]>) -> Result<Self, Self::Error> {
+        lazy_from_arc(buf)
+    }
+}
+
+impl TryFrom<Vec<u8>> for {{ u.name }} {
+    type Error = Error;
+
+    fn try_from(bytes: Vec<u8>) -> Result<Self, Self::Error> {
+        lazy_from_vec(bytes)
+    }
+}
+
+#[cfg(feature = "std")]
+impl TryFrom<&super::{{ u.name }}> for {{ u.name }} {
+    type Error = Error;
+
+    fn try_from(value: &super::{{ u.name }}) -> Result<Self, Self::Error> {
+        lazy_from_eager_ref(value)
+    }
+}
+
+impl LazyXdr for {{ u.name }} {
+    type Eager = super::{{ u.name }};
+
+    #[allow(unused_variables)]
+    fn lazy_validate(buf: &[u8], offset: u32, limits: &mut Limits) -> Result<u32, Error> {
+        limits.with_limited_depth(|limits| {
+            let dv: {{ u.lazy_discriminant.eager_type() }} = {{ u.lazy_discriminant.read_value_expr("buf", "offset") }};
+            let mut pos = offset.checked_add(4).ok_or(Error::LengthExceedsMax)?;
+            match dv {
+{%- for arm in u.arms %}
+{%- if let Some(lazy_type) = arm.lazy_type %}
+                {{ arm.lazy_case.render_expr() }} => {
+                    let arm_len = {{ lazy_type.validate_expr("buf", "pos", "limits") }};
+                    pos = pos.checked_add(arm_len).ok_or(Error::LengthExceedsMax)?;
+                }
+{%- else %}
+                {{ arm.lazy_case.render_expr() }} => {}
+{%- endif %}
+{%- endfor %}
+                #[allow(unreachable_patterns)]
+                _ => return Err(Error::Invalid),
+            }
+            pos.checked_sub(offset).ok_or(Error::Invalid)
+        })
+    }
+
+    #[allow(unused_variables)]
+    fn lazy_len(buf: &[u8], offset: u32) -> Result<u32, Error> {
+        let dv: {{ u.lazy_discriminant.eager_type() }} = {{ u.lazy_discriminant.read_value_expr("buf", "offset") }};
+        let mut pos = offset.checked_add(4).ok_or(Error::LengthExceedsMax)?;
+        match dv {
+{%- for arm in u.arms %}
+{%- if let Some(lazy_type) = arm.lazy_type %}
+            {{ arm.lazy_case.render_expr() }} => {
+                let arm_len = {{ lazy_type.trusted_len_expr("buf", "pos") }};
+                pos = pos.checked_add(arm_len).ok_or(Error::LengthExceedsMax)?;
+            }
+{%- else %}
+            {{ arm.lazy_case.render_expr() }} => {}
+{%- endif %}
+{%- endfor %}
+            #[allow(unreachable_patterns)]
+            _ => return Err(Error::Invalid),
+        }
+        pos.checked_sub(offset).ok_or(Error::Invalid)
+    }
+}

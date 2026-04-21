@@ -1,6 +1,7 @@
 //! CLI entry point for the XDR code generator.
 
 mod generator;
+mod lazy_codegen;
 mod naming;
 mod options;
 mod output;
@@ -9,7 +10,7 @@ mod types;
 #[cfg(test)]
 mod tests;
 
-use clap::Parser;
+use clap::{Parser, ValueEnum};
 use generator::RustGenerator;
 use options::RustOptions;
 use std::collections::HashSet;
@@ -17,6 +18,13 @@ use std::fs;
 use std::path::PathBuf;
 
 /// XDR code generator.
+#[derive(Copy, Clone, Debug, Eq, PartialEq, ValueEnum)]
+enum OutputMode {
+    Rust,
+    CxxBridge,
+    Both,
+}
+
 #[derive(Parser, Debug)]
 #[command(name = "xdr-generator")]
 #[command(about = "Generate code from XDR definitions")]
@@ -25,9 +33,21 @@ struct Args {
     #[arg(short, long, required = true)]
     input: Vec<PathBuf>,
 
+    /// Generation mode
+    #[arg(long, value_enum, default_value_t = OutputMode::Rust)]
+    mode: OutputMode,
+
     /// Output file
     #[arg(short, long)]
     output: PathBuf,
+
+    /// Output file for the cxx bridge module when mode is `both`
+    #[arg(long)]
+    bridge_output: Option<PathBuf>,
+
+    /// Comma-separated list of type names to expose in cxx bridge output
+    #[arg(long, value_delimiter = ',')]
+    bridge_types: Vec<String>,
 
     /// Types with custom Default implementation (skip derive(Default))
     #[arg(long, value_delimiter = ',')]
@@ -67,11 +87,29 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         custom_str_impl: args.custom_str.into_iter().collect::<HashSet<_>>(),
         no_display_fromstr: args.no_display_fromstr.into_iter().collect::<HashSet<_>>(),
     };
+    let bridge_types = (!args.bridge_types.is_empty())
+        .then(|| args.bridge_types.into_iter().collect::<HashSet<_>>());
 
     let generator = RustGenerator::new(&spec, options);
-    generator.generate_to_file(&spec, &args.output)?;
-
-    eprintln!("Generated: {}", args.output.display());
+    match args.mode {
+        OutputMode::Rust => {
+            generator.generate_to_file(&spec, &args.output)?;
+            eprintln!("Generated: {}", args.output.display());
+        }
+        OutputMode::CxxBridge => {
+            generator.generate_cxx_bridge_to_file(&spec, &args.output, bridge_types.as_ref())?;
+            eprintln!("Generated: {}", args.output.display());
+        }
+        OutputMode::Both => {
+            let bridge_output = args.bridge_output.as_ref().ok_or(
+                "--bridge-output is required when --mode both",
+            )?;
+            generator.generate_to_file(&spec, &args.output)?;
+            generator.generate_cxx_bridge_to_file(&spec, bridge_output, bridge_types.as_ref())?;
+            eprintln!("Generated: {}", args.output.display());
+            eprintln!("Generated: {}", bridge_output.display());
+        }
+    }
 
     Ok(())
 }

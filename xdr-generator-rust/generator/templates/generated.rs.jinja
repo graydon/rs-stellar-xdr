@@ -33,3 +33,28 @@ pub const XDR_FILES_SHA256: [(&str, &str); {{ xdr_files_sha256.len() }}] = [
 {%- endmatch %}
 {%- endfor %}
 {% include "type_enum.rs.jinja" %}
+
+#[cfg(feature = "alloc")]
+#[allow(dead_code, unused_mut)]
+pub mod lazy {
+    use super::*;
+
+{% include "lazy_runtime.rs.jinja" %}
+
+{%- for def in definitions %}
+{%- match def %}
+{%- when DefinitionOutput::Struct(s) %}
+{% include "lazy_struct.rs.jinja" %}
+{%- when DefinitionOutput::Enum(e) %}
+{% include "lazy_enum.rs.jinja" %}
+{%- when DefinitionOutput::Union(u) %}
+{% include "lazy_union.rs.jinja" %}
+{%- when DefinitionOutput::TypedefAlias(t) %}
+{% include "lazy_typedef_alias.rs.jinja" %}
+{%- when DefinitionOutput::TypedefNewtype(t) %}
+{% include "lazy_typedef_newtype.rs.jinja" %}
+{%- when DefinitionOutput::Const(c) %}
+{%- endmatch %}
+{%- endfor %}
+
+}

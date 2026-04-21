@@ -1,0 +1,40 @@
+#[cfg(feature = "cxx")]
+mod cxx_bridge {
+	#[cfg(feature = "std")]
+	use std::{boxed::Box, vec::Vec};
+
+	#[cfg(all(not(feature = "std"), feature = "alloc"))]
+	use alloc::{boxed::Box, vec::Vec};
+
+	use super::lazy::{
+		lazy_boxed_from_xdr,
+		lazy_to_xdr_vec,
+{%- for ty in bridge_types %}
+		{{ ty.name }},
+{%- endfor %}
+	};
+	use super::Error;
+
+	#[cxx::bridge]
+	pub mod ffi {
+{%- for ty in bridge_types %}
+		extern "Rust" {
+			type {{ ty.name }};
+
+			fn boxed_from_xdr_{{ ty.name }}(bytes: Vec<u8>) -> Result<Box<{{ ty.name }}>>;
+			fn to_xdr_vec_{{ ty.name }}(value: &{{ ty.name }}) -> Result<Vec<u8>>;
+		}
+{%- endfor %}
+	}
+
+{%- for ty in bridge_types %}
+	pub fn boxed_from_xdr_{{ ty.name }}(bytes: Vec<u8>) -> Result<Box<{{ ty.name }}>, Error> {
+		lazy_boxed_from_xdr(bytes)
+	}
+
+	pub fn to_xdr_vec_{{ ty.name }}(value: &{{ ty.name }}) -> Result<Vec<u8>, Error> {
+		lazy_to_xdr_vec(value)
+	}
+
+{%- endfor %}
+}

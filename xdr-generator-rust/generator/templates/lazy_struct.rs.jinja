@@ -1,0 +1,100 @@
+#[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
+pub struct {{ s.name }}(LazyHandle);
+
+impl {{ s.name }} {
+
+{%- for m in s.members %}
+    #[allow(unused_variables)]
+    pub fn {{ m.name }}(&self) -> Result<{{ m.lazy_type.accessor_type() }}, Error> {
+        let buf = self.0.buf.as_ref();
+        let mut pos = self.0.pos;
+{%- for scan_step in m.lazy_scan_steps %}
+{%- match scan_step %}
+{%- when LazyScanStepOutput::Fixed with { len_expr } %}
+        pos = checked_add_u32(pos, {{ len_expr }})?;
+{%- when LazyScanStepOutput::Variable with { type_output } %}
+    let field_len = {{ type_output.trusted_len_expr("buf", "pos") }};
+        pos = checked_add_u32(pos, field_len)?;
+{%- endmatch %}
+{%- endfor %}
+{%- if m.lazy_type.access_needs_ref() %}
+    let field_len = {{ m.lazy_type.trusted_len_expr("buf", "pos") }};
+    let field_ref = LazyHandle::new(self.0.buf.clone(), pos, field_len)?;
+    Ok({{ m.lazy_type.access_result_expr("buf", "pos", "field_ref") }})
+{%- else %}
+    Ok({{ m.lazy_type.access_result_expr("buf", "pos", "field_ref") }})
+{%- endif %}
+    }
+
+{%- endfor %}
+}
+
+impl AsRef<LazyHandle> for {{ s.name }} {
+    fn as_ref(&self) -> &LazyHandle {
+        &self.0
+    }
+}
+
+impl TryFrom<LazyHandle> for {{ s.name }} {
+    type Error = Error;
+
+    fn try_from(xdr: LazyHandle) -> Result<Self, Self::Error> {
+        Ok(Self(xdr))
+    }
+}
+
+impl TryFrom<Arc<[u8]>> for {{ s.name }} {
+    type Error = Error;
+
+    fn try_from(buf: Arc<[u8]>) -> Result<Self, Self::Error> {
+        lazy_from_arc(buf)
+    }
+}
+
+impl TryFrom<Vec<u8>> for {{ s.name }} {
+    type Error = Error;
+
+    fn try_from(bytes: Vec<u8>) -> Result<Self, Self::Error> {
+        lazy_from_vec(bytes)
+    }
+}
+
+#[cfg(feature = "std")]
+impl TryFrom<&super::{{ s.name }}> for {{ s.name }} {
+    type Error = Error;
+
+    fn try_from(value: &super::{{ s.name }}) -> Result<Self, Self::Error> {
+        lazy_from_eager_ref(value)
+    }
+}
+
+impl LazyXdr for {{ s.name }} {
+    type Eager = super::{{ s.name }};
+
+    #[allow(unused_variables)]
+    fn lazy_validate(buf: &[u8], offset: u32, limits: &mut Limits) -> Result<u32, Error> {
+        limits.with_limited_depth(|limits| {
+            let mut pos = offset;
+{%- for m in s.members %}
+            let field_len = {{ m.lazy_type.validate_expr("buf", "pos", "limits") }};
+            pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+{%- endfor %}
+            pos.checked_sub(offset).ok_or(Error::Invalid)
+        })
+    }
+
+    #[allow(unused_variables)]
+    fn lazy_len(buf: &[u8], offset: u32) -> Result<u32, Error> {
+        let mut pos = offset;
+    {%- for scan_step in s.lazy_len_steps %}
+    {%- match scan_step %}
+    {%- when LazyScanStepOutput::Fixed with { len_expr } %}
+        pos = checked_add_u32(pos, {{ len_expr }})?;
+    {%- when LazyScanStepOutput::Variable with { type_output } %}
+        let field_len = {{ type_output.trusted_len_expr("buf", "pos") }};
+        pos = checked_add_u32(pos, field_len)?;
+    {%- endmatch %}
+{%- endfor %}
+        pos.checked_sub(offset).ok_or(Error::Invalid)
+    }
+}
