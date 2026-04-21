@@ -6,14 +6,27 @@
 // data up front, then provide accessors that compute field offsets on
 // demand.
 
+use core::fmt;
 use core::marker::PhantomData;
 
+/// Default maximum recursion depth for XDR validation.
+pub const DEFAULT_XDR_DEPTH_LIMIT: u32 = 500;
+
 /// A shared-ownership handle to a validated region of an XDR buffer.
-#[derive(Clone, Debug)]
+#[derive(Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct LazyHandle {
     buf: Arc<[u8]>,
     pos: u32,
     len: u32,
+}
+
+impl fmt::Debug for LazyHandle {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("LazyHandle")
+            .field("pos", &self.pos)
+            .field("len", &self.len)
+            .finish()
+    }
 }
 
 impl LazyHandle {
@@ -97,7 +110,10 @@ pub trait LazyXdr: Sized {
     /// Returns the total number of bytes consumed (the wire length) on
     /// success, or an error if the data is invalid or the buffer is too
     /// short.  All arithmetic is checked for overflow.
-    fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error>;
+    ///
+    /// The `depth` parameter limits recursion depth to prevent stack overflow
+    /// on deeply-nested XDR types.
+    fn xdr_validate(buf: &[u8], depth: u32) -> Result<u32, super::Error>;
 
     /// Compute the wire length of already-validated data.
     ///
@@ -122,7 +138,7 @@ pub trait LazyXdr: Sized {
 impl LazyXdr for i32 {
     const FIXED_XDR_SIZE: Option<u32> = Some(4);
 
-    fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
+    fn xdr_validate(buf: &[u8], _depth: u32) -> Result<u32, super::Error> {
         if buf.len() < 4 {
             return Err(super::Error::Invalid);
         }
@@ -144,7 +160,7 @@ impl LazyXdr for i32 {
 impl LazyXdr for u32 {
     const FIXED_XDR_SIZE: Option<u32> = Some(4);
 
-    fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
+    fn xdr_validate(buf: &[u8], _depth: u32) -> Result<u32, super::Error> {
         if buf.len() < 4 {
             return Err(super::Error::Invalid);
         }
@@ -166,7 +182,7 @@ impl LazyXdr for u32 {
 impl LazyXdr for i64 {
     const FIXED_XDR_SIZE: Option<u32> = Some(8);
 
-    fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
+    fn xdr_validate(buf: &[u8], _depth: u32) -> Result<u32, super::Error> {
         if buf.len() < 8 {
             return Err(super::Error::Invalid);
         }
@@ -188,7 +204,7 @@ impl LazyXdr for i64 {
 impl LazyXdr for u64 {
     const FIXED_XDR_SIZE: Option<u32> = Some(8);
 
-    fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
+    fn xdr_validate(buf: &[u8], _depth: u32) -> Result<u32, super::Error> {
         if buf.len() < 8 {
             return Err(super::Error::Invalid);
         }
@@ -210,7 +226,7 @@ impl LazyXdr for u64 {
 impl LazyXdr for f32 {
     const FIXED_XDR_SIZE: Option<u32> = Some(4);
 
-    fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
+    fn xdr_validate(buf: &[u8], _depth: u32) -> Result<u32, super::Error> {
         if buf.len() < 4 {
             return Err(super::Error::Invalid);
         }
@@ -232,7 +248,7 @@ impl LazyXdr for f32 {
 impl LazyXdr for f64 {
     const FIXED_XDR_SIZE: Option<u32> = Some(8);
 
-    fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
+    fn xdr_validate(buf: &[u8], _depth: u32) -> Result<u32, super::Error> {
         if buf.len() < 8 {
             return Err(super::Error::Invalid);
         }
@@ -254,7 +270,7 @@ impl LazyXdr for f64 {
 impl LazyXdr for bool {
     const FIXED_XDR_SIZE: Option<u32> = Some(4);
 
-    fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
+    fn xdr_validate(buf: &[u8], _depth: u32) -> Result<u32, super::Error> {
         if buf.len() < 4 {
             return Err(super::Error::Invalid);
         }
@@ -281,7 +297,7 @@ impl LazyXdr for bool {
 impl LazyXdr for () {
     const FIXED_XDR_SIZE: Option<u32> = Some(0);
 
-    fn xdr_validate(_buf: &[u8]) -> Result<u32, super::Error> {
+    fn xdr_validate(_buf: &[u8], _depth: u32) -> Result<u32, super::Error> {
         Ok(0)
     }
 
@@ -305,11 +321,11 @@ const fn xdr_pad(n: u32) -> u32 {
 }
 
 /// Lazy wrapper for XDR `opaque<MAX>` (variable-length opaque data).
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct LazyBytesM<const MAX: u32 = { u32::MAX }>(LazyHandle);
 
 impl<const MAX: u32> LazyXdr for LazyBytesM<MAX> {
-    fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
+    fn xdr_validate(buf: &[u8], _depth: u32) -> Result<u32, super::Error> {
         if buf.len() < 4 {
             return Err(super::Error::Invalid);
         }
@@ -381,13 +397,13 @@ impl<const MAX: u32> From<LazyHandle> for LazyBytesM<MAX> {
 /// Lazy wrapper for XDR `string<MAX>` (variable-length string).
 ///
 /// Same wire format as `opaque<MAX>`.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct LazyStringM<const MAX: u32 = { u32::MAX }>(LazyHandle);
 
 impl<const MAX: u32> LazyXdr for LazyStringM<MAX> {
-    fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
+    fn xdr_validate(buf: &[u8], _depth: u32) -> Result<u32, super::Error> {
         // String has the same wire format as opaque.
-        LazyBytesM::<MAX>::xdr_validate(buf)
+        LazyBytesM::<MAX>::xdr_validate(buf, _depth)
     }
 
     #[inline]
@@ -442,11 +458,11 @@ impl<const MAX: u32> From<LazyHandle> for LazyStringM<MAX> {
 }
 
 /// Lazy wrapper for XDR variable-length arrays `T<MAX>`.
-#[derive(Clone, Debug)]
-pub struct LazyVecM<T: LazyXdr, const MAX: u32 = { u32::MAX }>(LazyHandle, PhantomData<T>);
+#[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
+pub struct LazyVecM<T: LazyXdr, const MAX: u32 = { u32::MAX }>(LazyHandle, PhantomData<fn() -> T>);
 
 impl<T: LazyXdr, const MAX: u32> LazyXdr for LazyVecM<T, MAX> {
-    fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
+    fn xdr_validate(buf: &[u8], depth: u32) -> Result<u32, super::Error> {
         if buf.len() < 4 {
             return Err(super::Error::Invalid);
         }
@@ -456,7 +472,7 @@ impl<T: LazyXdr, const MAX: u32> LazyXdr for LazyVecM<T, MAX> {
         }
         let mut pos: u32 = 4;
         for _ in 0..count {
-            let elem_len = T::xdr_validate(&buf[pos as usize..])?;
+            let elem_len = T::xdr_validate(&buf[pos as usize..], depth)?;
             pos = pos.checked_add(elem_len).ok_or(super::Error::LengthExceedsMax)?;
         }
         Ok(pos)
@@ -490,14 +506,14 @@ impl<T: LazyXdr, const MAX: u32> LazyVecM<T, MAX> {
     }
 
     /// Access the element at `index` (0-based).
-    ///
-    /// # Panics
-    /// Panics if `index >= self.element_count()`.
+    /// Returns `None` if `index >= self.element_count()`.
     #[must_use]
-    pub fn get(&self, index: u32) -> T {
+    pub fn get(&self, index: u32) -> Option<T> {
         let buf = self.0.as_slice();
         let count = self.element_count();
-        assert!(index < count, "lazy VecM index out of bounds");
+        if index >= count {
+            return None;
+        }
         let mut pos: u32 = 4;
         if let Some(fixed) = T::FIXED_XDR_SIZE {
             pos += index * fixed;
@@ -506,7 +522,7 @@ impl<T: LazyXdr, const MAX: u32> LazyVecM<T, MAX> {
                 pos += T::xdr_len(&buf[pos as usize..]);
             }
         }
-        T::from_xdr_at(&self.0, pos)
+        Some(T::from_xdr_at(&self.0, pos))
     }
 }
 
@@ -523,8 +539,8 @@ impl<T: LazyXdr, const MAX: u32> From<LazyHandle> for LazyVecM<T, MAX> {
 }
 
 /// Lazy wrapper for XDR fixed-length arrays `T[N]`.
-#[derive(Clone, Debug)]
-pub struct LazyFixedArray<T: LazyXdr, const N: u32>(LazyHandle, PhantomData<T>);
+#[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
+pub struct LazyFixedArray<T: LazyXdr, const N: u32>(LazyHandle, PhantomData<fn() -> T>);
 
 impl<T: LazyXdr, const N: u32> LazyXdr for LazyFixedArray<T, N> {
     const FIXED_XDR_SIZE: Option<u32> = match T::FIXED_XDR_SIZE {
@@ -532,10 +548,10 @@ impl<T: LazyXdr, const N: u32> LazyXdr for LazyFixedArray<T, N> {
         None => None,
     };
 
-    fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
+    fn xdr_validate(buf: &[u8], depth: u32) -> Result<u32, super::Error> {
         let mut pos: u32 = 0;
         for _ in 0..N {
-            let elem_len = T::xdr_validate(&buf[pos as usize..])?;
+            let elem_len = T::xdr_validate(&buf[pos as usize..], depth)?;
             pos = pos.checked_add(elem_len).ok_or(super::Error::LengthExceedsMax)?;
         }
         Ok(pos)
@@ -562,12 +578,12 @@ impl<T: LazyXdr, const N: u32> LazyXdr for LazyFixedArray<T, N> {
 
 impl<T: LazyXdr, const N: u32> LazyFixedArray<T, N> {
     /// Access the element at `index` (0-based).
-    ///
-    /// # Panics
-    /// Panics if `index >= N`.
+    /// Returns `None` if `index >= N`.
     #[must_use]
-    pub fn get(&self, index: u32) -> T {
-        assert!(index < N, "lazy fixed-array index out of bounds");
+    pub fn get(&self, index: u32) -> Option<T> {
+        if index >= N {
+            return None;
+        }
         let buf = self.0.as_slice();
         let mut pos: u32 = 0;
         if let Some(fixed) = T::FIXED_XDR_SIZE {
@@ -577,7 +593,7 @@ impl<T: LazyXdr, const N: u32> LazyFixedArray<T, N> {
                 pos += T::xdr_len(&buf[pos as usize..]);
             }
         }
-        T::from_xdr_at(&self.0, pos)
+        Some(T::from_xdr_at(&self.0, pos))
     }
 
     /// The number of elements (always `N`).
@@ -600,13 +616,13 @@ impl<T: LazyXdr, const N: u32> From<LazyHandle> for LazyFixedArray<T, N> {
 }
 
 /// Lazy wrapper for XDR `opaque[N]` (fixed-length opaque data).
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct LazyOpaqueFixed<const N: u32>(LazyHandle);
 
 impl<const N: u32> LazyXdr for LazyOpaqueFixed<N> {
     const FIXED_XDR_SIZE: Option<u32> = Some(xdr_pad(N));
 
-    fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
+    fn xdr_validate(buf: &[u8], _depth: u32) -> Result<u32, super::Error> {
         let padded = xdr_pad(N);
         if buf.len() < padded as usize {
             return Err(super::Error::Invalid);
@@ -658,11 +674,12 @@ impl<const N: u32> From<LazyHandle> for LazyOpaqueFixed<N> {
 }
 
 /// Lazy wrapper for XDR optional `T*`.
-#[derive(Clone, Debug)]
-pub struct LazyOption<T: LazyXdr>(LazyHandle, PhantomData<T>);
+#[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
+pub struct LazyOption<T: LazyXdr>(LazyHandle, PhantomData<fn() -> T>);
 
 impl<T: LazyXdr> LazyXdr for LazyOption<T> {
-    fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
+    fn xdr_validate(buf: &[u8], depth: u32) -> Result<u32, super::Error> {
+        let depth = depth.checked_sub(1).ok_or(super::Error::DepthLimitExceeded)?;
         if buf.len() < 4 {
             return Err(super::Error::Invalid);
         }
@@ -670,7 +687,7 @@ impl<T: LazyXdr> LazyXdr for LazyOption<T> {
         match disc {
             0 => Ok(4),
             1 => {
-                let inner_len = T::xdr_validate(&buf[4..])?;
+                let inner_len = T::xdr_validate(&buf[4..], depth)?;
                 4u32.checked_add(inner_len).ok_or(super::Error::LengthExceedsMax)
             }
             _ => Err(super::Error::Invalid),

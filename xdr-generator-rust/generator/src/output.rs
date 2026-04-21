@@ -41,9 +41,9 @@ pub struct CxxBridgeUnion {
 }
 
 pub struct CxxBridgeUnionArm {
-    pub case_name: String,
     pub is_void: bool,
     pub lazy_type: Option<String>,
+    pub lazy_method_name: String,
 }
 
 pub struct CxxBridgeTypedefNewtype {
@@ -79,7 +79,6 @@ pub struct StructMemberOutput {
     pub serde_as_type: Option<String>,
     // Lazy fields
     pub lazy_type: String,
-    pub lazy_is_scalar: bool,
     pub lazy_accessor: LazyAccessor,
 }
 
@@ -120,6 +119,7 @@ pub struct UnionArmOutput {
     // Lazy fields
     pub lazy_type: Option<String>,
     pub case_value_i32: String,
+    pub lazy_method_name: String,
 }
 
 pub struct TypedefAliasOutput {

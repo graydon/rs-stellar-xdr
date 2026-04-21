@@ -2,7 +2,7 @@
     impl LazyXdr for super::{{ e.name }} {
         const FIXED_XDR_SIZE: Option<u32> = Some(4);
 
-        fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
+        fn xdr_validate(buf: &[u8], _depth: u32) -> Result<u32, super::Error> {
             if buf.len() < 4 {
                 return Err(super::Error::Invalid);
             }

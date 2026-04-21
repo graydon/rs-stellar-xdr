@@ -1,9 +1,11 @@
     /// Lazy wrapper for [`super::{{ u.name }}`].
-    #[derive(Clone, Debug)]
+    #[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
     pub struct {{ u.lazy_name }}(LazyHandle);
 
     impl LazyXdr for {{ u.lazy_name }} {
-        fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
+        fn xdr_validate(buf: &[u8], depth: u32) -> Result<u32, super::Error> {
+            #[allow(unused_variables)]
+            let depth = depth.checked_sub(1).ok_or(super::Error::DepthLimitExceeded)?;
             if buf.len() < 4 {
                 return Err(super::Error::Invalid);
             }
@@ -17,7 +19,7 @@
 {%- if arm.is_void %}
                     // void — no additional data
 {%- else %}
-                    let field_len = <{{ arm.lazy_type.as_ref().unwrap() }} as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+                    let field_len = <{{ arm.lazy_type.as_ref().unwrap() }} as LazyXdr>::xdr_validate(&buf[pos as usize..], depth)?;
                     pos = pos.checked_add(field_len).ok_or(super::Error::LengthExceedsMax)?;
 {%- endif %}
                 }
@@ -69,7 +71,7 @@
     impl TryFrom<Arc<[u8]>> for {{ u.lazy_name }} {
         type Error = super::Error;
         fn try_from(buf: Arc<[u8]>) -> Result<Self, super::Error> {
-            let len = Self::xdr_validate(&buf)?;
+            let len = Self::xdr_validate(&buf, DEFAULT_XDR_DEPTH_LIMIT)?;
             Ok(Self(LazyHandle::from_arc(buf, 0, len)))
         }
     }
@@ -96,7 +98,7 @@
 
         /// Access arm `{{ arm.case_name }}`. Returns `Some` if the discriminant matches.
         #[must_use]
-        pub fn as_{{ arm.case_name|lower }}(&self) -> Option<{{ arm.lazy_type.as_ref().unwrap() }}> {
+        pub fn as_{{ arm.lazy_method_name }}(&self) -> Option<{{ arm.lazy_type.as_ref().unwrap() }}> {
             if self.discriminant_i32() == {{ arm.case_value_i32 }} {
                 Some(<{{ arm.lazy_type.as_ref().unwrap() }} as LazyXdr>::from_xdr_at(&self.0, 4))
             } else {

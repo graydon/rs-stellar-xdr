@@ -45,8 +45,8 @@ impl {{ u.lazy_name }} {
 {%- for arm in u.arms %}
 {%- if !arm.is_void %}
 
-    pub fn cxx_as_{{ arm.case_name|lower }}(self: &{{ u.lazy_name }}) -> Result<Box<{{ arm.lazy_type.as_ref().unwrap() }}>, crate::generated::Error> {
-        self.as_{{ arm.case_name|lower }}()
+    pub fn cxx_as_{{ arm.lazy_method_name }}(self: &{{ u.lazy_name }}) -> Result<Box<{{ arm.lazy_type.as_ref().unwrap() }}>, crate::generated::Error> {
+        self.as_{{ arm.lazy_method_name }}()
             .map(Box::new)
             .ok_or(crate::generated::Error::Invalid)
     }
@@ -92,7 +92,7 @@ mod ffi {
         fn cxx_discriminant_i32(self: &{{ u.lazy_name }}) -> i32;
 {%- for arm in u.arms %}
 {%- if !arm.is_void %}
-        fn cxx_as_{{ arm.case_name|lower }}(self: &{{ u.lazy_name }}) -> Result<Box<{{ arm.lazy_type.as_ref().unwrap() }}>>;
+        fn cxx_as_{{ arm.lazy_method_name }}(self: &{{ u.lazy_name }}) -> Result<Box<{{ arm.lazy_type.as_ref().unwrap() }}>>;
 {%- endif %}
 {%- endfor %}
 {%- when CxxBridgeDefinition::TypedefNewtype(t) %}

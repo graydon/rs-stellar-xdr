@@ -1,5 +1,5 @@
     /// Lazy wrapper for [`super::{{ s.name }}`].
-    #[derive(Clone, Debug)]
+    #[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
     pub struct {{ s.lazy_name }}(LazyHandle);
 
     impl LazyXdr for {{ s.lazy_name }} {
@@ -7,7 +7,9 @@
         const FIXED_XDR_SIZE: Option<u32> = Some({{ fs }});
 {%- endif %}
 
-        fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
+        fn xdr_validate(buf: &[u8], depth: u32) -> Result<u32, super::Error> {
+            #[allow(unused_variables)]
+            let depth = depth.checked_sub(1).ok_or(super::Error::DepthLimitExceeded)?;
             let mut pos: u32 = 0;
 {%- for step in s.lazy_validate_steps %}
 {%- match step %}
@@ -18,13 +20,13 @@
                 return Err(super::Error::Invalid);
             }
 {%- for cv in g.content_validations %}
-            <{{ cv.lazy_type }} as LazyXdr>::xdr_validate(&buf[(pos + {{ cv.offset }}) as usize..])?;
+            <{{ cv.lazy_type }} as LazyXdr>::xdr_validate(&buf[(pos + {{ cv.offset }}) as usize..], depth)?;
 {%- endfor %}
             pos = next_pos;
 {%- endif %}
 {%- when LazyValidateStep::Variable(v) %}
             {
-                let field_len = <{{ v.lazy_type }} as LazyXdr>::xdr_validate(&buf[pos as usize..])?;
+                let field_len = <{{ v.lazy_type }} as LazyXdr>::xdr_validate(&buf[pos as usize..], depth)?;
                 pos = pos.checked_add(field_len).ok_or(super::Error::LengthExceedsMax)?;
             }
 {%- endmatch %}
@@ -78,7 +80,7 @@
     impl TryFrom<Arc<[u8]>> for {{ s.lazy_name }} {
         type Error = super::Error;
         fn try_from(buf: Arc<[u8]>) -> Result<Self, super::Error> {
-            let len = Self::xdr_validate(&buf)?;
+            let len = Self::xdr_validate(&buf, DEFAULT_XDR_DEPTH_LIMIT)?;
             Ok(Self(LazyHandle::from_arc(buf, 0, len)))
         }
     }

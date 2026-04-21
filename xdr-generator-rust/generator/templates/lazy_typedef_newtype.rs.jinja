@@ -1,5 +1,5 @@
     /// Lazy wrapper for [`super::{{ t.name }}`].
-    #[derive(Clone, Debug)]
+    #[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
     pub struct {{ t.lazy_name }}({{ t.lazy_inner_type }});
 
     impl LazyXdr for {{ t.lazy_name }} {
@@ -7,8 +7,8 @@
         const FIXED_XDR_SIZE: Option<u32> = Some({{ fs }});
 {%- endif %}
 
-        fn xdr_validate(buf: &[u8]) -> Result<u32, super::Error> {
-            <{{ t.lazy_inner_type }} as LazyXdr>::xdr_validate(buf)
+        fn xdr_validate(buf: &[u8], depth: u32) -> Result<u32, super::Error> {
+            <{{ t.lazy_inner_type }} as LazyXdr>::xdr_validate(buf, depth)
         }
 
         #[inline]
@@ -37,7 +37,7 @@
     impl TryFrom<Arc<[u8]>> for {{ t.lazy_name }} {
         type Error = super::Error;
         fn try_from(buf: Arc<[u8]>) -> Result<Self, super::Error> {
-            let len = Self::xdr_validate(&buf)?;
+            let len = Self::xdr_validate(&buf, DEFAULT_XDR_DEPTH_LIMIT)?;
             Ok(Self(<{{ t.lazy_inner_type }}>::from(LazyHandle::from_arc(buf, 0, len))))
         }
     }
@@ -45,7 +45,7 @@
     impl TryFrom<Arc<[u8]>> for {{ t.lazy_name }} {
         type Error = super::Error;
         fn try_from(buf: Arc<[u8]>) -> Result<Self, super::Error> {
-            let len = Self::xdr_validate(&buf)?;
+            let len = Self::xdr_validate(&buf, DEFAULT_XDR_DEPTH_LIMIT)?;
             Ok(Self::from_xdr_at(&LazyHandle::from_arc(buf, 0, len), 0))
         }
     }

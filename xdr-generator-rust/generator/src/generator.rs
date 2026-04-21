@@ -98,7 +98,7 @@ impl RustGenerator {
                         })
                         .collect();
                     definitions.push(CxxBridgeDefinition::Struct(CxxBridgeStruct {
-                        lazy_name: format!("Lazy{rust_name}"),
+                        lazy_name: rust_name.clone(),
                         members,
                     }));
                 }
@@ -136,7 +136,7 @@ impl RustGenerator {
                                 let lazy_type =
                                     arm.type_.as_ref().map(|t| self.lazy_type_ref(t));
                                 CxxBridgeUnionArm {
-                                    case_name: cn,
+                                    lazy_method_name: field_name(&cn),
                                     is_void: arm.type_.is_none(),
                                     lazy_type,
                                 }
@@ -144,14 +144,14 @@ impl RustGenerator {
                         })
                         .collect();
                     definitions.push(CxxBridgeDefinition::Union(CxxBridgeUnion {
-                        lazy_name: format!("Lazy{rust_name}"),
+                        lazy_name: rust_name.clone(),
                         arms,
                     }));
                 }
                 Definition::Typedef(_) => {
                     definitions.push(CxxBridgeDefinition::TypedefNewtype(
                         CxxBridgeTypedefNewtype {
-                            lazy_name: format!("Lazy{rust_name}"),
+                            lazy_name: rust_name.clone(),
                         },
                     ));
                 }
@@ -251,7 +251,7 @@ impl RustGenerator {
             .map(|(i, m)| {
                 let mname = field_name(&m.name);
                 let resolved = resolve_type(&m.type_, Some(&name), &self.type_info, custom_str);
-                let (_, ref ltype, scalar, _) = field_infos[i];
+                let (_, ref ltype, _scalar, _) = field_infos[i];
                 let acc = &accessors[i];
                 StructMemberOutput {
                     name: mname,
@@ -259,7 +259,6 @@ impl RustGenerator {
                     turbofish_type: resolved.turbofish_type,
                     serde_as_type: resolved.serde_as_type,
                     lazy_type: ltype.clone(),
-                    lazy_is_scalar: scalar,
                     lazy_accessor: LazyAccessor {
                         initial_fixed: acc.initial_fixed,
                         var_skips: acc
@@ -287,7 +286,7 @@ impl RustGenerator {
             "Struct"
         };
 
-        let lazy_name = format!("Lazy{name}");
+        let lazy_name = name.clone();
         let lazy_fixed_size = self.compute_total_fixed_size(&s.members);
         let lazy_validate_steps = self.build_validate_steps(&s.members);
 
@@ -368,7 +367,7 @@ impl RustGenerator {
 
         let type_kind = if u.is_nested { "NestedUnion" } else { "Union" };
 
-        let lazy_name = format!("Lazy{name}");
+        let lazy_name = name.clone();
         let lazy_discriminant_type = self.lazy_type_ref(&u.discriminant.type_);
         let lazy_discriminant_is_enum = !discriminant_is_builtin;
 
@@ -413,7 +412,7 @@ impl RustGenerator {
             _ => None,
         };
 
-        let lazy_name = format!("Lazy{name}");
+        let lazy_name = name.clone();
         let lazy_inner_type = self.lazy_type_ref(&t.type_);
         let lazy_fixed_size = self.xdr_fixed_size(&t.type_);
         let lazy_inner_is_scalar = self.is_lazy_scalar(&t.type_);
@@ -491,6 +490,7 @@ impl RustGenerator {
                 };
 
                 UnionArmOutput {
+                    lazy_method_name: field_name(&case_name),
                     case_name,
                     case_value: case_value_expr,
                     is_void: arm.type_.is_none(),
@@ -621,8 +621,8 @@ impl RustGenerator {
                         self.lazy_type_ref(&t.type_)
                     }
                     _ => {
-                        // Struct, union, typedef wrapping complex → Lazy wrapper.
-                        format!("Lazy{resolved_name}")
+                        // Struct, union, typedef wrapping complex → lazy wrapper (same name in lazy module).
+                        resolved_name
                     }
                 }
             }
