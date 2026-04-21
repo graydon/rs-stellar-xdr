@@ -33,3 +33,4 @@ pub const XDR_FILES_SHA256: [(&str, &str); {{ xdr_files_sha256.len() }}] = [
 {%- endmatch %}
 {%- endfor %}
 {% include "type_enum.rs.jinja" %}
+{% include "lazy_module.rs.jinja" %}

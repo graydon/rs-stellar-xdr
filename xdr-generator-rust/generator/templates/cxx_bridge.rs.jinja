@@ -1,0 +1,106 @@
+// Auto-generated CXX bridge module for lazy XDR types.
+// Do not edit manually.
+
+// Support impl blocks for the bridged types.
+// These add cxx_* methods that the bridge module's extern "Rust" block refers to.
+
+use crate::generated::lazy::*;
+extern crate alloc;
+use alloc::sync::Arc;
+
+{%- for def in definitions %}
+{%- match def %}
+{%- when CxxBridgeDefinition::Struct(s) %}
+
+impl {{ s.lazy_name }} {
+    pub fn cxx_from_bytes(buf: &[u8]) -> Result<Box<{{ s.lazy_name }}>, crate::generated::Error> {
+        let arc: Arc<[u8]> = buf.into();
+        let lazy = {{ s.lazy_name }}::try_from(arc)?;
+        Ok(Box::new(lazy))
+    }
+{%- for m in s.members %}
+{%- if m.lazy_is_scalar %}
+    pub fn cxx_{{ m.name }}(self: &{{ s.lazy_name }}) -> {{ m.lazy_type }} {
+        self.{{ m.name }}()
+    }
+{%- else %}
+    pub fn cxx_{{ m.name }}(self: &{{ s.lazy_name }}) -> Box<{{ m.lazy_type }}> {
+        Box::new(self.{{ m.name }}())
+    }
+{%- endif %}
+{%- endfor %}
+}
+{%- when CxxBridgeDefinition::Union(u) %}
+
+impl {{ u.lazy_name }} {
+    pub fn cxx_from_bytes(buf: &[u8]) -> Result<Box<{{ u.lazy_name }}>, crate::generated::Error> {
+        let arc: Arc<[u8]> = buf.into();
+        let lazy = {{ u.lazy_name }}::try_from(arc)?;
+        Ok(Box::new(lazy))
+    }
+
+    pub fn cxx_discriminant_i32(self: &{{ u.lazy_name }}) -> i32 {
+        self.discriminant_i32()
+    }
+{%- for arm in u.arms %}
+{%- if !arm.is_void %}
+
+    pub fn cxx_as_{{ arm.case_name|lower }}(self: &{{ u.lazy_name }}) -> Result<Box<{{ arm.lazy_type.as_ref().unwrap() }}>, crate::generated::Error> {
+        self.as_{{ arm.case_name|lower }}()
+            .map(Box::new)
+            .ok_or(crate::generated::Error::Invalid)
+    }
+{%- endif %}
+{%- endfor %}
+}
+{%- when CxxBridgeDefinition::TypedefNewtype(t) %}
+
+impl {{ t.lazy_name }} {
+    pub fn cxx_from_bytes(buf: &[u8]) -> Result<Box<{{ t.lazy_name }}>, crate::generated::Error> {
+        let arc: Arc<[u8]> = buf.into();
+        let lazy = {{ t.lazy_name }}::try_from(arc)?;
+        Ok(Box::new(lazy))
+    }
+}
+{%- endmatch %}
+{%- endfor %}
+
+// CXX bridge module declaration.
+// This module is processed by the cxx crate's code generator.
+#[cxx::bridge]
+mod ffi {
+    extern "Rust" {
+{%- for def in definitions %}
+{%- match def %}
+{%- when CxxBridgeDefinition::Struct(s) %}
+
+        // {{ s.lazy_name }}
+        type {{ s.lazy_name }};
+        fn cxx_from_bytes(buf: &[u8]) -> Result<Box<{{ s.lazy_name }}>>;
+{%- for m in s.members %}
+{%- if m.lazy_is_scalar %}
+        fn cxx_{{ m.name }}(self: &{{ s.lazy_name }}) -> {{ m.cxx_scalar_type }};
+{%- else %}
+        fn cxx_{{ m.name }}(self: &{{ s.lazy_name }}) -> Box<{{ m.lazy_type }}>;
+{%- endif %}
+{%- endfor %}
+{%- when CxxBridgeDefinition::Union(u) %}
+
+        // {{ u.lazy_name }}
+        type {{ u.lazy_name }};
+        fn cxx_from_bytes(buf: &[u8]) -> Result<Box<{{ u.lazy_name }}>>;
+        fn cxx_discriminant_i32(self: &{{ u.lazy_name }}) -> i32;
+{%- for arm in u.arms %}
+{%- if !arm.is_void %}
+        fn cxx_as_{{ arm.case_name|lower }}(self: &{{ u.lazy_name }}) -> Result<Box<{{ arm.lazy_type.as_ref().unwrap() }}>>;
+{%- endif %}
+{%- endfor %}
+{%- when CxxBridgeDefinition::TypedefNewtype(t) %}
+
+        // {{ t.lazy_name }}
+        type {{ t.lazy_name }};
+        fn cxx_from_bytes(buf: &[u8]) -> Result<Box<{{ t.lazy_name }}>>;
+{%- endmatch %}
+{%- endfor %}
+    }
+}
