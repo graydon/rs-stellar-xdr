@@ -1,5 +1,10 @@
 #[allow(unused_imports, clippy::wildcard_imports)]
 use super::*;
+#[cfg(feature = "alloc")]
+extern crate alloc;
+#[cfg(feature = "alloc")]
+#[allow(unused_imports)]
+use alloc::sync::Arc;
 
 /// ConfigUpgradeSetKey is an XDR Struct defined as:
 ///
@@ -46,5 +51,104 @@ impl WriteXdr for ConfigUpgradeSetKey {
             self.content_hash.write_xdr(w)?;
             Ok(())
         })
+    }
+}
+
+#[cfg(feature = "alloc")]
+/// Lazy wrapper for [`ConfigUpgradeSetKey`].
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+pub struct LazyConfigUpgradeSetKey(LazyHandle);
+#[cfg(feature = "alloc")]
+impl PartialOrd for LazyConfigUpgradeSetKey {
+    fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+#[cfg(feature = "alloc")]
+impl Ord for LazyConfigUpgradeSetKey {
+    fn cmp(&self, other: &Self) -> core::cmp::Ordering {
+        core::cmp::Ordering::Equal
+            .then_with(|| self.contract_id().cmp(&other.contract_id()))
+            .then_with(|| self.content_hash().cmp(&other.content_hash()))
+    }
+}
+#[cfg(feature = "alloc")]
+impl LazyXdr for LazyConfigUpgradeSetKey {
+    const FIXED_XDR_SIZE: Option<u32> = Some(64);
+
+    fn xdr_validate(buf: &[u8], depth: u32) -> Result<u32, Error> {
+        #[allow(unused_variables)]
+        let depth = depth.checked_sub(1).ok_or(Error::DepthLimitExceeded)?;
+        let mut pos: u32 = 0;
+        let next_pos = pos.checked_add(64).ok_or(Error::LengthExceedsMax)?;
+        if buf.len() < next_pos as usize {
+            return Err(Error::Invalid);
+        }
+        <LazyContractId as LazyXdr>::xdr_validate(&buf[(pos + 0) as usize..], depth)?;
+        <LazyHash as LazyXdr>::xdr_validate(&buf[(pos + 32) as usize..], depth)?;
+        pos = next_pos;
+        Ok(pos)
+    }
+
+    #[inline]
+    fn xdr_len(_buf: &[u8]) -> u32 {
+        64
+    }
+
+    fn from_xdr_at(parent: &LazyHandle, offset: u32) -> Self {
+        let buf = &parent.as_slice()[offset as usize..];
+        let len = Self::xdr_len(buf);
+        Self(parent.sub_handle(offset, len))
+    }
+}
+#[cfg(feature = "alloc")]
+impl From<LazyHandle> for LazyConfigUpgradeSetKey {
+    fn from(h: LazyHandle) -> Self {
+        Self(h)
+    }
+}
+#[cfg(feature = "alloc")]
+impl AsRef<LazyHandle> for LazyConfigUpgradeSetKey {
+    fn as_ref(&self) -> &LazyHandle {
+        &self.0
+    }
+}
+#[cfg(feature = "alloc")]
+impl TryFrom<Arc<[u8]>> for LazyConfigUpgradeSetKey {
+    type Error = Error;
+    fn try_from(buf: Arc<[u8]>) -> Result<Self, Error> {
+        let len = Self::xdr_validate(&buf, DEFAULT_XDR_DEPTH_LIMIT)?;
+        Ok(Self(LazyHandle::from_arc(buf, 0, len)))
+    }
+}
+#[cfg(feature = "alloc")]
+impl LazyConfigUpgradeSetKey {
+    /// Access field `contract_id`.
+    #[must_use]
+    pub fn contract_id(&self) -> LazyContractId {
+        <LazyContractId as LazyXdr>::from_xdr_at(&self.0, 0)
+    }
+    /// Access field `content_hash`.
+    #[must_use]
+    pub fn content_hash(&self) -> LazyHash {
+        <LazyHash as LazyXdr>::from_xdr_at(&self.0, 32)
+    }
+}
+#[cfg(all(feature = "alloc", feature = "std"))]
+impl TryFrom<&ConfigUpgradeSetKey> for LazyConfigUpgradeSetKey {
+    type Error = Error;
+    fn try_from(val: &ConfigUpgradeSetKey) -> Result<Self, Error> {
+        let mut buf = Vec::new();
+        val.write_xdr(&mut Limited::new(&mut buf, Limits::none()))?;
+        let arc: Arc<[u8]> = buf.into();
+        Self::try_from(arc)
+    }
+}
+#[cfg(all(feature = "alloc", feature = "std"))]
+impl TryFrom<&LazyConfigUpgradeSetKey> for ConfigUpgradeSetKey {
+    type Error = Error;
+    fn try_from(lazy: &LazyConfigUpgradeSetKey) -> Result<Self, Error> {
+        let buf = lazy.as_ref().as_slice();
+        Self::read_xdr(&mut Limited::new(&mut &buf[..], Limits::none()))
     }
 }

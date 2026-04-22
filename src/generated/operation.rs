@@ -1,5 +1,10 @@
 #[allow(unused_imports, clippy::wildcard_imports)]
 use super::*;
+#[cfg(feature = "alloc")]
+extern crate alloc;
+#[cfg(feature = "alloc")]
+#[allow(unused_imports)]
+use alloc::sync::Arc;
 
 /// Operation is an XDR Struct defined as:
 ///
@@ -108,5 +113,112 @@ impl WriteXdr for Operation {
             self.body.write_xdr(w)?;
             Ok(())
         })
+    }
+}
+
+#[cfg(feature = "alloc")]
+/// Lazy wrapper for [`Operation`].
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+pub struct LazyOperation(LazyHandle);
+#[cfg(feature = "alloc")]
+impl PartialOrd for LazyOperation {
+    fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+#[cfg(feature = "alloc")]
+impl Ord for LazyOperation {
+    fn cmp(&self, other: &Self) -> core::cmp::Ordering {
+        core::cmp::Ordering::Equal
+            .then_with(|| self.source_account().cmp(&other.source_account()))
+            .then_with(|| self.body().cmp(&other.body()))
+    }
+}
+#[cfg(feature = "alloc")]
+impl LazyXdr for LazyOperation {
+    fn xdr_validate(buf: &[u8], depth: u32) -> Result<u32, Error> {
+        #[allow(unused_variables)]
+        let depth = depth.checked_sub(1).ok_or(Error::DepthLimitExceeded)?;
+        let mut pos: u32 = 0;
+        {
+            let field_len = <LazyOption<LazyMuxedAccount> as LazyXdr>::xdr_validate(
+                &buf[pos as usize..],
+                depth,
+            )?;
+            pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+        }
+        {
+            let field_len =
+                <LazyOperationBody as LazyXdr>::xdr_validate(&buf[pos as usize..], depth)?;
+            pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+        }
+        Ok(pos)
+    }
+
+    fn xdr_len(buf: &[u8]) -> u32 {
+        let mut pos: u32 = 0;
+        pos += <LazyOption<LazyMuxedAccount> as LazyXdr>::xdr_len(&buf[pos as usize..]);
+        pos += <LazyOperationBody as LazyXdr>::xdr_len(&buf[pos as usize..]);
+        pos
+    }
+
+    fn from_xdr_at(parent: &LazyHandle, offset: u32) -> Self {
+        let buf = &parent.as_slice()[offset as usize..];
+        let len = Self::xdr_len(buf);
+        Self(parent.sub_handle(offset, len))
+    }
+}
+#[cfg(feature = "alloc")]
+impl From<LazyHandle> for LazyOperation {
+    fn from(h: LazyHandle) -> Self {
+        Self(h)
+    }
+}
+#[cfg(feature = "alloc")]
+impl AsRef<LazyHandle> for LazyOperation {
+    fn as_ref(&self) -> &LazyHandle {
+        &self.0
+    }
+}
+#[cfg(feature = "alloc")]
+impl TryFrom<Arc<[u8]>> for LazyOperation {
+    type Error = Error;
+    fn try_from(buf: Arc<[u8]>) -> Result<Self, Error> {
+        let len = Self::xdr_validate(&buf, DEFAULT_XDR_DEPTH_LIMIT)?;
+        Ok(Self(LazyHandle::from_arc(buf, 0, len)))
+    }
+}
+#[cfg(feature = "alloc")]
+impl LazyOperation {
+    /// Access field `source_account`.
+    #[must_use]
+    pub fn source_account(&self) -> LazyOption<LazyMuxedAccount> {
+        <LazyOption<LazyMuxedAccount> as LazyXdr>::from_xdr_at(&self.0, 0)
+    }
+    /// Access field `body`.
+    #[must_use]
+    pub fn body(&self) -> LazyOperationBody {
+        let buf = self.0.as_slice();
+        let mut pos: u32 = 0;
+        pos += <LazyOption<LazyMuxedAccount> as LazyXdr>::xdr_len(&buf[pos as usize..]);
+        <LazyOperationBody as LazyXdr>::from_xdr_at(&self.0, pos)
+    }
+}
+#[cfg(all(feature = "alloc", feature = "std"))]
+impl TryFrom<&Operation> for LazyOperation {
+    type Error = Error;
+    fn try_from(val: &Operation) -> Result<Self, Error> {
+        let mut buf = Vec::new();
+        val.write_xdr(&mut Limited::new(&mut buf, Limits::none()))?;
+        let arc: Arc<[u8]> = buf.into();
+        Self::try_from(arc)
+    }
+}
+#[cfg(all(feature = "alloc", feature = "std"))]
+impl TryFrom<&LazyOperation> for Operation {
+    type Error = Error;
+    fn try_from(lazy: &LazyOperation) -> Result<Self, Error> {
+        let buf = lazy.as_ref().as_slice();
+        Self::read_xdr(&mut Limited::new(&mut &buf[..], Limits::none()))
     }
 }

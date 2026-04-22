@@ -1,0 +1,170 @@
+{%- if let Some(cfg_attr) = u.cfg %}
+    #[cfg({{ cfg_attr }})]
+{%- endif %}
+    /// Lazy wrapper for [`super::{{ u.name }}`].
+    #[derive(Clone, Debug, Hash, PartialEq, Eq)]
+    pub struct {{ u.lazy_name }}(LazyHandle);
+
+{%- if let Some(cfg_attr) = u.cfg %}
+    #[cfg({{ cfg_attr }})]
+{%- endif %}
+    impl PartialOrd for {{ u.lazy_name }} {
+        fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
+            Some(self.cmp(other))
+        }
+    }
+
+{%- if let Some(cfg_attr) = u.cfg %}
+    #[cfg({{ cfg_attr }})]
+{%- endif %}
+    impl Ord for {{ u.lazy_name }} {
+        fn cmp(&self, other: &Self) -> core::cmp::Ordering {
+            let ord = self.discriminant().cmp(&other.discriminant());
+            if ord != core::cmp::Ordering::Equal {
+                return ord;
+            }
+            #[allow(clippy::match_same_arms)]
+            match self.discriminant_i32() {
+{%- for arm in u.arms %}
+{%- if !arm.is_void %}
+{%- if let Some(cfg) = arm.cfg %}
+                #[cfg({{ cfg }})]
+{%- endif %}
+                {{ arm.case_value_i32 }} => self.as_{{ arm.lazy_method_name }}().cmp(&other.as_{{ arm.lazy_method_name }}()),
+{%- endif %}
+{%- endfor %}
+                _ => core::cmp::Ordering::Equal,
+            }
+        }
+    }
+
+{%- if let Some(cfg_attr) = u.cfg %}
+    #[cfg({{ cfg_attr }})]
+{%- endif %}
+    impl LazyXdr for {{ u.lazy_name }} {
+        fn xdr_validate(buf: &[u8], depth: u32) -> Result<u32, super::Error> {
+            #[allow(unused_variables)]
+            let depth = depth.checked_sub(1).ok_or(super::Error::DepthLimitExceeded)?;
+            if buf.len() < 4 {
+                return Err(super::Error::Invalid);
+            }
+            let disc = i32::from_be_bytes([buf[0], buf[1], buf[2], buf[3]]);
+            #[allow(unused_mut)]
+            let mut pos: u32 = 4;
+            #[allow(clippy::match_same_arms)]
+            match disc {
+{%- for arm in u.arms %}
+{%- if let Some(cfg) = arm.cfg %}
+                #[cfg({{ cfg }})]
+{%- endif %}
+                {{ arm.case_value_i32 }} => {
+{%- if arm.is_void %}
+                    // void — no additional data
+{%- else %}
+                    let field_len = <{{ arm.lazy_type.as_ref().unwrap() }} as LazyXdr>::xdr_validate(&buf[pos as usize..], depth)?;
+                    pos = pos.checked_add(field_len).ok_or(super::Error::LengthExceedsMax)?;
+{%- endif %}
+                }
+{%- endfor %}
+                _ => return Err(super::Error::Invalid),
+            }
+            Ok(pos)
+        }
+
+        fn xdr_len(buf: &[u8]) -> u32 {
+            let disc = i32::from_be_bytes([buf[0], buf[1], buf[2], buf[3]]);
+            #[allow(unused_mut)]
+            let mut pos: u32 = 4;
+            #[allow(clippy::match_same_arms)]
+            match disc {
+{%- for arm in u.arms %}
+{%- if let Some(cfg) = arm.cfg %}
+                #[cfg({{ cfg }})]
+{%- endif %}
+                {{ arm.case_value_i32 }} => {
+{%- if arm.is_void %}
+                    // void
+{%- else %}
+                    pos += <{{ arm.lazy_type.as_ref().unwrap() }} as LazyXdr>::xdr_len(&buf[pos as usize..]);
+{%- endif %}
+                }
+{%- endfor %}
+                _ => {}
+            }
+            pos
+        }
+
+        fn from_xdr_at(parent: &LazyHandle, offset: u32) -> Self {
+            let buf = &parent.as_slice()[offset as usize..];
+            let len = Self::xdr_len(buf);
+            Self(parent.sub_handle(offset, len))
+        }
+    }
+
+{%- if let Some(cfg_attr) = u.cfg %}
+    #[cfg({{ cfg_attr }})]
+{%- endif %}
+    impl From<LazyHandle> for {{ u.lazy_name }} {
+        fn from(h: LazyHandle) -> Self {
+            Self(h)
+        }
+    }
+
+{%- if let Some(cfg_attr) = u.cfg %}
+    #[cfg({{ cfg_attr }})]
+{%- endif %}
+    impl AsRef<LazyHandle> for {{ u.lazy_name }} {
+        fn as_ref(&self) -> &LazyHandle {
+            &self.0
+        }
+    }
+
+{%- if let Some(cfg_attr) = u.cfg %}
+    #[cfg({{ cfg_attr }})]
+{%- endif %}
+    impl TryFrom<Arc<[u8]>> for {{ u.lazy_name }} {
+        type Error = super::Error;
+        fn try_from(buf: Arc<[u8]>) -> Result<Self, super::Error> {
+            let len = Self::xdr_validate(&buf, DEFAULT_XDR_DEPTH_LIMIT)?;
+            Ok(Self(LazyHandle::from_arc(buf, 0, len)))
+        }
+    }
+
+{%- if let Some(cfg_attr) = u.cfg %}
+    #[cfg({{ cfg_attr }})]
+{%- endif %}
+    impl {{ u.lazy_name }} {
+        /// Get the discriminant value as i32.
+        #[must_use]
+        pub fn discriminant_i32(&self) -> i32 {
+            i32::from_xdr_at(&self.0, 0)
+        }
+
+        /// Get the discriminant.
+        #[must_use]
+        pub fn discriminant(&self) -> {{ u.lazy_discriminant_type }} {
+{%- if u.lazy_discriminant_is_enum %}
+            // Validated — unwrap is safe.
+            super::{{ u.discriminant_type }}::try_from(self.discriminant_i32()).unwrap()
+{%- else %}
+            <{{ u.lazy_discriminant_type }} as LazyXdr>::from_xdr_at(&self.0, 0)
+{%- endif %}
+        }
+{%- for arm in u.arms %}
+{%- if !arm.is_void %}
+
+{%- if let Some(cfg) = arm.cfg %}
+        #[cfg({{ cfg }})]
+{%- endif %}
+        /// Access arm `{{ arm.case_name }}`. Returns `Some` if the discriminant matches.
+        #[must_use]
+        pub fn as_{{ arm.lazy_method_name }}(&self) -> Option<{{ arm.lazy_type.as_ref().unwrap() }}> {
+            if self.discriminant_i32() == {{ arm.case_value_i32 }} {
+                Some(<{{ arm.lazy_type.as_ref().unwrap() }} as LazyXdr>::from_xdr_at(&self.0, 4))
+            } else {
+                None
+            }
+        }
+{%- endif %}
+{%- endfor %}
+    }

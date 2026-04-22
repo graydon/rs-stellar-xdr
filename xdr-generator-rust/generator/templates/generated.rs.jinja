@@ -16,18 +16,36 @@ pub const XDR_FILES_SHA256: [(&str, &str); {{ xdr_files_sha256.len() }}] = [
 ];
 
 {{ header }}
+
+#[cfg(feature = "alloc")]
+mod lazy_base_inline {
+    #![allow(dead_code, unused_imports)]
+    use super::*;
+    extern crate alloc;
+    use alloc::sync::Arc;
+    {{ lazy_header }}
+}
+#[cfg(feature = "alloc")]
+#[allow(unused_imports)]
+pub use lazy_base_inline::*;
+
 {%- for def in definitions %}
 {%- match def %}
 {%- when DefinitionOutput::Struct(s) %}
 {% include "struct.rs.jinja" %}
+{% include "lazy_struct_inline.rs.jinja" %}
 {%- when DefinitionOutput::Enum(e) %}
 {% include "enum.rs.jinja" %}
+{% include "lazy_enum_inline.rs.jinja" %}
 {%- when DefinitionOutput::Union(u) %}
 {% include "union.rs.jinja" %}
+{% include "lazy_union_inline.rs.jinja" %}
 {%- when DefinitionOutput::TypedefAlias(t) %}
 {% include "typedef_alias.rs.jinja" %}
+{% include "lazy_typedef_alias_inline.rs.jinja" %}
 {%- when DefinitionOutput::TypedefNewtype(t) %}
 {% include "typedef_newtype.rs.jinja" %}
+{% include "lazy_typedef_newtype_inline.rs.jinja" %}
 {%- when DefinitionOutput::Const(c) %}
 {% include "const.rs.jinja" %}
 {%- endmatch %}

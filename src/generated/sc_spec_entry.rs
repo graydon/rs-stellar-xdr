@@ -1,5 +1,10 @@
 #[allow(unused_imports, clippy::wildcard_imports)]
 use super::*;
+#[cfg(feature = "alloc")]
+extern crate alloc;
+#[cfg(feature = "alloc")]
+#[allow(unused_imports)]
+use alloc::sync::Arc;
 
 /// ScSpecEntry is an XDR Union defined as:
 ///
@@ -177,5 +182,231 @@ impl WriteXdr for ScSpecEntry {
             };
             Ok(())
         })
+    }
+}
+
+#[cfg(feature = "alloc")]
+/// Lazy wrapper for [`ScSpecEntry`].
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+pub struct LazyScSpecEntry(LazyHandle);
+#[cfg(feature = "alloc")]
+impl PartialOrd for LazyScSpecEntry {
+    fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+#[cfg(feature = "alloc")]
+impl Ord for LazyScSpecEntry {
+    fn cmp(&self, other: &Self) -> core::cmp::Ordering {
+        let ord = self.discriminant().cmp(&other.discriminant());
+        if ord != core::cmp::Ordering::Equal {
+            return ord;
+        }
+        #[allow(clippy::match_same_arms)]
+        match self.discriminant_i32() {
+            0 => self.as_function_v0().cmp(&other.as_function_v0()),
+            1 => self.as_udt_struct_v0().cmp(&other.as_udt_struct_v0()),
+            2 => self.as_udt_union_v0().cmp(&other.as_udt_union_v0()),
+            3 => self.as_udt_enum_v0().cmp(&other.as_udt_enum_v0()),
+            4 => self
+                .as_udt_error_enum_v0()
+                .cmp(&other.as_udt_error_enum_v0()),
+            5 => self.as_event_v0().cmp(&other.as_event_v0()),
+            _ => core::cmp::Ordering::Equal,
+        }
+    }
+}
+#[cfg(feature = "alloc")]
+impl LazyXdr for LazyScSpecEntry {
+    fn xdr_validate(buf: &[u8], depth: u32) -> Result<u32, Error> {
+        #[allow(unused_variables)]
+        let depth = depth.checked_sub(1).ok_or(Error::DepthLimitExceeded)?;
+        if buf.len() < 4 {
+            return Err(Error::Invalid);
+        }
+        let disc = i32::from_be_bytes([buf[0], buf[1], buf[2], buf[3]]);
+        #[allow(unused_mut)]
+        let mut pos: u32 = 4;
+        #[allow(clippy::match_same_arms)]
+        match disc {
+            0 => {
+                let field_len =
+                    <LazyScSpecFunctionV0 as LazyXdr>::xdr_validate(&buf[pos as usize..], depth)?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            1 => {
+                let field_len =
+                    <LazyScSpecUdtStructV0 as LazyXdr>::xdr_validate(&buf[pos as usize..], depth)?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            2 => {
+                let field_len =
+                    <LazyScSpecUdtUnionV0 as LazyXdr>::xdr_validate(&buf[pos as usize..], depth)?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            3 => {
+                let field_len =
+                    <LazyScSpecUdtEnumV0 as LazyXdr>::xdr_validate(&buf[pos as usize..], depth)?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            4 => {
+                let field_len = <LazyScSpecUdtErrorEnumV0 as LazyXdr>::xdr_validate(
+                    &buf[pos as usize..],
+                    depth,
+                )?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            5 => {
+                let field_len =
+                    <LazyScSpecEventV0 as LazyXdr>::xdr_validate(&buf[pos as usize..], depth)?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            _ => return Err(Error::Invalid),
+        }
+        Ok(pos)
+    }
+
+    fn xdr_len(buf: &[u8]) -> u32 {
+        let disc = i32::from_be_bytes([buf[0], buf[1], buf[2], buf[3]]);
+        #[allow(unused_mut)]
+        let mut pos: u32 = 4;
+        #[allow(clippy::match_same_arms)]
+        match disc {
+            0 => {
+                pos += <LazyScSpecFunctionV0 as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            1 => {
+                pos += <LazyScSpecUdtStructV0 as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            2 => {
+                pos += <LazyScSpecUdtUnionV0 as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            3 => {
+                pos += <LazyScSpecUdtEnumV0 as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            4 => {
+                pos += <LazyScSpecUdtErrorEnumV0 as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            5 => {
+                pos += <LazyScSpecEventV0 as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            _ => {}
+        }
+        pos
+    }
+
+    fn from_xdr_at(parent: &LazyHandle, offset: u32) -> Self {
+        let buf = &parent.as_slice()[offset as usize..];
+        let len = Self::xdr_len(buf);
+        Self(parent.sub_handle(offset, len))
+    }
+}
+#[cfg(feature = "alloc")]
+impl From<LazyHandle> for LazyScSpecEntry {
+    fn from(h: LazyHandle) -> Self {
+        Self(h)
+    }
+}
+#[cfg(feature = "alloc")]
+impl AsRef<LazyHandle> for LazyScSpecEntry {
+    fn as_ref(&self) -> &LazyHandle {
+        &self.0
+    }
+}
+#[cfg(feature = "alloc")]
+impl TryFrom<Arc<[u8]>> for LazyScSpecEntry {
+    type Error = Error;
+    fn try_from(buf: Arc<[u8]>) -> Result<Self, Error> {
+        let len = Self::xdr_validate(&buf, DEFAULT_XDR_DEPTH_LIMIT)?;
+        Ok(Self(LazyHandle::from_arc(buf, 0, len)))
+    }
+}
+#[cfg(feature = "alloc")]
+impl LazyScSpecEntry {
+    /// Get the discriminant value as i32.
+    #[must_use]
+    pub fn discriminant_i32(&self) -> i32 {
+        i32::from_xdr_at(&self.0, 0)
+    }
+
+    /// Get the discriminant.
+    #[must_use]
+    pub fn discriminant(&self) -> ScSpecEntryKind {
+        // Validated — unwrap is safe.
+        ScSpecEntryKind::try_from(self.discriminant_i32()).unwrap()
+    }
+    /// Access arm `FunctionV0`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_function_v0(&self) -> Option<LazyScSpecFunctionV0> {
+        if self.discriminant_i32() == 0 {
+            Some(<LazyScSpecFunctionV0 as LazyXdr>::from_xdr_at(&self.0, 4))
+        } else {
+            None
+        }
+    }
+    /// Access arm `UdtStructV0`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_udt_struct_v0(&self) -> Option<LazyScSpecUdtStructV0> {
+        if self.discriminant_i32() == 1 {
+            Some(<LazyScSpecUdtStructV0 as LazyXdr>::from_xdr_at(&self.0, 4))
+        } else {
+            None
+        }
+    }
+    /// Access arm `UdtUnionV0`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_udt_union_v0(&self) -> Option<LazyScSpecUdtUnionV0> {
+        if self.discriminant_i32() == 2 {
+            Some(<LazyScSpecUdtUnionV0 as LazyXdr>::from_xdr_at(&self.0, 4))
+        } else {
+            None
+        }
+    }
+    /// Access arm `UdtEnumV0`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_udt_enum_v0(&self) -> Option<LazyScSpecUdtEnumV0> {
+        if self.discriminant_i32() == 3 {
+            Some(<LazyScSpecUdtEnumV0 as LazyXdr>::from_xdr_at(&self.0, 4))
+        } else {
+            None
+        }
+    }
+    /// Access arm `UdtErrorEnumV0`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_udt_error_enum_v0(&self) -> Option<LazyScSpecUdtErrorEnumV0> {
+        if self.discriminant_i32() == 4 {
+            Some(<LazyScSpecUdtErrorEnumV0 as LazyXdr>::from_xdr_at(
+                &self.0, 4,
+            ))
+        } else {
+            None
+        }
+    }
+    /// Access arm `EventV0`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_event_v0(&self) -> Option<LazyScSpecEventV0> {
+        if self.discriminant_i32() == 5 {
+            Some(<LazyScSpecEventV0 as LazyXdr>::from_xdr_at(&self.0, 4))
+        } else {
+            None
+        }
+    }
+}
+#[cfg(all(feature = "alloc", feature = "std"))]
+impl TryFrom<&ScSpecEntry> for LazyScSpecEntry {
+    type Error = Error;
+    fn try_from(val: &ScSpecEntry) -> Result<Self, Error> {
+        let mut buf = Vec::new();
+        val.write_xdr(&mut Limited::new(&mut buf, Limits::none()))?;
+        let arc: Arc<[u8]> = buf.into();
+        Self::try_from(arc)
+    }
+}
+#[cfg(all(feature = "alloc", feature = "std"))]
+impl TryFrom<&LazyScSpecEntry> for ScSpecEntry {
+    type Error = Error;
+    fn try_from(lazy: &LazyScSpecEntry) -> Result<Self, Error> {
+        let buf = lazy.as_ref().as_slice();
+        Self::read_xdr(&mut Limited::new(&mut &buf[..], Limits::none()))
     }
 }

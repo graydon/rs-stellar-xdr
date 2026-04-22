@@ -22,3 +22,9 @@ mod {{ m.mod_name }};
 pub use {{ m.mod_name }}::*;
 {%- endfor %}
 {% include "type_enum.rs.jinja" %}
+
+#[cfg(feature = "alloc")]
+mod lazy_base;
+#[cfg(feature = "alloc")]
+#[allow(unused_imports)]
+pub use lazy_base::*;

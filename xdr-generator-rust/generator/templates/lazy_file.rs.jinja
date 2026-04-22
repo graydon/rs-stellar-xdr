@@ -1,0 +1,40 @@
+#![allow(dead_code, unused_imports)]
+use super::*;
+extern crate alloc;
+use alloc::sync::Arc;
+
+{{ lazy_header }}
+{%- for def in definitions %}
+{%- match def %}
+{%- when DefinitionOutput::Enum(e) %}
+{% include "lazy_enum.rs.jinja" %}
+{%- when DefinitionOutput::Struct(s) %}
+{% include "lazy_struct.rs.jinja" %}
+{%- when DefinitionOutput::Union(u) %}
+{% include "lazy_union.rs.jinja" %}
+{%- when DefinitionOutput::TypedefAlias(t) %}
+{% include "lazy_typedef_alias.rs.jinja" %}
+{%- when DefinitionOutput::TypedefNewtype(t) %}
+{% include "lazy_typedef_newtype.rs.jinja" %}
+{%- when DefinitionOutput::Const(_c) %}
+{# consts don't need lazy wrappers #}
+{%- endmatch %}
+{%- endfor %}
+
+// ---- cfg-gated eager/lazy interconversion ----
+
+#[cfg(feature = "std")]
+mod eager_conv {
+    use super::*;
+{%- for def in definitions %}
+{%- match def %}
+{%- when DefinitionOutput::Struct(s) %}
+{% include "lazy_eager_conv_struct.rs.jinja" %}
+{%- when DefinitionOutput::Union(u) %}
+{% include "lazy_eager_conv_union.rs.jinja" %}
+{%- when DefinitionOutput::TypedefNewtype(t) %}
+{% include "lazy_eager_conv_typedef.rs.jinja" %}
+{%- when _ %}
+{%- endmatch %}
+{%- endfor %}
+}

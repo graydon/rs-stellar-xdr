@@ -1,5 +1,10 @@
 #[allow(unused_imports, clippy::wildcard_imports)]
 use super::*;
+#[cfg(feature = "alloc")]
+extern crate alloc;
+#[cfg(feature = "alloc")]
+#[allow(unused_imports)]
+use alloc::sync::Arc;
 
 /// ScVal is an XDR Union defined as:
 ///
@@ -346,5 +351,486 @@ impl WriteXdr for ScVal {
             };
             Ok(())
         })
+    }
+}
+
+#[cfg(feature = "alloc")]
+/// Lazy wrapper for [`ScVal`].
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+pub struct LazyScVal(LazyHandle);
+#[cfg(feature = "alloc")]
+impl PartialOrd for LazyScVal {
+    fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+#[cfg(feature = "alloc")]
+impl Ord for LazyScVal {
+    fn cmp(&self, other: &Self) -> core::cmp::Ordering {
+        let ord = self.discriminant().cmp(&other.discriminant());
+        if ord != core::cmp::Ordering::Equal {
+            return ord;
+        }
+        #[allow(clippy::match_same_arms)]
+        match self.discriminant_i32() {
+            0 => self.as_bool().cmp(&other.as_bool()),
+            2 => self.as_error().cmp(&other.as_error()),
+            3 => self.as_u32().cmp(&other.as_u32()),
+            4 => self.as_i32().cmp(&other.as_i32()),
+            5 => self.as_u64().cmp(&other.as_u64()),
+            6 => self.as_i64().cmp(&other.as_i64()),
+            7 => self.as_timepoint().cmp(&other.as_timepoint()),
+            8 => self.as_duration().cmp(&other.as_duration()),
+            9 => self.as_u128().cmp(&other.as_u128()),
+            10 => self.as_i128().cmp(&other.as_i128()),
+            11 => self.as_u256().cmp(&other.as_u256()),
+            12 => self.as_i256().cmp(&other.as_i256()),
+            13 => self.as_bytes().cmp(&other.as_bytes()),
+            14 => self.as_string().cmp(&other.as_string()),
+            15 => self.as_symbol().cmp(&other.as_symbol()),
+            16 => self.as_vec().cmp(&other.as_vec()),
+            17 => self.as_map().cmp(&other.as_map()),
+            18 => self.as_address().cmp(&other.as_address()),
+            19 => self
+                .as_contract_instance()
+                .cmp(&other.as_contract_instance()),
+            21 => self.as_ledger_key_nonce().cmp(&other.as_ledger_key_nonce()),
+            _ => core::cmp::Ordering::Equal,
+        }
+    }
+}
+#[cfg(feature = "alloc")]
+impl LazyXdr for LazyScVal {
+    fn xdr_validate(buf: &[u8], depth: u32) -> Result<u32, Error> {
+        #[allow(unused_variables)]
+        let depth = depth.checked_sub(1).ok_or(Error::DepthLimitExceeded)?;
+        if buf.len() < 4 {
+            return Err(Error::Invalid);
+        }
+        let disc = i32::from_be_bytes([buf[0], buf[1], buf[2], buf[3]]);
+        #[allow(unused_mut)]
+        let mut pos: u32 = 4;
+        #[allow(clippy::match_same_arms)]
+        match disc {
+            0 => {
+                let field_len = <bool as LazyXdr>::xdr_validate(&buf[pos as usize..], depth)?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            1 => {
+                // void — no additional data
+            }
+            2 => {
+                let field_len =
+                    <LazyScError as LazyXdr>::xdr_validate(&buf[pos as usize..], depth)?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            3 => {
+                let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..], depth)?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            4 => {
+                let field_len = <i32 as LazyXdr>::xdr_validate(&buf[pos as usize..], depth)?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            5 => {
+                let field_len = <u64 as LazyXdr>::xdr_validate(&buf[pos as usize..], depth)?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            6 => {
+                let field_len = <i64 as LazyXdr>::xdr_validate(&buf[pos as usize..], depth)?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            7 => {
+                let field_len =
+                    <LazyTimePoint as LazyXdr>::xdr_validate(&buf[pos as usize..], depth)?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            8 => {
+                let field_len =
+                    <LazyDuration as LazyXdr>::xdr_validate(&buf[pos as usize..], depth)?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            9 => {
+                let field_len =
+                    <LazyUInt128Parts as LazyXdr>::xdr_validate(&buf[pos as usize..], depth)?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            10 => {
+                let field_len =
+                    <LazyInt128Parts as LazyXdr>::xdr_validate(&buf[pos as usize..], depth)?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            11 => {
+                let field_len =
+                    <LazyUInt256Parts as LazyXdr>::xdr_validate(&buf[pos as usize..], depth)?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            12 => {
+                let field_len =
+                    <LazyInt256Parts as LazyXdr>::xdr_validate(&buf[pos as usize..], depth)?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            13 => {
+                let field_len =
+                    <LazyScBytes as LazyXdr>::xdr_validate(&buf[pos as usize..], depth)?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            14 => {
+                let field_len =
+                    <LazyScString as LazyXdr>::xdr_validate(&buf[pos as usize..], depth)?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            15 => {
+                let field_len =
+                    <LazyScSymbol as LazyXdr>::xdr_validate(&buf[pos as usize..], depth)?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            16 => {
+                let field_len =
+                    <LazyOption<LazyScVec> as LazyXdr>::xdr_validate(&buf[pos as usize..], depth)?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            17 => {
+                let field_len =
+                    <LazyOption<LazyScMap> as LazyXdr>::xdr_validate(&buf[pos as usize..], depth)?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            18 => {
+                let field_len =
+                    <LazyScAddress as LazyXdr>::xdr_validate(&buf[pos as usize..], depth)?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            19 => {
+                let field_len =
+                    <LazyScContractInstance as LazyXdr>::xdr_validate(&buf[pos as usize..], depth)?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            20 => {
+                // void — no additional data
+            }
+            21 => {
+                let field_len =
+                    <LazyScNonceKey as LazyXdr>::xdr_validate(&buf[pos as usize..], depth)?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            _ => return Err(Error::Invalid),
+        }
+        Ok(pos)
+    }
+
+    fn xdr_len(buf: &[u8]) -> u32 {
+        let disc = i32::from_be_bytes([buf[0], buf[1], buf[2], buf[3]]);
+        #[allow(unused_mut)]
+        let mut pos: u32 = 4;
+        #[allow(clippy::match_same_arms)]
+        match disc {
+            0 => {
+                pos += <bool as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            1 => {
+                // void
+            }
+            2 => {
+                pos += <LazyScError as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            3 => {
+                pos += <u32 as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            4 => {
+                pos += <i32 as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            5 => {
+                pos += <u64 as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            6 => {
+                pos += <i64 as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            7 => {
+                pos += <LazyTimePoint as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            8 => {
+                pos += <LazyDuration as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            9 => {
+                pos += <LazyUInt128Parts as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            10 => {
+                pos += <LazyInt128Parts as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            11 => {
+                pos += <LazyUInt256Parts as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            12 => {
+                pos += <LazyInt256Parts as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            13 => {
+                pos += <LazyScBytes as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            14 => {
+                pos += <LazyScString as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            15 => {
+                pos += <LazyScSymbol as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            16 => {
+                pos += <LazyOption<LazyScVec> as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            17 => {
+                pos += <LazyOption<LazyScMap> as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            18 => {
+                pos += <LazyScAddress as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            19 => {
+                pos += <LazyScContractInstance as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            20 => {
+                // void
+            }
+            21 => {
+                pos += <LazyScNonceKey as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            _ => {}
+        }
+        pos
+    }
+
+    fn from_xdr_at(parent: &LazyHandle, offset: u32) -> Self {
+        let buf = &parent.as_slice()[offset as usize..];
+        let len = Self::xdr_len(buf);
+        Self(parent.sub_handle(offset, len))
+    }
+}
+#[cfg(feature = "alloc")]
+impl From<LazyHandle> for LazyScVal {
+    fn from(h: LazyHandle) -> Self {
+        Self(h)
+    }
+}
+#[cfg(feature = "alloc")]
+impl AsRef<LazyHandle> for LazyScVal {
+    fn as_ref(&self) -> &LazyHandle {
+        &self.0
+    }
+}
+#[cfg(feature = "alloc")]
+impl TryFrom<Arc<[u8]>> for LazyScVal {
+    type Error = Error;
+    fn try_from(buf: Arc<[u8]>) -> Result<Self, Error> {
+        let len = Self::xdr_validate(&buf, DEFAULT_XDR_DEPTH_LIMIT)?;
+        Ok(Self(LazyHandle::from_arc(buf, 0, len)))
+    }
+}
+#[cfg(feature = "alloc")]
+impl LazyScVal {
+    /// Get the discriminant value as i32.
+    #[must_use]
+    pub fn discriminant_i32(&self) -> i32 {
+        i32::from_xdr_at(&self.0, 0)
+    }
+
+    /// Get the discriminant.
+    #[must_use]
+    pub fn discriminant(&self) -> ScValType {
+        // Validated — unwrap is safe.
+        ScValType::try_from(self.discriminant_i32()).unwrap()
+    }
+    /// Access arm `Bool`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_bool(&self) -> Option<bool> {
+        if self.discriminant_i32() == 0 {
+            Some(<bool as LazyXdr>::from_xdr_at(&self.0, 4))
+        } else {
+            None
+        }
+    }
+    /// Access arm `Error`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_error(&self) -> Option<LazyScError> {
+        if self.discriminant_i32() == 2 {
+            Some(<LazyScError as LazyXdr>::from_xdr_at(&self.0, 4))
+        } else {
+            None
+        }
+    }
+    /// Access arm `U32`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_u32(&self) -> Option<u32> {
+        if self.discriminant_i32() == 3 {
+            Some(<u32 as LazyXdr>::from_xdr_at(&self.0, 4))
+        } else {
+            None
+        }
+    }
+    /// Access arm `I32`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_i32(&self) -> Option<i32> {
+        if self.discriminant_i32() == 4 {
+            Some(<i32 as LazyXdr>::from_xdr_at(&self.0, 4))
+        } else {
+            None
+        }
+    }
+    /// Access arm `U64`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_u64(&self) -> Option<u64> {
+        if self.discriminant_i32() == 5 {
+            Some(<u64 as LazyXdr>::from_xdr_at(&self.0, 4))
+        } else {
+            None
+        }
+    }
+    /// Access arm `I64`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_i64(&self) -> Option<i64> {
+        if self.discriminant_i32() == 6 {
+            Some(<i64 as LazyXdr>::from_xdr_at(&self.0, 4))
+        } else {
+            None
+        }
+    }
+    /// Access arm `Timepoint`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_timepoint(&self) -> Option<LazyTimePoint> {
+        if self.discriminant_i32() == 7 {
+            Some(<LazyTimePoint as LazyXdr>::from_xdr_at(&self.0, 4))
+        } else {
+            None
+        }
+    }
+    /// Access arm `Duration`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_duration(&self) -> Option<LazyDuration> {
+        if self.discriminant_i32() == 8 {
+            Some(<LazyDuration as LazyXdr>::from_xdr_at(&self.0, 4))
+        } else {
+            None
+        }
+    }
+    /// Access arm `U128`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_u128(&self) -> Option<LazyUInt128Parts> {
+        if self.discriminant_i32() == 9 {
+            Some(<LazyUInt128Parts as LazyXdr>::from_xdr_at(&self.0, 4))
+        } else {
+            None
+        }
+    }
+    /// Access arm `I128`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_i128(&self) -> Option<LazyInt128Parts> {
+        if self.discriminant_i32() == 10 {
+            Some(<LazyInt128Parts as LazyXdr>::from_xdr_at(&self.0, 4))
+        } else {
+            None
+        }
+    }
+    /// Access arm `U256`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_u256(&self) -> Option<LazyUInt256Parts> {
+        if self.discriminant_i32() == 11 {
+            Some(<LazyUInt256Parts as LazyXdr>::from_xdr_at(&self.0, 4))
+        } else {
+            None
+        }
+    }
+    /// Access arm `I256`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_i256(&self) -> Option<LazyInt256Parts> {
+        if self.discriminant_i32() == 12 {
+            Some(<LazyInt256Parts as LazyXdr>::from_xdr_at(&self.0, 4))
+        } else {
+            None
+        }
+    }
+    /// Access arm `Bytes`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_bytes(&self) -> Option<LazyScBytes> {
+        if self.discriminant_i32() == 13 {
+            Some(<LazyScBytes as LazyXdr>::from_xdr_at(&self.0, 4))
+        } else {
+            None
+        }
+    }
+    /// Access arm `String`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_string(&self) -> Option<LazyScString> {
+        if self.discriminant_i32() == 14 {
+            Some(<LazyScString as LazyXdr>::from_xdr_at(&self.0, 4))
+        } else {
+            None
+        }
+    }
+    /// Access arm `Symbol`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_symbol(&self) -> Option<LazyScSymbol> {
+        if self.discriminant_i32() == 15 {
+            Some(<LazyScSymbol as LazyXdr>::from_xdr_at(&self.0, 4))
+        } else {
+            None
+        }
+    }
+    /// Access arm `Vec`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_vec(&self) -> Option<LazyOption<LazyScVec>> {
+        if self.discriminant_i32() == 16 {
+            Some(<LazyOption<LazyScVec> as LazyXdr>::from_xdr_at(&self.0, 4))
+        } else {
+            None
+        }
+    }
+    /// Access arm `Map`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_map(&self) -> Option<LazyOption<LazyScMap>> {
+        if self.discriminant_i32() == 17 {
+            Some(<LazyOption<LazyScMap> as LazyXdr>::from_xdr_at(&self.0, 4))
+        } else {
+            None
+        }
+    }
+    /// Access arm `Address`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_address(&self) -> Option<LazyScAddress> {
+        if self.discriminant_i32() == 18 {
+            Some(<LazyScAddress as LazyXdr>::from_xdr_at(&self.0, 4))
+        } else {
+            None
+        }
+    }
+    /// Access arm `ContractInstance`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_contract_instance(&self) -> Option<LazyScContractInstance> {
+        if self.discriminant_i32() == 19 {
+            Some(<LazyScContractInstance as LazyXdr>::from_xdr_at(&self.0, 4))
+        } else {
+            None
+        }
+    }
+    /// Access arm `LedgerKeyNonce`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_ledger_key_nonce(&self) -> Option<LazyScNonceKey> {
+        if self.discriminant_i32() == 21 {
+            Some(<LazyScNonceKey as LazyXdr>::from_xdr_at(&self.0, 4))
+        } else {
+            None
+        }
+    }
+}
+#[cfg(all(feature = "alloc", feature = "std"))]
+impl TryFrom<&ScVal> for LazyScVal {
+    type Error = Error;
+    fn try_from(val: &ScVal) -> Result<Self, Error> {
+        let mut buf = Vec::new();
+        val.write_xdr(&mut Limited::new(&mut buf, Limits::none()))?;
+        let arc: Arc<[u8]> = buf.into();
+        Self::try_from(arc)
+    }
+}
+#[cfg(all(feature = "alloc", feature = "std"))]
+impl TryFrom<&LazyScVal> for ScVal {
+    type Error = Error;
+    fn try_from(lazy: &LazyScVal) -> Result<Self, Error> {
+        let buf = lazy.as_ref().as_slice();
+        Self::read_xdr(&mut Limited::new(&mut &buf[..], Limits::none()))
     }
 }

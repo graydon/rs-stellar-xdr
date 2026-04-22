@@ -1,0 +1,7 @@
+{%- if let Some(cfg_attr) = t.cfg %}
+#[cfg(all(feature = "alloc", {{ cfg_attr }}))]
+{%- else %}
+#[cfg(feature = "alloc")]
+{%- endif %}
+/// Lazy alias — scalars need no wrapper.
+pub type Lazy{{ t.name }} = {{ t.lazy_type }};

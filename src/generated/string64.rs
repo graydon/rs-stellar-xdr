@@ -1,5 +1,10 @@
 #[allow(unused_imports, clippy::wildcard_imports)]
 use super::*;
+#[cfg(feature = "alloc")]
+extern crate alloc;
+#[cfg(feature = "alloc")]
+#[allow(unused_imports)]
+use alloc::sync::Arc;
 
 /// String64 is an XDR Typedef defined as:
 ///
@@ -105,5 +110,84 @@ impl AsRef<[u8]> for String64 {
     #[must_use]
     fn as_ref(&self) -> &[u8] {
         self.0 .0
+    }
+}
+
+#[cfg(feature = "alloc")]
+/// Lazy wrapper for [`String64`].
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+pub struct LazyString64(LazyStringM<64>);
+#[cfg(feature = "alloc")]
+impl PartialOrd for LazyString64 {
+    fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+#[cfg(feature = "alloc")]
+impl Ord for LazyString64 {
+    fn cmp(&self, other: &Self) -> core::cmp::Ordering {
+        self.0.cmp(&other.0)
+    }
+}
+#[cfg(feature = "alloc")]
+impl LazyXdr for LazyString64 {
+    fn xdr_validate(buf: &[u8], depth: u32) -> Result<u32, Error> {
+        <LazyStringM<64> as LazyXdr>::xdr_validate(buf, depth)
+    }
+
+    #[inline]
+    fn xdr_len(buf: &[u8]) -> u32 {
+        <LazyStringM<64> as LazyXdr>::xdr_len(buf)
+    }
+
+    fn from_xdr_at(parent: &LazyHandle, offset: u32) -> Self {
+        Self(<LazyStringM<64> as LazyXdr>::from_xdr_at(parent, offset))
+    }
+}
+#[cfg(feature = "alloc")]
+impl From<LazyHandle> for LazyString64 {
+    fn from(h: LazyHandle) -> Self {
+        Self(<LazyStringM<64>>::from(h))
+    }
+}
+#[cfg(feature = "alloc")]
+impl AsRef<LazyHandle> for LazyString64 {
+    fn as_ref(&self) -> &LazyHandle {
+        self.0.as_ref()
+    }
+}
+#[cfg(feature = "alloc")]
+impl TryFrom<Arc<[u8]>> for LazyString64 {
+    type Error = Error;
+    fn try_from(buf: Arc<[u8]>) -> Result<Self, Error> {
+        let len = Self::xdr_validate(&buf, DEFAULT_XDR_DEPTH_LIMIT)?;
+        Ok(Self(<LazyStringM<64>>::from(LazyHandle::from_arc(
+            buf, 0, len,
+        ))))
+    }
+}
+#[cfg(feature = "alloc")]
+impl core::ops::Deref for LazyString64 {
+    type Target = LazyStringM<64>;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+#[cfg(all(feature = "alloc", feature = "std"))]
+impl TryFrom<&String64> for LazyString64 {
+    type Error = Error;
+    fn try_from(val: &String64) -> Result<Self, Error> {
+        let mut buf = Vec::new();
+        val.write_xdr(&mut Limited::new(&mut buf, Limits::none()))?;
+        let arc: Arc<[u8]> = buf.into();
+        Self::try_from(arc)
+    }
+}
+#[cfg(all(feature = "alloc", feature = "std"))]
+impl TryFrom<&LazyString64> for String64 {
+    type Error = Error;
+    fn try_from(lazy: &LazyString64) -> Result<Self, Error> {
+        let buf = lazy.as_ref().as_slice();
+        Self::read_xdr(&mut Limited::new(&mut &buf[..], Limits::none()))
     }
 }

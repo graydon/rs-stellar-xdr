@@ -40,6 +40,14 @@ struct Args {
     /// Types that should NOT have Display/FromStr/schemars generated
     #[arg(long, value_delimiter = ',')]
     no_display_fromstr: Vec<String>,
+
+    /// Output file for a standalone CXX bridge module. Requires --bridge-types.
+    #[arg(long)]
+    cxx_bridge_output: Option<PathBuf>,
+
+    /// Comma-separated list of XDR type names to include in the CXX bridge.
+    #[arg(long, value_delimiter = ',')]
+    bridge_types: Vec<String>,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -76,6 +84,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     generator.generate_to_dir(&spec, &args.output, &output_dir)?;
 
     eprintln!("Generated: {}", args.output.display());
+
+    // Generate standalone CXX bridge module if requested
+    if let Some(cxx_output) = &args.cxx_bridge_output {
+        if args.bridge_types.is_empty() {
+            return Err("--cxx-bridge-output requires --bridge-types".into());
+        }
+        let bridge_types: HashSet<String> = args.bridge_types.into_iter().collect();
+        generator.generate_cxx_bridge_to_file(&spec, cxx_output, &bridge_types)?;
+        eprintln!("Generated CXX bridge: {}", cxx_output.display());
+    }
 
     Ok(())
 }

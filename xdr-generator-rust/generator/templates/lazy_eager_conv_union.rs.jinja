@@ -1,0 +1,23 @@
+{%- if let Some(cfg_attr) = u.cfg %}
+        #[cfg({{ cfg_attr }})]
+{%- endif %}
+        impl TryFrom<&super::super::{{ u.name }}> for {{ u.lazy_name }} {
+            type Error = super::super::Error;
+            fn try_from(val: &super::super::{{ u.name }}) -> Result<Self, super::super::Error> {
+                let mut buf = Vec::new();
+                val.write_xdr(&mut super::super::Limited::new(&mut buf, super::super::Limits::none()))?;
+                let arc: Arc<[u8]> = buf.into();
+                Self::try_from(arc)
+            }
+        }
+
+{%- if let Some(cfg_attr) = u.cfg %}
+        #[cfg({{ cfg_attr }})]
+{%- endif %}
+        impl TryFrom<&{{ u.lazy_name }}> for super::super::{{ u.name }} {
+            type Error = super::super::Error;
+            fn try_from(lazy: &{{ u.lazy_name }}) -> Result<Self, super::super::Error> {
+                let buf = lazy.as_ref().as_slice();
+                Self::read_xdr(&mut super::super::Limited::new(&mut &buf[..], super::super::Limits::none()))
+            }
+        }

@@ -1,0 +1,157 @@
+{%- if let Some(cfg_attr) = t.cfg %}
+#[cfg(all(feature = "alloc", {{ cfg_attr }}))]
+{%- else %}
+#[cfg(feature = "alloc")]
+{%- endif %}
+/// Lazy wrapper for [`{{ t.name }}`].
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+pub struct {{ t.lazy_name }}({{ t.lazy_inner_type }});
+
+{%- if let Some(cfg_attr) = t.cfg %}
+#[cfg(all(feature = "alloc", {{ cfg_attr }}))]
+{%- else %}
+#[cfg(feature = "alloc")]
+{%- endif %}
+impl PartialOrd for {{ t.lazy_name }} {
+    fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+{%- if let Some(cfg_attr) = t.cfg %}
+#[cfg(all(feature = "alloc", {{ cfg_attr }}))]
+{%- else %}
+#[cfg(feature = "alloc")]
+{%- endif %}
+impl Ord for {{ t.lazy_name }} {
+    fn cmp(&self, other: &Self) -> core::cmp::Ordering {
+        self.0.cmp(&other.0)
+    }
+}
+
+{%- if let Some(cfg_attr) = t.cfg %}
+#[cfg(all(feature = "alloc", {{ cfg_attr }}))]
+{%- else %}
+#[cfg(feature = "alloc")]
+{%- endif %}
+impl LazyXdr for {{ t.lazy_name }} {
+{%- if let Some(fs) = t.lazy_fixed_size %}
+    const FIXED_XDR_SIZE: Option<u32> = Some({{ fs }});
+{%- endif %}
+
+    fn xdr_validate(buf: &[u8], depth: u32) -> Result<u32, Error> {
+        <{{ t.lazy_inner_type }} as LazyXdr>::xdr_validate(buf, depth)
+    }
+
+    #[inline]
+    fn xdr_len(buf: &[u8]) -> u32 {
+        <{{ t.lazy_inner_type }} as LazyXdr>::xdr_len(buf)
+    }
+
+    fn from_xdr_at(parent: &LazyHandle, offset: u32) -> Self {
+        Self(<{{ t.lazy_inner_type }} as LazyXdr>::from_xdr_at(parent, offset))
+    }
+}
+
+{%- if !t.lazy_inner_is_scalar %}
+{%- if let Some(cfg_attr) = t.cfg %}
+#[cfg(all(feature = "alloc", {{ cfg_attr }}))]
+{%- else %}
+#[cfg(feature = "alloc")]
+{%- endif %}
+impl From<LazyHandle> for {{ t.lazy_name }} {
+    fn from(h: LazyHandle) -> Self {
+        Self(<{{ t.lazy_inner_type }}>::from(h))
+    }
+}
+
+{%- if let Some(cfg_attr) = t.cfg %}
+#[cfg(all(feature = "alloc", {{ cfg_attr }}))]
+{%- else %}
+#[cfg(feature = "alloc")]
+{%- endif %}
+impl AsRef<LazyHandle> for {{ t.lazy_name }} {
+    fn as_ref(&self) -> &LazyHandle {
+        self.0.as_ref()
+    }
+}
+
+{%- if let Some(cfg_attr) = t.cfg %}
+#[cfg(all(feature = "alloc", {{ cfg_attr }}))]
+{%- else %}
+#[cfg(feature = "alloc")]
+{%- endif %}
+impl TryFrom<Arc<[u8]>> for {{ t.lazy_name }} {
+    type Error = Error;
+    fn try_from(buf: Arc<[u8]>) -> Result<Self, Error> {
+        let len = Self::xdr_validate(&buf, DEFAULT_XDR_DEPTH_LIMIT)?;
+        Ok(Self(<{{ t.lazy_inner_type }}>::from(LazyHandle::from_arc(buf, 0, len))))
+    }
+}
+{%- else %}
+{%- if let Some(cfg_attr) = t.cfg %}
+#[cfg(all(feature = "alloc", {{ cfg_attr }}))]
+{%- else %}
+#[cfg(feature = "alloc")]
+{%- endif %}
+impl TryFrom<Arc<[u8]>> for {{ t.lazy_name }} {
+    type Error = Error;
+    fn try_from(buf: Arc<[u8]>) -> Result<Self, Error> {
+        let len = Self::xdr_validate(&buf, DEFAULT_XDR_DEPTH_LIMIT)?;
+        Ok(Self::from_xdr_at(&LazyHandle::from_arc(buf, 0, len), 0))
+    }
+}
+{%- endif %}
+
+{%- if let Some(cfg_attr) = t.cfg %}
+#[cfg(all(feature = "alloc", {{ cfg_attr }}))]
+{%- else %}
+#[cfg(feature = "alloc")]
+{%- endif %}
+impl core::ops::Deref for {{ t.lazy_name }} {
+    type Target = {{ t.lazy_inner_type }};
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+{%- if let Some(cfg_attr) = t.cfg %}
+#[cfg(all(feature = "alloc", feature = "std", {{ cfg_attr }}))]
+{%- else %}
+#[cfg(all(feature = "alloc", feature = "std"))]
+{%- endif %}
+impl TryFrom<&{{ t.name }}> for {{ t.lazy_name }} {
+    type Error = Error;
+    fn try_from(val: &{{ t.name }}) -> Result<Self, Error> {
+        let mut buf = Vec::new();
+        val.write_xdr(&mut Limited::new(&mut buf, Limits::none()))?;
+        let arc: Arc<[u8]> = buf.into();
+        Self::try_from(arc)
+    }
+}
+
+{%- if t.lazy_inner_is_scalar %}
+{%- if let Some(cfg_attr) = t.cfg %}
+#[cfg(all(feature = "alloc", feature = "std", {{ cfg_attr }}))]
+{%- else %}
+#[cfg(all(feature = "alloc", feature = "std"))]
+{%- endif %}
+impl From<&{{ t.lazy_name }}> for {{ t.name }} {
+    fn from(lazy: &{{ t.lazy_name }}) -> Self {
+        {{ t.name }}(**lazy)
+    }
+}
+{%- else %}
+{%- if let Some(cfg_attr) = t.cfg %}
+#[cfg(all(feature = "alloc", feature = "std", {{ cfg_attr }}))]
+{%- else %}
+#[cfg(all(feature = "alloc", feature = "std"))]
+{%- endif %}
+impl TryFrom<&{{ t.lazy_name }}> for {{ t.name }} {
+    type Error = Error;
+    fn try_from(lazy: &{{ t.lazy_name }}) -> Result<Self, Error> {
+        let buf = lazy.as_ref().as_slice();
+        Self::read_xdr(&mut Limited::new(&mut &buf[..], Limits::none()))
+    }
+}
+{%- endif %}

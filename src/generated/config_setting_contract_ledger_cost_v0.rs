@@ -1,5 +1,10 @@
 #[allow(unused_imports, clippy::wildcard_imports)]
 use super::*;
+#[cfg(feature = "alloc")]
+extern crate alloc;
+#[cfg(feature = "alloc")]
+#[allow(unused_imports)]
+use alloc::sync::Arc;
 
 /// ConfigSettingContractLedgerCostV0 is an XDR Struct defined as:
 ///
@@ -140,5 +145,219 @@ impl WriteXdr for ConfigSettingContractLedgerCostV0 {
             self.soroban_state_rent_fee_growth_factor.write_xdr(w)?;
             Ok(())
         })
+    }
+}
+
+#[cfg(feature = "alloc")]
+/// Lazy wrapper for [`ConfigSettingContractLedgerCostV0`].
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+pub struct LazyConfigSettingContractLedgerCostV0(LazyHandle);
+#[cfg(feature = "alloc")]
+impl PartialOrd for LazyConfigSettingContractLedgerCostV0 {
+    fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+#[cfg(feature = "alloc")]
+impl Ord for LazyConfigSettingContractLedgerCostV0 {
+    fn cmp(&self, other: &Self) -> core::cmp::Ordering {
+        core::cmp::Ordering::Equal
+            .then_with(|| {
+                self.ledger_max_disk_read_entries()
+                    .cmp(&other.ledger_max_disk_read_entries())
+            })
+            .then_with(|| {
+                self.ledger_max_disk_read_bytes()
+                    .cmp(&other.ledger_max_disk_read_bytes())
+            })
+            .then_with(|| {
+                self.ledger_max_write_ledger_entries()
+                    .cmp(&other.ledger_max_write_ledger_entries())
+            })
+            .then_with(|| {
+                self.ledger_max_write_bytes()
+                    .cmp(&other.ledger_max_write_bytes())
+            })
+            .then_with(|| {
+                self.tx_max_disk_read_entries()
+                    .cmp(&other.tx_max_disk_read_entries())
+            })
+            .then_with(|| {
+                self.tx_max_disk_read_bytes()
+                    .cmp(&other.tx_max_disk_read_bytes())
+            })
+            .then_with(|| {
+                self.tx_max_write_ledger_entries()
+                    .cmp(&other.tx_max_write_ledger_entries())
+            })
+            .then_with(|| self.tx_max_write_bytes().cmp(&other.tx_max_write_bytes()))
+            .then_with(|| {
+                self.fee_disk_read_ledger_entry()
+                    .cmp(&other.fee_disk_read_ledger_entry())
+            })
+            .then_with(|| {
+                self.fee_write_ledger_entry()
+                    .cmp(&other.fee_write_ledger_entry())
+            })
+            .then_with(|| self.fee_disk_read1_kb().cmp(&other.fee_disk_read1_kb()))
+            .then_with(|| {
+                self.soroban_state_target_size_bytes()
+                    .cmp(&other.soroban_state_target_size_bytes())
+            })
+            .then_with(|| {
+                self.rent_fee1_kb_soroban_state_size_low()
+                    .cmp(&other.rent_fee1_kb_soroban_state_size_low())
+            })
+            .then_with(|| {
+                self.rent_fee1_kb_soroban_state_size_high()
+                    .cmp(&other.rent_fee1_kb_soroban_state_size_high())
+            })
+            .then_with(|| {
+                self.soroban_state_rent_fee_growth_factor()
+                    .cmp(&other.soroban_state_rent_fee_growth_factor())
+            })
+    }
+}
+#[cfg(feature = "alloc")]
+impl LazyXdr for LazyConfigSettingContractLedgerCostV0 {
+    const FIXED_XDR_SIZE: Option<u32> = Some(84);
+
+    fn xdr_validate(buf: &[u8], depth: u32) -> Result<u32, Error> {
+        #[allow(unused_variables)]
+        let depth = depth.checked_sub(1).ok_or(Error::DepthLimitExceeded)?;
+        let mut pos: u32 = 0;
+        let next_pos = pos.checked_add(84).ok_or(Error::LengthExceedsMax)?;
+        if buf.len() < next_pos as usize {
+            return Err(Error::Invalid);
+        }
+        pos = next_pos;
+        Ok(pos)
+    }
+
+    #[inline]
+    fn xdr_len(_buf: &[u8]) -> u32 {
+        84
+    }
+
+    fn from_xdr_at(parent: &LazyHandle, offset: u32) -> Self {
+        let buf = &parent.as_slice()[offset as usize..];
+        let len = Self::xdr_len(buf);
+        Self(parent.sub_handle(offset, len))
+    }
+}
+#[cfg(feature = "alloc")]
+impl From<LazyHandle> for LazyConfigSettingContractLedgerCostV0 {
+    fn from(h: LazyHandle) -> Self {
+        Self(h)
+    }
+}
+#[cfg(feature = "alloc")]
+impl AsRef<LazyHandle> for LazyConfigSettingContractLedgerCostV0 {
+    fn as_ref(&self) -> &LazyHandle {
+        &self.0
+    }
+}
+#[cfg(feature = "alloc")]
+impl TryFrom<Arc<[u8]>> for LazyConfigSettingContractLedgerCostV0 {
+    type Error = Error;
+    fn try_from(buf: Arc<[u8]>) -> Result<Self, Error> {
+        let len = Self::xdr_validate(&buf, DEFAULT_XDR_DEPTH_LIMIT)?;
+        Ok(Self(LazyHandle::from_arc(buf, 0, len)))
+    }
+}
+#[cfg(feature = "alloc")]
+impl LazyConfigSettingContractLedgerCostV0 {
+    /// Access field `ledger_max_disk_read_entries`.
+    #[must_use]
+    pub fn ledger_max_disk_read_entries(&self) -> u32 {
+        <u32 as LazyXdr>::from_xdr_at(&self.0, 0)
+    }
+    /// Access field `ledger_max_disk_read_bytes`.
+    #[must_use]
+    pub fn ledger_max_disk_read_bytes(&self) -> u32 {
+        <u32 as LazyXdr>::from_xdr_at(&self.0, 4)
+    }
+    /// Access field `ledger_max_write_ledger_entries`.
+    #[must_use]
+    pub fn ledger_max_write_ledger_entries(&self) -> u32 {
+        <u32 as LazyXdr>::from_xdr_at(&self.0, 8)
+    }
+    /// Access field `ledger_max_write_bytes`.
+    #[must_use]
+    pub fn ledger_max_write_bytes(&self) -> u32 {
+        <u32 as LazyXdr>::from_xdr_at(&self.0, 12)
+    }
+    /// Access field `tx_max_disk_read_entries`.
+    #[must_use]
+    pub fn tx_max_disk_read_entries(&self) -> u32 {
+        <u32 as LazyXdr>::from_xdr_at(&self.0, 16)
+    }
+    /// Access field `tx_max_disk_read_bytes`.
+    #[must_use]
+    pub fn tx_max_disk_read_bytes(&self) -> u32 {
+        <u32 as LazyXdr>::from_xdr_at(&self.0, 20)
+    }
+    /// Access field `tx_max_write_ledger_entries`.
+    #[must_use]
+    pub fn tx_max_write_ledger_entries(&self) -> u32 {
+        <u32 as LazyXdr>::from_xdr_at(&self.0, 24)
+    }
+    /// Access field `tx_max_write_bytes`.
+    #[must_use]
+    pub fn tx_max_write_bytes(&self) -> u32 {
+        <u32 as LazyXdr>::from_xdr_at(&self.0, 28)
+    }
+    /// Access field `fee_disk_read_ledger_entry`.
+    #[must_use]
+    pub fn fee_disk_read_ledger_entry(&self) -> i64 {
+        <i64 as LazyXdr>::from_xdr_at(&self.0, 32)
+    }
+    /// Access field `fee_write_ledger_entry`.
+    #[must_use]
+    pub fn fee_write_ledger_entry(&self) -> i64 {
+        <i64 as LazyXdr>::from_xdr_at(&self.0, 40)
+    }
+    /// Access field `fee_disk_read1_kb`.
+    #[must_use]
+    pub fn fee_disk_read1_kb(&self) -> i64 {
+        <i64 as LazyXdr>::from_xdr_at(&self.0, 48)
+    }
+    /// Access field `soroban_state_target_size_bytes`.
+    #[must_use]
+    pub fn soroban_state_target_size_bytes(&self) -> i64 {
+        <i64 as LazyXdr>::from_xdr_at(&self.0, 56)
+    }
+    /// Access field `rent_fee1_kb_soroban_state_size_low`.
+    #[must_use]
+    pub fn rent_fee1_kb_soroban_state_size_low(&self) -> i64 {
+        <i64 as LazyXdr>::from_xdr_at(&self.0, 64)
+    }
+    /// Access field `rent_fee1_kb_soroban_state_size_high`.
+    #[must_use]
+    pub fn rent_fee1_kb_soroban_state_size_high(&self) -> i64 {
+        <i64 as LazyXdr>::from_xdr_at(&self.0, 72)
+    }
+    /// Access field `soroban_state_rent_fee_growth_factor`.
+    #[must_use]
+    pub fn soroban_state_rent_fee_growth_factor(&self) -> u32 {
+        <u32 as LazyXdr>::from_xdr_at(&self.0, 80)
+    }
+}
+#[cfg(all(feature = "alloc", feature = "std"))]
+impl TryFrom<&ConfigSettingContractLedgerCostV0> for LazyConfigSettingContractLedgerCostV0 {
+    type Error = Error;
+    fn try_from(val: &ConfigSettingContractLedgerCostV0) -> Result<Self, Error> {
+        let mut buf = Vec::new();
+        val.write_xdr(&mut Limited::new(&mut buf, Limits::none()))?;
+        let arc: Arc<[u8]> = buf.into();
+        Self::try_from(arc)
+    }
+}
+#[cfg(all(feature = "alloc", feature = "std"))]
+impl TryFrom<&LazyConfigSettingContractLedgerCostV0> for ConfigSettingContractLedgerCostV0 {
+    type Error = Error;
+    fn try_from(lazy: &LazyConfigSettingContractLedgerCostV0) -> Result<Self, Error> {
+        let buf = lazy.as_ref().as_slice();
+        Self::read_xdr(&mut Limited::new(&mut &buf[..], Limits::none()))
     }
 }

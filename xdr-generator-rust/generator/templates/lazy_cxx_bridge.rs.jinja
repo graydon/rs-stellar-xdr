@@ -1,0 +1,68 @@
+        // CXX bridge support for lazy XDR types.
+        //
+        // Each lazy wrapper type is projected as an opaque type in a cxx::bridge
+        // module. Free functions provide Box<T>-based construction and field access.
+
+{%- for def in definitions %}
+{%- match def %}
+{%- when DefinitionOutput::Struct(s) %}
+
+        // ---- {{ s.lazy_name }} ----
+
+        impl {{ s.lazy_name }} {
+            pub fn cxx_from_bytes(buf: &[u8]) -> Result<Box<{{ s.lazy_name }}>, super::Error> {
+                let arc: Arc<[u8]> = buf.into();
+                let lazy = {{ s.lazy_name }}::try_from(arc)?;
+                Ok(Box::new(lazy))
+            }
+{%- for m in s.members %}
+{%- if m.lazy_is_scalar %}
+            pub fn cxx_{{ m.name }}(self: &{{ s.lazy_name }}) -> {{ m.lazy_type }} {
+                self.{{ m.name }}()
+            }
+{%- else %}
+            pub fn cxx_{{ m.name }}(self: &{{ s.lazy_name }}) -> Box<{{ m.lazy_type }}> {
+                Box::new(self.{{ m.name }}())
+            }
+{%- endif %}
+{%- endfor %}
+        }
+{%- when DefinitionOutput::Union(u) %}
+
+        // ---- {{ u.lazy_name }} ----
+
+        impl {{ u.lazy_name }} {
+            pub fn cxx_from_bytes(buf: &[u8]) -> Result<Box<{{ u.lazy_name }}>, super::Error> {
+                let arc: Arc<[u8]> = buf.into();
+                let lazy = {{ u.lazy_name }}::try_from(arc)?;
+                Ok(Box::new(lazy))
+            }
+
+            pub fn cxx_discriminant_i32(self: &{{ u.lazy_name }}) -> i32 {
+                self.discriminant_i32()
+            }
+{%- for arm in u.arms %}
+{%- if !arm.is_void %}
+
+            pub fn cxx_as_{{ arm.lazy_method_name }}(self: &{{ u.lazy_name }}) -> Result<Box<{{ arm.lazy_type.as_ref().unwrap() }}>, super::Error> {
+                self.as_{{ arm.lazy_method_name }}()
+                    .map(Box::new)
+                    .ok_or(super::Error::Invalid)
+            }
+{%- endif %}
+{%- endfor %}
+        }
+{%- when DefinitionOutput::TypedefNewtype(t) %}
+
+        // ---- {{ t.lazy_name }} ----
+
+        impl {{ t.lazy_name }} {
+            pub fn cxx_from_bytes(buf: &[u8]) -> Result<Box<{{ t.lazy_name }}>, super::Error> {
+                let arc: Arc<[u8]> = buf.into();
+                let lazy = {{ t.lazy_name }}::try_from(arc)?;
+                Ok(Box::new(lazy))
+            }
+        }
+{%- when _ %}
+{%- endmatch %}
+{%- endfor %}

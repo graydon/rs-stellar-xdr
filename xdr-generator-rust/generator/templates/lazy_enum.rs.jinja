@@ -1,0 +1,29 @@
+{%- if let Some(cfg_attr) = e.cfg %}
+    #[cfg({{ cfg_attr }})]
+{%- endif %}
+    // Enum {{ e.name }}: scalar lazy type — impl LazyXdr directly on the enum.
+    impl LazyXdr for super::{{ e.name }} {
+        const FIXED_XDR_SIZE: Option<u32> = Some(4);
+
+        fn xdr_validate(buf: &[u8], _depth: u32) -> Result<u32, super::Error> {
+            if buf.len() < 4 {
+                return Err(super::Error::Invalid);
+            }
+            let v = i32::from_be_bytes([buf[0], buf[1], buf[2], buf[3]]);
+            let _ = super::{{ e.name }}::try_from(v)?;
+            Ok(4)
+        }
+
+        #[inline]
+        fn xdr_len(_buf: &[u8]) -> u32 {
+            4
+        }
+
+        #[inline]
+        fn from_xdr_at(parent: &LazyHandle, offset: u32) -> Self {
+            let b = &parent.as_slice()[offset as usize..];
+            let v = i32::from_be_bytes([b[0], b[1], b[2], b[3]]);
+            // SAFETY: data was validated; unwrap is infallible.
+            super::{{ e.name }}::try_from(v).unwrap()
+        }
+    }

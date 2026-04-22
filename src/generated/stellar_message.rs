@@ -1,5 +1,10 @@
 #[allow(unused_imports, clippy::wildcard_imports)]
 use super::*;
+#[cfg(feature = "alloc")]
+extern crate alloc;
+#[cfg(feature = "alloc")]
+#[allow(unused_imports)]
+use alloc::sync::Arc;
 
 /// StellarMessage is an XDR Union defined as:
 ///
@@ -339,5 +344,553 @@ impl WriteXdr for StellarMessage {
             };
             Ok(())
         })
+    }
+}
+
+#[cfg(feature = "alloc")]
+/// Lazy wrapper for [`StellarMessage`].
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+pub struct LazyStellarMessage(LazyHandle);
+#[cfg(feature = "alloc")]
+impl PartialOrd for LazyStellarMessage {
+    fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+#[cfg(feature = "alloc")]
+impl Ord for LazyStellarMessage {
+    fn cmp(&self, other: &Self) -> core::cmp::Ordering {
+        let ord = self.discriminant().cmp(&other.discriminant());
+        if ord != core::cmp::Ordering::Equal {
+            return ord;
+        }
+        #[allow(clippy::match_same_arms)]
+        match self.discriminant_i32() {
+            0 => self.as_error_msg().cmp(&other.as_error_msg()),
+            13 => self.as_hello().cmp(&other.as_hello()),
+            2 => self.as_auth().cmp(&other.as_auth()),
+            3 => self.as_dont_have().cmp(&other.as_dont_have()),
+            5 => self.as_peers().cmp(&other.as_peers()),
+            6 => self.as_get_tx_set().cmp(&other.as_get_tx_set()),
+            7 => self.as_tx_set().cmp(&other.as_tx_set()),
+            17 => self
+                .as_generalized_tx_set()
+                .cmp(&other.as_generalized_tx_set()),
+            8 => self.as_transaction().cmp(&other.as_transaction()),
+            21 => self
+                .as_time_sliced_survey_request()
+                .cmp(&other.as_time_sliced_survey_request()),
+            22 => self
+                .as_time_sliced_survey_response()
+                .cmp(&other.as_time_sliced_survey_response()),
+            23 => self
+                .as_time_sliced_survey_start_collecting()
+                .cmp(&other.as_time_sliced_survey_start_collecting()),
+            24 => self
+                .as_time_sliced_survey_stop_collecting()
+                .cmp(&other.as_time_sliced_survey_stop_collecting()),
+            9 => self
+                .as_get_scp_quorumset()
+                .cmp(&other.as_get_scp_quorumset()),
+            10 => self.as_scp_quorumset().cmp(&other.as_scp_quorumset()),
+            11 => self.as_scp_message().cmp(&other.as_scp_message()),
+            12 => self.as_get_scp_state().cmp(&other.as_get_scp_state()),
+            16 => self.as_send_more().cmp(&other.as_send_more()),
+            20 => self
+                .as_send_more_extended()
+                .cmp(&other.as_send_more_extended()),
+            18 => self.as_flood_advert().cmp(&other.as_flood_advert()),
+            19 => self.as_flood_demand().cmp(&other.as_flood_demand()),
+            _ => core::cmp::Ordering::Equal,
+        }
+    }
+}
+#[cfg(feature = "alloc")]
+impl LazyXdr for LazyStellarMessage {
+    fn xdr_validate(buf: &[u8], depth: u32) -> Result<u32, Error> {
+        #[allow(unused_variables)]
+        let depth = depth.checked_sub(1).ok_or(Error::DepthLimitExceeded)?;
+        if buf.len() < 4 {
+            return Err(Error::Invalid);
+        }
+        let disc = i32::from_be_bytes([buf[0], buf[1], buf[2], buf[3]]);
+        #[allow(unused_mut)]
+        let mut pos: u32 = 4;
+        #[allow(clippy::match_same_arms)]
+        match disc {
+            0 => {
+                let field_len = <LazySError as LazyXdr>::xdr_validate(&buf[pos as usize..], depth)?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            13 => {
+                let field_len = <LazyHello as LazyXdr>::xdr_validate(&buf[pos as usize..], depth)?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            2 => {
+                let field_len = <LazyAuth as LazyXdr>::xdr_validate(&buf[pos as usize..], depth)?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            3 => {
+                let field_len =
+                    <LazyDontHave as LazyXdr>::xdr_validate(&buf[pos as usize..], depth)?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            5 => {
+                let field_len = <LazyVecM<LazyPeerAddress, 100> as LazyXdr>::xdr_validate(
+                    &buf[pos as usize..],
+                    depth,
+                )?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            6 => {
+                let field_len =
+                    <LazyUint256 as LazyXdr>::xdr_validate(&buf[pos as usize..], depth)?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            7 => {
+                let field_len =
+                    <LazyTransactionSet as LazyXdr>::xdr_validate(&buf[pos as usize..], depth)?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            17 => {
+                let field_len = <LazyGeneralizedTransactionSet as LazyXdr>::xdr_validate(
+                    &buf[pos as usize..],
+                    depth,
+                )?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            8 => {
+                let field_len = <LazyTransactionEnvelope as LazyXdr>::xdr_validate(
+                    &buf[pos as usize..],
+                    depth,
+                )?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            21 => {
+                let field_len =
+                    <LazySignedTimeSlicedSurveyRequestMessage as LazyXdr>::xdr_validate(
+                        &buf[pos as usize..],
+                        depth,
+                    )?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            22 => {
+                let field_len =
+                    <LazySignedTimeSlicedSurveyResponseMessage as LazyXdr>::xdr_validate(
+                        &buf[pos as usize..],
+                        depth,
+                    )?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            23 => {
+                let field_len =
+                    <LazySignedTimeSlicedSurveyStartCollectingMessage as LazyXdr>::xdr_validate(
+                        &buf[pos as usize..],
+                        depth,
+                    )?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            24 => {
+                let field_len =
+                    <LazySignedTimeSlicedSurveyStopCollectingMessage as LazyXdr>::xdr_validate(
+                        &buf[pos as usize..],
+                        depth,
+                    )?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            9 => {
+                let field_len =
+                    <LazyUint256 as LazyXdr>::xdr_validate(&buf[pos as usize..], depth)?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            10 => {
+                let field_len =
+                    <LazyScpQuorumSet as LazyXdr>::xdr_validate(&buf[pos as usize..], depth)?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            11 => {
+                let field_len =
+                    <LazyScpEnvelope as LazyXdr>::xdr_validate(&buf[pos as usize..], depth)?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            12 => {
+                let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..], depth)?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            16 => {
+                let field_len =
+                    <LazySendMore as LazyXdr>::xdr_validate(&buf[pos as usize..], depth)?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            20 => {
+                let field_len =
+                    <LazySendMoreExtended as LazyXdr>::xdr_validate(&buf[pos as usize..], depth)?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            18 => {
+                let field_len =
+                    <LazyFloodAdvert as LazyXdr>::xdr_validate(&buf[pos as usize..], depth)?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            19 => {
+                let field_len =
+                    <LazyFloodDemand as LazyXdr>::xdr_validate(&buf[pos as usize..], depth)?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            _ => return Err(Error::Invalid),
+        }
+        Ok(pos)
+    }
+
+    fn xdr_len(buf: &[u8]) -> u32 {
+        let disc = i32::from_be_bytes([buf[0], buf[1], buf[2], buf[3]]);
+        #[allow(unused_mut)]
+        let mut pos: u32 = 4;
+        #[allow(clippy::match_same_arms)]
+        match disc {
+            0 => {
+                pos += <LazySError as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            13 => {
+                pos += <LazyHello as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            2 => {
+                pos += <LazyAuth as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            3 => {
+                pos += <LazyDontHave as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            5 => {
+                pos += <LazyVecM<LazyPeerAddress, 100> as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            6 => {
+                pos += <LazyUint256 as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            7 => {
+                pos += <LazyTransactionSet as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            17 => {
+                pos += <LazyGeneralizedTransactionSet as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            8 => {
+                pos += <LazyTransactionEnvelope as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            21 => {
+                pos += <LazySignedTimeSlicedSurveyRequestMessage as LazyXdr>::xdr_len(
+                    &buf[pos as usize..],
+                );
+            }
+            22 => {
+                pos += <LazySignedTimeSlicedSurveyResponseMessage as LazyXdr>::xdr_len(
+                    &buf[pos as usize..],
+                );
+            }
+            23 => {
+                pos += <LazySignedTimeSlicedSurveyStartCollectingMessage as LazyXdr>::xdr_len(
+                    &buf[pos as usize..],
+                );
+            }
+            24 => {
+                pos += <LazySignedTimeSlicedSurveyStopCollectingMessage as LazyXdr>::xdr_len(
+                    &buf[pos as usize..],
+                );
+            }
+            9 => {
+                pos += <LazyUint256 as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            10 => {
+                pos += <LazyScpQuorumSet as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            11 => {
+                pos += <LazyScpEnvelope as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            12 => {
+                pos += <u32 as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            16 => {
+                pos += <LazySendMore as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            20 => {
+                pos += <LazySendMoreExtended as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            18 => {
+                pos += <LazyFloodAdvert as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            19 => {
+                pos += <LazyFloodDemand as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            _ => {}
+        }
+        pos
+    }
+
+    fn from_xdr_at(parent: &LazyHandle, offset: u32) -> Self {
+        let buf = &parent.as_slice()[offset as usize..];
+        let len = Self::xdr_len(buf);
+        Self(parent.sub_handle(offset, len))
+    }
+}
+#[cfg(feature = "alloc")]
+impl From<LazyHandle> for LazyStellarMessage {
+    fn from(h: LazyHandle) -> Self {
+        Self(h)
+    }
+}
+#[cfg(feature = "alloc")]
+impl AsRef<LazyHandle> for LazyStellarMessage {
+    fn as_ref(&self) -> &LazyHandle {
+        &self.0
+    }
+}
+#[cfg(feature = "alloc")]
+impl TryFrom<Arc<[u8]>> for LazyStellarMessage {
+    type Error = Error;
+    fn try_from(buf: Arc<[u8]>) -> Result<Self, Error> {
+        let len = Self::xdr_validate(&buf, DEFAULT_XDR_DEPTH_LIMIT)?;
+        Ok(Self(LazyHandle::from_arc(buf, 0, len)))
+    }
+}
+#[cfg(feature = "alloc")]
+impl LazyStellarMessage {
+    /// Get the discriminant value as i32.
+    #[must_use]
+    pub fn discriminant_i32(&self) -> i32 {
+        i32::from_xdr_at(&self.0, 0)
+    }
+
+    /// Get the discriminant.
+    #[must_use]
+    pub fn discriminant(&self) -> MessageType {
+        // Validated — unwrap is safe.
+        MessageType::try_from(self.discriminant_i32()).unwrap()
+    }
+    /// Access arm `ErrorMsg`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_error_msg(&self) -> Option<LazySError> {
+        if self.discriminant_i32() == 0 {
+            Some(<LazySError as LazyXdr>::from_xdr_at(&self.0, 4))
+        } else {
+            None
+        }
+    }
+    /// Access arm `Hello`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_hello(&self) -> Option<LazyHello> {
+        if self.discriminant_i32() == 13 {
+            Some(<LazyHello as LazyXdr>::from_xdr_at(&self.0, 4))
+        } else {
+            None
+        }
+    }
+    /// Access arm `Auth`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_auth(&self) -> Option<LazyAuth> {
+        if self.discriminant_i32() == 2 {
+            Some(<LazyAuth as LazyXdr>::from_xdr_at(&self.0, 4))
+        } else {
+            None
+        }
+    }
+    /// Access arm `DontHave`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_dont_have(&self) -> Option<LazyDontHave> {
+        if self.discriminant_i32() == 3 {
+            Some(<LazyDontHave as LazyXdr>::from_xdr_at(&self.0, 4))
+        } else {
+            None
+        }
+    }
+    /// Access arm `Peers`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_peers(&self) -> Option<LazyVecM<LazyPeerAddress, 100>> {
+        if self.discriminant_i32() == 5 {
+            Some(<LazyVecM<LazyPeerAddress, 100> as LazyXdr>::from_xdr_at(
+                &self.0, 4,
+            ))
+        } else {
+            None
+        }
+    }
+    /// Access arm `GetTxSet`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_get_tx_set(&self) -> Option<LazyUint256> {
+        if self.discriminant_i32() == 6 {
+            Some(<LazyUint256 as LazyXdr>::from_xdr_at(&self.0, 4))
+        } else {
+            None
+        }
+    }
+    /// Access arm `TxSet`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_tx_set(&self) -> Option<LazyTransactionSet> {
+        if self.discriminant_i32() == 7 {
+            Some(<LazyTransactionSet as LazyXdr>::from_xdr_at(&self.0, 4))
+        } else {
+            None
+        }
+    }
+    /// Access arm `GeneralizedTxSet`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_generalized_tx_set(&self) -> Option<LazyGeneralizedTransactionSet> {
+        if self.discriminant_i32() == 17 {
+            Some(<LazyGeneralizedTransactionSet as LazyXdr>::from_xdr_at(
+                &self.0, 4,
+            ))
+        } else {
+            None
+        }
+    }
+    /// Access arm `Transaction`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_transaction(&self) -> Option<LazyTransactionEnvelope> {
+        if self.discriminant_i32() == 8 {
+            Some(<LazyTransactionEnvelope as LazyXdr>::from_xdr_at(
+                &self.0, 4,
+            ))
+        } else {
+            None
+        }
+    }
+    /// Access arm `TimeSlicedSurveyRequest`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_time_sliced_survey_request(
+        &self,
+    ) -> Option<LazySignedTimeSlicedSurveyRequestMessage> {
+        if self.discriminant_i32() == 21 {
+            Some(<LazySignedTimeSlicedSurveyRequestMessage as LazyXdr>::from_xdr_at(&self.0, 4))
+        } else {
+            None
+        }
+    }
+    /// Access arm `TimeSlicedSurveyResponse`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_time_sliced_survey_response(
+        &self,
+    ) -> Option<LazySignedTimeSlicedSurveyResponseMessage> {
+        if self.discriminant_i32() == 22 {
+            Some(<LazySignedTimeSlicedSurveyResponseMessage as LazyXdr>::from_xdr_at(&self.0, 4))
+        } else {
+            None
+        }
+    }
+    /// Access arm `TimeSlicedSurveyStartCollecting`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_time_sliced_survey_start_collecting(
+        &self,
+    ) -> Option<LazySignedTimeSlicedSurveyStartCollectingMessage> {
+        if self.discriminant_i32() == 23 {
+            Some(
+                <LazySignedTimeSlicedSurveyStartCollectingMessage as LazyXdr>::from_xdr_at(
+                    &self.0, 4,
+                ),
+            )
+        } else {
+            None
+        }
+    }
+    /// Access arm `TimeSlicedSurveyStopCollecting`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_time_sliced_survey_stop_collecting(
+        &self,
+    ) -> Option<LazySignedTimeSlicedSurveyStopCollectingMessage> {
+        if self.discriminant_i32() == 24 {
+            Some(
+                <LazySignedTimeSlicedSurveyStopCollectingMessage as LazyXdr>::from_xdr_at(
+                    &self.0, 4,
+                ),
+            )
+        } else {
+            None
+        }
+    }
+    /// Access arm `GetScpQuorumset`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_get_scp_quorumset(&self) -> Option<LazyUint256> {
+        if self.discriminant_i32() == 9 {
+            Some(<LazyUint256 as LazyXdr>::from_xdr_at(&self.0, 4))
+        } else {
+            None
+        }
+    }
+    /// Access arm `ScpQuorumset`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_scp_quorumset(&self) -> Option<LazyScpQuorumSet> {
+        if self.discriminant_i32() == 10 {
+            Some(<LazyScpQuorumSet as LazyXdr>::from_xdr_at(&self.0, 4))
+        } else {
+            None
+        }
+    }
+    /// Access arm `ScpMessage`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_scp_message(&self) -> Option<LazyScpEnvelope> {
+        if self.discriminant_i32() == 11 {
+            Some(<LazyScpEnvelope as LazyXdr>::from_xdr_at(&self.0, 4))
+        } else {
+            None
+        }
+    }
+    /// Access arm `GetScpState`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_get_scp_state(&self) -> Option<u32> {
+        if self.discriminant_i32() == 12 {
+            Some(<u32 as LazyXdr>::from_xdr_at(&self.0, 4))
+        } else {
+            None
+        }
+    }
+    /// Access arm `SendMore`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_send_more(&self) -> Option<LazySendMore> {
+        if self.discriminant_i32() == 16 {
+            Some(<LazySendMore as LazyXdr>::from_xdr_at(&self.0, 4))
+        } else {
+            None
+        }
+    }
+    /// Access arm `SendMoreExtended`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_send_more_extended(&self) -> Option<LazySendMoreExtended> {
+        if self.discriminant_i32() == 20 {
+            Some(<LazySendMoreExtended as LazyXdr>::from_xdr_at(&self.0, 4))
+        } else {
+            None
+        }
+    }
+    /// Access arm `FloodAdvert`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_flood_advert(&self) -> Option<LazyFloodAdvert> {
+        if self.discriminant_i32() == 18 {
+            Some(<LazyFloodAdvert as LazyXdr>::from_xdr_at(&self.0, 4))
+        } else {
+            None
+        }
+    }
+    /// Access arm `FloodDemand`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_flood_demand(&self) -> Option<LazyFloodDemand> {
+        if self.discriminant_i32() == 19 {
+            Some(<LazyFloodDemand as LazyXdr>::from_xdr_at(&self.0, 4))
+        } else {
+            None
+        }
+    }
+}
+#[cfg(all(feature = "alloc", feature = "std"))]
+impl TryFrom<&StellarMessage> for LazyStellarMessage {
+    type Error = Error;
+    fn try_from(val: &StellarMessage) -> Result<Self, Error> {
+        let mut buf = Vec::new();
+        val.write_xdr(&mut Limited::new(&mut buf, Limits::none()))?;
+        let arc: Arc<[u8]> = buf.into();
+        Self::try_from(arc)
+    }
+}
+#[cfg(all(feature = "alloc", feature = "std"))]
+impl TryFrom<&LazyStellarMessage> for StellarMessage {
+    type Error = Error;
+    fn try_from(lazy: &LazyStellarMessage) -> Result<Self, Error> {
+        let buf = lazy.as_ref().as_slice();
+        Self::read_xdr(&mut Limited::new(&mut &buf[..], Limits::none()))
     }
 }

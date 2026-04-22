@@ -1,5 +1,10 @@
 #[allow(unused_imports, clippy::wildcard_imports)]
 use super::*;
+#[cfg(feature = "alloc")]
+extern crate alloc;
+#[cfg(feature = "alloc")]
+#[allow(unused_imports)]
+use alloc::sync::Arc;
 
 /// SorobanAuthorizedFunctionType is an XDR Enum defined as:
 ///
@@ -136,5 +141,33 @@ impl WriteXdr for SorobanAuthorizedFunctionType {
             let i: i32 = (*self).into();
             i.write_xdr(w)
         })
+    }
+}
+
+#[cfg(feature = "alloc")]
+// Enum SorobanAuthorizedFunctionType: scalar lazy type — impl LazyXdr directly on the enum.
+impl LazyXdr for SorobanAuthorizedFunctionType {
+    const FIXED_XDR_SIZE: Option<u32> = Some(4);
+
+    fn xdr_validate(buf: &[u8], _depth: u32) -> Result<u32, Error> {
+        if buf.len() < 4 {
+            return Err(Error::Invalid);
+        }
+        let v = i32::from_be_bytes([buf[0], buf[1], buf[2], buf[3]]);
+        let _ = SorobanAuthorizedFunctionType::try_from(v)?;
+        Ok(4)
+    }
+
+    #[inline]
+    fn xdr_len(_buf: &[u8]) -> u32 {
+        4
+    }
+
+    #[inline]
+    fn from_xdr_at(parent: &LazyHandle, offset: u32) -> Self {
+        let b = &parent.as_slice()[offset as usize..];
+        let v = i32::from_be_bytes([b[0], b[1], b[2], b[3]]);
+        // SAFETY: data was validated; unwrap is infallible.
+        SorobanAuthorizedFunctionType::try_from(v).unwrap()
     }
 }

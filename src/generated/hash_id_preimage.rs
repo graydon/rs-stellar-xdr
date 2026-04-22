@@ -1,5 +1,10 @@
 #[allow(unused_imports, clippy::wildcard_imports)]
 use super::*;
+#[cfg(feature = "alloc")]
+extern crate alloc;
+#[cfg(feature = "alloc")]
+#[allow(unused_imports)]
+use alloc::sync::Arc;
 
 /// HashIdPreimage is an XDR Union defined as:
 ///
@@ -216,5 +221,244 @@ impl WriteXdr for HashIdPreimage {
             };
             Ok(())
         })
+    }
+}
+
+#[cfg(feature = "alloc")]
+/// Lazy wrapper for [`HashIdPreimage`].
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+pub struct LazyHashIdPreimage(LazyHandle);
+#[cfg(feature = "alloc")]
+impl PartialOrd for LazyHashIdPreimage {
+    fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+#[cfg(feature = "alloc")]
+impl Ord for LazyHashIdPreimage {
+    fn cmp(&self, other: &Self) -> core::cmp::Ordering {
+        let ord = self.discriminant().cmp(&other.discriminant());
+        if ord != core::cmp::Ordering::Equal {
+            return ord;
+        }
+        #[allow(clippy::match_same_arms)]
+        match self.discriminant_i32() {
+            6 => self.as_op_id().cmp(&other.as_op_id()),
+            7 => self
+                .as_pool_revoke_op_id()
+                .cmp(&other.as_pool_revoke_op_id()),
+            8 => self.as_contract_id().cmp(&other.as_contract_id()),
+            9 => self
+                .as_soroban_authorization()
+                .cmp(&other.as_soroban_authorization()),
+            #[cfg(feature = "cap_0071")]
+            10 => self
+                .as_soroban_authorization_with_address()
+                .cmp(&other.as_soroban_authorization_with_address()),
+            _ => core::cmp::Ordering::Equal,
+        }
+    }
+}
+#[cfg(feature = "alloc")]
+impl LazyXdr for LazyHashIdPreimage {
+    fn xdr_validate(buf: &[u8], depth: u32) -> Result<u32, Error> {
+        #[allow(unused_variables)]
+        let depth = depth.checked_sub(1).ok_or(Error::DepthLimitExceeded)?;
+        if buf.len() < 4 {
+            return Err(Error::Invalid);
+        }
+        let disc = i32::from_be_bytes([buf[0], buf[1], buf[2], buf[3]]);
+        #[allow(unused_mut)]
+        let mut pos: u32 = 4;
+        #[allow(clippy::match_same_arms)]
+        match disc {
+            6 => {
+                let field_len = <LazyHashIdPreimageOperationId as LazyXdr>::xdr_validate(
+                    &buf[pos as usize..],
+                    depth,
+                )?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            7 => {
+                let field_len = <LazyHashIdPreimageRevokeId as LazyXdr>::xdr_validate(
+                    &buf[pos as usize..],
+                    depth,
+                )?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            8 => {
+                let field_len = <LazyHashIdPreimageContractId as LazyXdr>::xdr_validate(
+                    &buf[pos as usize..],
+                    depth,
+                )?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            9 => {
+                let field_len = <LazyHashIdPreimageSorobanAuthorization as LazyXdr>::xdr_validate(
+                    &buf[pos as usize..],
+                    depth,
+                )?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            #[cfg(feature = "cap_0071")]
+            10 => {
+                let field_len =
+                    <LazyHashIdPreimageSorobanAuthorizationWithAddress as LazyXdr>::xdr_validate(
+                        &buf[pos as usize..],
+                        depth,
+                    )?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            _ => return Err(Error::Invalid),
+        }
+        Ok(pos)
+    }
+
+    fn xdr_len(buf: &[u8]) -> u32 {
+        let disc = i32::from_be_bytes([buf[0], buf[1], buf[2], buf[3]]);
+        #[allow(unused_mut)]
+        let mut pos: u32 = 4;
+        #[allow(clippy::match_same_arms)]
+        match disc {
+            6 => {
+                pos += <LazyHashIdPreimageOperationId as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            7 => {
+                pos += <LazyHashIdPreimageRevokeId as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            8 => {
+                pos += <LazyHashIdPreimageContractId as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            9 => {
+                pos += <LazyHashIdPreimageSorobanAuthorization as LazyXdr>::xdr_len(
+                    &buf[pos as usize..],
+                );
+            }
+            #[cfg(feature = "cap_0071")]
+            10 => {
+                pos += <LazyHashIdPreimageSorobanAuthorizationWithAddress as LazyXdr>::xdr_len(
+                    &buf[pos as usize..],
+                );
+            }
+            _ => {}
+        }
+        pos
+    }
+
+    fn from_xdr_at(parent: &LazyHandle, offset: u32) -> Self {
+        let buf = &parent.as_slice()[offset as usize..];
+        let len = Self::xdr_len(buf);
+        Self(parent.sub_handle(offset, len))
+    }
+}
+#[cfg(feature = "alloc")]
+impl From<LazyHandle> for LazyHashIdPreimage {
+    fn from(h: LazyHandle) -> Self {
+        Self(h)
+    }
+}
+#[cfg(feature = "alloc")]
+impl AsRef<LazyHandle> for LazyHashIdPreimage {
+    fn as_ref(&self) -> &LazyHandle {
+        &self.0
+    }
+}
+#[cfg(feature = "alloc")]
+impl TryFrom<Arc<[u8]>> for LazyHashIdPreimage {
+    type Error = Error;
+    fn try_from(buf: Arc<[u8]>) -> Result<Self, Error> {
+        let len = Self::xdr_validate(&buf, DEFAULT_XDR_DEPTH_LIMIT)?;
+        Ok(Self(LazyHandle::from_arc(buf, 0, len)))
+    }
+}
+#[cfg(feature = "alloc")]
+impl LazyHashIdPreimage {
+    /// Get the discriminant value as i32.
+    #[must_use]
+    pub fn discriminant_i32(&self) -> i32 {
+        i32::from_xdr_at(&self.0, 0)
+    }
+
+    /// Get the discriminant.
+    #[must_use]
+    pub fn discriminant(&self) -> EnvelopeType {
+        // Validated — unwrap is safe.
+        EnvelopeType::try_from(self.discriminant_i32()).unwrap()
+    }
+    /// Access arm `OpId`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_op_id(&self) -> Option<LazyHashIdPreimageOperationId> {
+        if self.discriminant_i32() == 6 {
+            Some(<LazyHashIdPreimageOperationId as LazyXdr>::from_xdr_at(
+                &self.0, 4,
+            ))
+        } else {
+            None
+        }
+    }
+    /// Access arm `PoolRevokeOpId`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_pool_revoke_op_id(&self) -> Option<LazyHashIdPreimageRevokeId> {
+        if self.discriminant_i32() == 7 {
+            Some(<LazyHashIdPreimageRevokeId as LazyXdr>::from_xdr_at(
+                &self.0, 4,
+            ))
+        } else {
+            None
+        }
+    }
+    /// Access arm `ContractId`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_contract_id(&self) -> Option<LazyHashIdPreimageContractId> {
+        if self.discriminant_i32() == 8 {
+            Some(<LazyHashIdPreimageContractId as LazyXdr>::from_xdr_at(
+                &self.0, 4,
+            ))
+        } else {
+            None
+        }
+    }
+    /// Access arm `SorobanAuthorization`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_soroban_authorization(&self) -> Option<LazyHashIdPreimageSorobanAuthorization> {
+        if self.discriminant_i32() == 9 {
+            Some(<LazyHashIdPreimageSorobanAuthorization as LazyXdr>::from_xdr_at(&self.0, 4))
+        } else {
+            None
+        }
+    }
+    #[cfg(feature = "cap_0071")]
+    /// Access arm `SorobanAuthorizationWithAddress`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_soroban_authorization_with_address(
+        &self,
+    ) -> Option<LazyHashIdPreimageSorobanAuthorizationWithAddress> {
+        if self.discriminant_i32() == 10 {
+            Some(
+                <LazyHashIdPreimageSorobanAuthorizationWithAddress as LazyXdr>::from_xdr_at(
+                    &self.0, 4,
+                ),
+            )
+        } else {
+            None
+        }
+    }
+}
+#[cfg(all(feature = "alloc", feature = "std"))]
+impl TryFrom<&HashIdPreimage> for LazyHashIdPreimage {
+    type Error = Error;
+    fn try_from(val: &HashIdPreimage) -> Result<Self, Error> {
+        let mut buf = Vec::new();
+        val.write_xdr(&mut Limited::new(&mut buf, Limits::none()))?;
+        let arc: Arc<[u8]> = buf.into();
+        Self::try_from(arc)
+    }
+}
+#[cfg(all(feature = "alloc", feature = "std"))]
+impl TryFrom<&LazyHashIdPreimage> for HashIdPreimage {
+    type Error = Error;
+    fn try_from(lazy: &LazyHashIdPreimage) -> Result<Self, Error> {
+        let buf = lazy.as_ref().as_slice();
+        Self::read_xdr(&mut Limited::new(&mut &buf[..], Limits::none()))
     }
 }

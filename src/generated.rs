@@ -25667,3 +25667,9 @@ impl WriteXdr for Type {
         }
     }
 }
+
+#[cfg(feature = "alloc")]
+mod lazy_base;
+#[cfg(feature = "alloc")]
+#[allow(unused_imports)]
+pub use lazy_base::*;

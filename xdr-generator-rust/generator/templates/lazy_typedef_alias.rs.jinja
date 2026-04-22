@@ -1,0 +1,5 @@
+{%- if let Some(cfg_attr) = t.cfg %}
+    #[cfg({{ cfg_attr }})]
+{%- endif %}
+    /// Lazy alias — scalars need no wrapper.
+    pub type {{ t.name }} = {{ t.lazy_type }};

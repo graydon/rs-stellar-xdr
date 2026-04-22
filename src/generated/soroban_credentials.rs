@@ -1,5 +1,10 @@
 #[allow(unused_imports, clippy::wildcard_imports)]
 use super::*;
+#[cfg(feature = "alloc")]
+extern crate alloc;
+#[cfg(feature = "alloc")]
+#[allow(unused_imports)]
+use alloc::sync::Arc;
 
 /// SorobanCredentials is an XDR Union defined as:
 ///
@@ -161,5 +166,174 @@ impl WriteXdr for SorobanCredentials {
             };
             Ok(())
         })
+    }
+}
+
+#[cfg(feature = "alloc")]
+/// Lazy wrapper for [`SorobanCredentials`].
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+pub struct LazySorobanCredentials(LazyHandle);
+#[cfg(feature = "alloc")]
+impl PartialOrd for LazySorobanCredentials {
+    fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+#[cfg(feature = "alloc")]
+impl Ord for LazySorobanCredentials {
+    fn cmp(&self, other: &Self) -> core::cmp::Ordering {
+        let ord = self.discriminant().cmp(&other.discriminant());
+        if ord != core::cmp::Ordering::Equal {
+            return ord;
+        }
+        #[allow(clippy::match_same_arms)]
+        match self.discriminant_i32() {
+            1 => self.as_address().cmp(&other.as_address()),
+            #[cfg(feature = "cap_0071")]
+            2 => self
+                .as_address_with_delegates()
+                .cmp(&other.as_address_with_delegates()),
+            _ => core::cmp::Ordering::Equal,
+        }
+    }
+}
+#[cfg(feature = "alloc")]
+impl LazyXdr for LazySorobanCredentials {
+    fn xdr_validate(buf: &[u8], depth: u32) -> Result<u32, Error> {
+        #[allow(unused_variables)]
+        let depth = depth.checked_sub(1).ok_or(Error::DepthLimitExceeded)?;
+        if buf.len() < 4 {
+            return Err(Error::Invalid);
+        }
+        let disc = i32::from_be_bytes([buf[0], buf[1], buf[2], buf[3]]);
+        #[allow(unused_mut)]
+        let mut pos: u32 = 4;
+        #[allow(clippy::match_same_arms)]
+        match disc {
+            0 => {
+                // void — no additional data
+            }
+            1 => {
+                let field_len = <LazySorobanAddressCredentials as LazyXdr>::xdr_validate(
+                    &buf[pos as usize..],
+                    depth,
+                )?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            #[cfg(feature = "cap_0071")]
+            2 => {
+                let field_len =
+                    <LazySorobanAddressCredentialsWithDelegates as LazyXdr>::xdr_validate(
+                        &buf[pos as usize..],
+                        depth,
+                    )?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            _ => return Err(Error::Invalid),
+        }
+        Ok(pos)
+    }
+
+    fn xdr_len(buf: &[u8]) -> u32 {
+        let disc = i32::from_be_bytes([buf[0], buf[1], buf[2], buf[3]]);
+        #[allow(unused_mut)]
+        let mut pos: u32 = 4;
+        #[allow(clippy::match_same_arms)]
+        match disc {
+            0 => {
+                // void
+            }
+            1 => {
+                pos += <LazySorobanAddressCredentials as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            #[cfg(feature = "cap_0071")]
+            2 => {
+                pos += <LazySorobanAddressCredentialsWithDelegates as LazyXdr>::xdr_len(
+                    &buf[pos as usize..],
+                );
+            }
+            _ => {}
+        }
+        pos
+    }
+
+    fn from_xdr_at(parent: &LazyHandle, offset: u32) -> Self {
+        let buf = &parent.as_slice()[offset as usize..];
+        let len = Self::xdr_len(buf);
+        Self(parent.sub_handle(offset, len))
+    }
+}
+#[cfg(feature = "alloc")]
+impl From<LazyHandle> for LazySorobanCredentials {
+    fn from(h: LazyHandle) -> Self {
+        Self(h)
+    }
+}
+#[cfg(feature = "alloc")]
+impl AsRef<LazyHandle> for LazySorobanCredentials {
+    fn as_ref(&self) -> &LazyHandle {
+        &self.0
+    }
+}
+#[cfg(feature = "alloc")]
+impl TryFrom<Arc<[u8]>> for LazySorobanCredentials {
+    type Error = Error;
+    fn try_from(buf: Arc<[u8]>) -> Result<Self, Error> {
+        let len = Self::xdr_validate(&buf, DEFAULT_XDR_DEPTH_LIMIT)?;
+        Ok(Self(LazyHandle::from_arc(buf, 0, len)))
+    }
+}
+#[cfg(feature = "alloc")]
+impl LazySorobanCredentials {
+    /// Get the discriminant value as i32.
+    #[must_use]
+    pub fn discriminant_i32(&self) -> i32 {
+        i32::from_xdr_at(&self.0, 0)
+    }
+
+    /// Get the discriminant.
+    #[must_use]
+    pub fn discriminant(&self) -> SorobanCredentialsType {
+        // Validated — unwrap is safe.
+        SorobanCredentialsType::try_from(self.discriminant_i32()).unwrap()
+    }
+    /// Access arm `Address`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_address(&self) -> Option<LazySorobanAddressCredentials> {
+        if self.discriminant_i32() == 1 {
+            Some(<LazySorobanAddressCredentials as LazyXdr>::from_xdr_at(
+                &self.0, 4,
+            ))
+        } else {
+            None
+        }
+    }
+    #[cfg(feature = "cap_0071")]
+    /// Access arm `AddressWithDelegates`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_address_with_delegates(&self) -> Option<LazySorobanAddressCredentialsWithDelegates> {
+        if self.discriminant_i32() == 2 {
+            Some(<LazySorobanAddressCredentialsWithDelegates as LazyXdr>::from_xdr_at(&self.0, 4))
+        } else {
+            None
+        }
+    }
+}
+#[cfg(all(feature = "alloc", feature = "std"))]
+impl TryFrom<&SorobanCredentials> for LazySorobanCredentials {
+    type Error = Error;
+    fn try_from(val: &SorobanCredentials) -> Result<Self, Error> {
+        let mut buf = Vec::new();
+        val.write_xdr(&mut Limited::new(&mut buf, Limits::none()))?;
+        let arc: Arc<[u8]> = buf.into();
+        Self::try_from(arc)
+    }
+}
+#[cfg(all(feature = "alloc", feature = "std"))]
+impl TryFrom<&LazySorobanCredentials> for SorobanCredentials {
+    type Error = Error;
+    fn try_from(lazy: &LazySorobanCredentials) -> Result<Self, Error> {
+        let buf = lazy.as_ref().as_slice();
+        Self::read_xdr(&mut Limited::new(&mut &buf[..], Limits::none()))
     }
 }

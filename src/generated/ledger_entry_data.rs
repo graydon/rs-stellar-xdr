@@ -1,5 +1,10 @@
 #[allow(unused_imports, clippy::wildcard_imports)]
 use super::*;
+#[cfg(feature = "alloc")]
+extern crate alloc;
+#[cfg(feature = "alloc")]
+#[allow(unused_imports)]
+use alloc::sync::Arc;
 
 /// LedgerEntryData is an XDR NestedUnion defined as:
 ///
@@ -221,5 +226,303 @@ impl WriteXdr for LedgerEntryData {
             };
             Ok(())
         })
+    }
+}
+
+#[cfg(feature = "alloc")]
+/// Lazy wrapper for [`LedgerEntryData`].
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+pub struct LazyLedgerEntryData(LazyHandle);
+#[cfg(feature = "alloc")]
+impl PartialOrd for LazyLedgerEntryData {
+    fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+#[cfg(feature = "alloc")]
+impl Ord for LazyLedgerEntryData {
+    fn cmp(&self, other: &Self) -> core::cmp::Ordering {
+        let ord = self.discriminant().cmp(&other.discriminant());
+        if ord != core::cmp::Ordering::Equal {
+            return ord;
+        }
+        #[allow(clippy::match_same_arms)]
+        match self.discriminant_i32() {
+            0 => self.as_account().cmp(&other.as_account()),
+            1 => self.as_trustline().cmp(&other.as_trustline()),
+            2 => self.as_offer().cmp(&other.as_offer()),
+            3 => self.as_data().cmp(&other.as_data()),
+            4 => self
+                .as_claimable_balance()
+                .cmp(&other.as_claimable_balance()),
+            5 => self.as_liquidity_pool().cmp(&other.as_liquidity_pool()),
+            6 => self.as_contract_data().cmp(&other.as_contract_data()),
+            7 => self.as_contract_code().cmp(&other.as_contract_code()),
+            8 => self.as_config_setting().cmp(&other.as_config_setting()),
+            9 => self.as_ttl().cmp(&other.as_ttl()),
+            _ => core::cmp::Ordering::Equal,
+        }
+    }
+}
+#[cfg(feature = "alloc")]
+impl LazyXdr for LazyLedgerEntryData {
+    fn xdr_validate(buf: &[u8], depth: u32) -> Result<u32, Error> {
+        #[allow(unused_variables)]
+        let depth = depth.checked_sub(1).ok_or(Error::DepthLimitExceeded)?;
+        if buf.len() < 4 {
+            return Err(Error::Invalid);
+        }
+        let disc = i32::from_be_bytes([buf[0], buf[1], buf[2], buf[3]]);
+        #[allow(unused_mut)]
+        let mut pos: u32 = 4;
+        #[allow(clippy::match_same_arms)]
+        match disc {
+            0 => {
+                let field_len =
+                    <LazyAccountEntry as LazyXdr>::xdr_validate(&buf[pos as usize..], depth)?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            1 => {
+                let field_len =
+                    <LazyTrustLineEntry as LazyXdr>::xdr_validate(&buf[pos as usize..], depth)?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            2 => {
+                let field_len =
+                    <LazyOfferEntry as LazyXdr>::xdr_validate(&buf[pos as usize..], depth)?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            3 => {
+                let field_len =
+                    <LazyDataEntry as LazyXdr>::xdr_validate(&buf[pos as usize..], depth)?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            4 => {
+                let field_len = <LazyClaimableBalanceEntry as LazyXdr>::xdr_validate(
+                    &buf[pos as usize..],
+                    depth,
+                )?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            5 => {
+                let field_len =
+                    <LazyLiquidityPoolEntry as LazyXdr>::xdr_validate(&buf[pos as usize..], depth)?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            6 => {
+                let field_len =
+                    <LazyContractDataEntry as LazyXdr>::xdr_validate(&buf[pos as usize..], depth)?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            7 => {
+                let field_len =
+                    <LazyContractCodeEntry as LazyXdr>::xdr_validate(&buf[pos as usize..], depth)?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            8 => {
+                let field_len =
+                    <LazyConfigSettingEntry as LazyXdr>::xdr_validate(&buf[pos as usize..], depth)?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            9 => {
+                let field_len =
+                    <LazyTtlEntry as LazyXdr>::xdr_validate(&buf[pos as usize..], depth)?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            _ => return Err(Error::Invalid),
+        }
+        Ok(pos)
+    }
+
+    fn xdr_len(buf: &[u8]) -> u32 {
+        let disc = i32::from_be_bytes([buf[0], buf[1], buf[2], buf[3]]);
+        #[allow(unused_mut)]
+        let mut pos: u32 = 4;
+        #[allow(clippy::match_same_arms)]
+        match disc {
+            0 => {
+                pos += <LazyAccountEntry as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            1 => {
+                pos += <LazyTrustLineEntry as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            2 => {
+                pos += <LazyOfferEntry as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            3 => {
+                pos += <LazyDataEntry as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            4 => {
+                pos += <LazyClaimableBalanceEntry as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            5 => {
+                pos += <LazyLiquidityPoolEntry as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            6 => {
+                pos += <LazyContractDataEntry as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            7 => {
+                pos += <LazyContractCodeEntry as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            8 => {
+                pos += <LazyConfigSettingEntry as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            9 => {
+                pos += <LazyTtlEntry as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            _ => {}
+        }
+        pos
+    }
+
+    fn from_xdr_at(parent: &LazyHandle, offset: u32) -> Self {
+        let buf = &parent.as_slice()[offset as usize..];
+        let len = Self::xdr_len(buf);
+        Self(parent.sub_handle(offset, len))
+    }
+}
+#[cfg(feature = "alloc")]
+impl From<LazyHandle> for LazyLedgerEntryData {
+    fn from(h: LazyHandle) -> Self {
+        Self(h)
+    }
+}
+#[cfg(feature = "alloc")]
+impl AsRef<LazyHandle> for LazyLedgerEntryData {
+    fn as_ref(&self) -> &LazyHandle {
+        &self.0
+    }
+}
+#[cfg(feature = "alloc")]
+impl TryFrom<Arc<[u8]>> for LazyLedgerEntryData {
+    type Error = Error;
+    fn try_from(buf: Arc<[u8]>) -> Result<Self, Error> {
+        let len = Self::xdr_validate(&buf, DEFAULT_XDR_DEPTH_LIMIT)?;
+        Ok(Self(LazyHandle::from_arc(buf, 0, len)))
+    }
+}
+#[cfg(feature = "alloc")]
+impl LazyLedgerEntryData {
+    /// Get the discriminant value as i32.
+    #[must_use]
+    pub fn discriminant_i32(&self) -> i32 {
+        i32::from_xdr_at(&self.0, 0)
+    }
+
+    /// Get the discriminant.
+    #[must_use]
+    pub fn discriminant(&self) -> LedgerEntryType {
+        // Validated — unwrap is safe.
+        LedgerEntryType::try_from(self.discriminant_i32()).unwrap()
+    }
+    /// Access arm `Account`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_account(&self) -> Option<LazyAccountEntry> {
+        if self.discriminant_i32() == 0 {
+            Some(<LazyAccountEntry as LazyXdr>::from_xdr_at(&self.0, 4))
+        } else {
+            None
+        }
+    }
+    /// Access arm `Trustline`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_trustline(&self) -> Option<LazyTrustLineEntry> {
+        if self.discriminant_i32() == 1 {
+            Some(<LazyTrustLineEntry as LazyXdr>::from_xdr_at(&self.0, 4))
+        } else {
+            None
+        }
+    }
+    /// Access arm `Offer`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_offer(&self) -> Option<LazyOfferEntry> {
+        if self.discriminant_i32() == 2 {
+            Some(<LazyOfferEntry as LazyXdr>::from_xdr_at(&self.0, 4))
+        } else {
+            None
+        }
+    }
+    /// Access arm `Data`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_data(&self) -> Option<LazyDataEntry> {
+        if self.discriminant_i32() == 3 {
+            Some(<LazyDataEntry as LazyXdr>::from_xdr_at(&self.0, 4))
+        } else {
+            None
+        }
+    }
+    /// Access arm `ClaimableBalance`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_claimable_balance(&self) -> Option<LazyClaimableBalanceEntry> {
+        if self.discriminant_i32() == 4 {
+            Some(<LazyClaimableBalanceEntry as LazyXdr>::from_xdr_at(
+                &self.0, 4,
+            ))
+        } else {
+            None
+        }
+    }
+    /// Access arm `LiquidityPool`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_liquidity_pool(&self) -> Option<LazyLiquidityPoolEntry> {
+        if self.discriminant_i32() == 5 {
+            Some(<LazyLiquidityPoolEntry as LazyXdr>::from_xdr_at(&self.0, 4))
+        } else {
+            None
+        }
+    }
+    /// Access arm `ContractData`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_contract_data(&self) -> Option<LazyContractDataEntry> {
+        if self.discriminant_i32() == 6 {
+            Some(<LazyContractDataEntry as LazyXdr>::from_xdr_at(&self.0, 4))
+        } else {
+            None
+        }
+    }
+    /// Access arm `ContractCode`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_contract_code(&self) -> Option<LazyContractCodeEntry> {
+        if self.discriminant_i32() == 7 {
+            Some(<LazyContractCodeEntry as LazyXdr>::from_xdr_at(&self.0, 4))
+        } else {
+            None
+        }
+    }
+    /// Access arm `ConfigSetting`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_config_setting(&self) -> Option<LazyConfigSettingEntry> {
+        if self.discriminant_i32() == 8 {
+            Some(<LazyConfigSettingEntry as LazyXdr>::from_xdr_at(&self.0, 4))
+        } else {
+            None
+        }
+    }
+    /// Access arm `Ttl`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_ttl(&self) -> Option<LazyTtlEntry> {
+        if self.discriminant_i32() == 9 {
+            Some(<LazyTtlEntry as LazyXdr>::from_xdr_at(&self.0, 4))
+        } else {
+            None
+        }
+    }
+}
+#[cfg(all(feature = "alloc", feature = "std"))]
+impl TryFrom<&LedgerEntryData> for LazyLedgerEntryData {
+    type Error = Error;
+    fn try_from(val: &LedgerEntryData) -> Result<Self, Error> {
+        let mut buf = Vec::new();
+        val.write_xdr(&mut Limited::new(&mut buf, Limits::none()))?;
+        let arc: Arc<[u8]> = buf.into();
+        Self::try_from(arc)
+    }
+}
+#[cfg(all(feature = "alloc", feature = "std"))]
+impl TryFrom<&LazyLedgerEntryData> for LedgerEntryData {
+    type Error = Error;
+    fn try_from(lazy: &LazyLedgerEntryData) -> Result<Self, Error> {
+        let buf = lazy.as_ref().as_slice();
+        Self::read_xdr(&mut Limited::new(&mut &buf[..], Limits::none()))
     }
 }

@@ -1,5 +1,10 @@
 #[allow(unused_imports, clippy::wildcard_imports)]
 use super::*;
+#[cfg(feature = "alloc")]
+extern crate alloc;
+#[cfg(feature = "alloc")]
+#[allow(unused_imports)]
+use alloc::sync::Arc;
 
 /// SerializedBinaryFuseFilter is an XDR Struct defined as:
 ///
@@ -81,5 +86,157 @@ impl WriteXdr for SerializedBinaryFuseFilter {
             self.fingerprints.write_xdr(w)?;
             Ok(())
         })
+    }
+}
+
+#[cfg(feature = "alloc")]
+/// Lazy wrapper for [`SerializedBinaryFuseFilter`].
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+pub struct LazySerializedBinaryFuseFilter(LazyHandle);
+#[cfg(feature = "alloc")]
+impl PartialOrd for LazySerializedBinaryFuseFilter {
+    fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+#[cfg(feature = "alloc")]
+impl Ord for LazySerializedBinaryFuseFilter {
+    fn cmp(&self, other: &Self) -> core::cmp::Ordering {
+        core::cmp::Ordering::Equal
+            .then_with(|| self.type_().cmp(&other.type_()))
+            .then_with(|| self.input_hash_seed().cmp(&other.input_hash_seed()))
+            .then_with(|| self.filter_seed().cmp(&other.filter_seed()))
+            .then_with(|| self.segment_length().cmp(&other.segment_length()))
+            .then_with(|| {
+                self.segement_length_mask()
+                    .cmp(&other.segement_length_mask())
+            })
+            .then_with(|| self.segment_count().cmp(&other.segment_count()))
+            .then_with(|| {
+                self.segment_count_length()
+                    .cmp(&other.segment_count_length())
+            })
+            .then_with(|| self.fingerprint_length().cmp(&other.fingerprint_length()))
+            .then_with(|| self.fingerprints().cmp(&other.fingerprints()))
+    }
+}
+#[cfg(feature = "alloc")]
+impl LazyXdr for LazySerializedBinaryFuseFilter {
+    fn xdr_validate(buf: &[u8], depth: u32) -> Result<u32, Error> {
+        #[allow(unused_variables)]
+        let depth = depth.checked_sub(1).ok_or(Error::DepthLimitExceeded)?;
+        let mut pos: u32 = 0;
+        let next_pos = pos.checked_add(56).ok_or(Error::LengthExceedsMax)?;
+        if buf.len() < next_pos as usize {
+            return Err(Error::Invalid);
+        }
+        <BinaryFuseFilterType as LazyXdr>::xdr_validate(&buf[(pos + 0) as usize..], depth)?;
+        <LazyShortHashSeed as LazyXdr>::xdr_validate(&buf[(pos + 4) as usize..], depth)?;
+        <LazyShortHashSeed as LazyXdr>::xdr_validate(&buf[(pos + 20) as usize..], depth)?;
+        pos = next_pos;
+        {
+            let field_len = <LazyBytesM as LazyXdr>::xdr_validate(&buf[pos as usize..], depth)?;
+            pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+        }
+        Ok(pos)
+    }
+
+    fn xdr_len(buf: &[u8]) -> u32 {
+        let mut pos: u32 = 0;
+        pos += 56;
+        pos += <LazyBytesM as LazyXdr>::xdr_len(&buf[pos as usize..]);
+        pos
+    }
+
+    fn from_xdr_at(parent: &LazyHandle, offset: u32) -> Self {
+        let buf = &parent.as_slice()[offset as usize..];
+        let len = Self::xdr_len(buf);
+        Self(parent.sub_handle(offset, len))
+    }
+}
+#[cfg(feature = "alloc")]
+impl From<LazyHandle> for LazySerializedBinaryFuseFilter {
+    fn from(h: LazyHandle) -> Self {
+        Self(h)
+    }
+}
+#[cfg(feature = "alloc")]
+impl AsRef<LazyHandle> for LazySerializedBinaryFuseFilter {
+    fn as_ref(&self) -> &LazyHandle {
+        &self.0
+    }
+}
+#[cfg(feature = "alloc")]
+impl TryFrom<Arc<[u8]>> for LazySerializedBinaryFuseFilter {
+    type Error = Error;
+    fn try_from(buf: Arc<[u8]>) -> Result<Self, Error> {
+        let len = Self::xdr_validate(&buf, DEFAULT_XDR_DEPTH_LIMIT)?;
+        Ok(Self(LazyHandle::from_arc(buf, 0, len)))
+    }
+}
+#[cfg(feature = "alloc")]
+impl LazySerializedBinaryFuseFilter {
+    /// Access field `type_`.
+    #[must_use]
+    pub fn type_(&self) -> BinaryFuseFilterType {
+        <BinaryFuseFilterType as LazyXdr>::from_xdr_at(&self.0, 0)
+    }
+    /// Access field `input_hash_seed`.
+    #[must_use]
+    pub fn input_hash_seed(&self) -> LazyShortHashSeed {
+        <LazyShortHashSeed as LazyXdr>::from_xdr_at(&self.0, 4)
+    }
+    /// Access field `filter_seed`.
+    #[must_use]
+    pub fn filter_seed(&self) -> LazyShortHashSeed {
+        <LazyShortHashSeed as LazyXdr>::from_xdr_at(&self.0, 20)
+    }
+    /// Access field `segment_length`.
+    #[must_use]
+    pub fn segment_length(&self) -> u32 {
+        <u32 as LazyXdr>::from_xdr_at(&self.0, 36)
+    }
+    /// Access field `segement_length_mask`.
+    #[must_use]
+    pub fn segement_length_mask(&self) -> u32 {
+        <u32 as LazyXdr>::from_xdr_at(&self.0, 40)
+    }
+    /// Access field `segment_count`.
+    #[must_use]
+    pub fn segment_count(&self) -> u32 {
+        <u32 as LazyXdr>::from_xdr_at(&self.0, 44)
+    }
+    /// Access field `segment_count_length`.
+    #[must_use]
+    pub fn segment_count_length(&self) -> u32 {
+        <u32 as LazyXdr>::from_xdr_at(&self.0, 48)
+    }
+    /// Access field `fingerprint_length`.
+    #[must_use]
+    pub fn fingerprint_length(&self) -> u32 {
+        <u32 as LazyXdr>::from_xdr_at(&self.0, 52)
+    }
+    /// Access field `fingerprints`.
+    #[must_use]
+    pub fn fingerprints(&self) -> LazyBytesM {
+        <LazyBytesM as LazyXdr>::from_xdr_at(&self.0, 56)
+    }
+}
+#[cfg(all(feature = "alloc", feature = "std"))]
+impl TryFrom<&SerializedBinaryFuseFilter> for LazySerializedBinaryFuseFilter {
+    type Error = Error;
+    fn try_from(val: &SerializedBinaryFuseFilter) -> Result<Self, Error> {
+        let mut buf = Vec::new();
+        val.write_xdr(&mut Limited::new(&mut buf, Limits::none()))?;
+        let arc: Arc<[u8]> = buf.into();
+        Self::try_from(arc)
+    }
+}
+#[cfg(all(feature = "alloc", feature = "std"))]
+impl TryFrom<&LazySerializedBinaryFuseFilter> for SerializedBinaryFuseFilter {
+    type Error = Error;
+    fn try_from(lazy: &LazySerializedBinaryFuseFilter) -> Result<Self, Error> {
+        let buf = lazy.as_ref().as_slice();
+        Self::read_xdr(&mut Limited::new(&mut &buf[..], Limits::none()))
     }
 }

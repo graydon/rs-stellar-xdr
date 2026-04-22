@@ -1,0 +1,193 @@
+{%- if let Some(cfg_attr) = s.cfg %}
+#[cfg(all(feature = "alloc", {{ cfg_attr }}))]
+{%- else %}
+#[cfg(feature = "alloc")]
+{%- endif %}
+/// Lazy wrapper for [`{{ s.name }}`].
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+pub struct {{ s.lazy_name }}(LazyHandle);
+
+{%- if let Some(cfg_attr) = s.cfg %}
+#[cfg(all(feature = "alloc", {{ cfg_attr }}))]
+{%- else %}
+#[cfg(feature = "alloc")]
+{%- endif %}
+impl PartialOrd for {{ s.lazy_name }} {
+    fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+{%- if let Some(cfg_attr) = s.cfg %}
+#[cfg(all(feature = "alloc", {{ cfg_attr }}))]
+{%- else %}
+#[cfg(feature = "alloc")]
+{%- endif %}
+impl Ord for {{ s.lazy_name }} {
+    fn cmp(&self, other: &Self) -> core::cmp::Ordering {
+        core::cmp::Ordering::Equal
+{%- for m in s.members %}
+            .then_with(|| self.{{ m.name }}().cmp(&other.{{ m.name }}()))
+{%- endfor %}
+    }
+}
+
+{%- if let Some(cfg_attr) = s.cfg %}
+#[cfg(all(feature = "alloc", {{ cfg_attr }}))]
+{%- else %}
+#[cfg(feature = "alloc")]
+{%- endif %}
+impl LazyXdr for {{ s.lazy_name }} {
+{%- if let Some(fs) = s.lazy_fixed_size %}
+    const FIXED_XDR_SIZE: Option<u32> = Some({{ fs }});
+{%- endif %}
+
+    fn xdr_validate(buf: &[u8], depth: u32) -> Result<u32, Error> {
+        #[allow(unused_variables)]
+        let depth = depth.checked_sub(1).ok_or(Error::DepthLimitExceeded)?;
+        let mut pos: u32 = 0;
+{%- for step in s.lazy_validate_steps %}
+{%- match step %}
+{%- when LazyValidateStep::FixedGroup(g) %}
+{%- if g.total_fixed > 0 %}
+        let next_pos = pos.checked_add({{ g.total_fixed }}).ok_or(Error::LengthExceedsMax)?;
+        if buf.len() < next_pos as usize {
+            return Err(Error::Invalid);
+        }
+{%- for cv in g.content_validations %}
+        <{{ cv.lazy_type }} as LazyXdr>::xdr_validate(&buf[(pos + {{ cv.offset }}) as usize..], depth)?;
+{%- endfor %}
+        pos = next_pos;
+{%- endif %}
+{%- when LazyValidateStep::Variable(v) %}
+        {
+            let field_len = <{{ v.lazy_type }} as LazyXdr>::xdr_validate(&buf[pos as usize..], depth)?;
+            pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+        }
+{%- endmatch %}
+{%- endfor %}
+        Ok(pos)
+    }
+
+{%- if let Some(fs) = s.lazy_fixed_size %}
+
+    #[inline]
+    fn xdr_len(_buf: &[u8]) -> u32 {
+        {{ fs }}
+    }
+{%- else %}
+
+    fn xdr_len(buf: &[u8]) -> u32 {
+        let mut pos: u32 = 0;
+{%- for step in s.lazy_validate_steps %}
+{%- match step %}
+{%- when LazyValidateStep::FixedGroup(g) %}
+{%- if g.total_fixed > 0 %}
+        pos += {{ g.total_fixed }};
+{%- endif %}
+{%- when LazyValidateStep::Variable(v) %}
+        pos += <{{ v.lazy_type }} as LazyXdr>::xdr_len(&buf[pos as usize..]);
+{%- endmatch %}
+{%- endfor %}
+        pos
+    }
+{%- endif %}
+
+    fn from_xdr_at(parent: &LazyHandle, offset: u32) -> Self {
+        let buf = &parent.as_slice()[offset as usize..];
+        let len = Self::xdr_len(buf);
+        Self(parent.sub_handle(offset, len))
+    }
+}
+
+{%- if let Some(cfg_attr) = s.cfg %}
+#[cfg(all(feature = "alloc", {{ cfg_attr }}))]
+{%- else %}
+#[cfg(feature = "alloc")]
+{%- endif %}
+impl From<LazyHandle> for {{ s.lazy_name }} {
+    fn from(h: LazyHandle) -> Self {
+        Self(h)
+    }
+}
+
+{%- if let Some(cfg_attr) = s.cfg %}
+#[cfg(all(feature = "alloc", {{ cfg_attr }}))]
+{%- else %}
+#[cfg(feature = "alloc")]
+{%- endif %}
+impl AsRef<LazyHandle> for {{ s.lazy_name }} {
+    fn as_ref(&self) -> &LazyHandle {
+        &self.0
+    }
+}
+
+{%- if let Some(cfg_attr) = s.cfg %}
+#[cfg(all(feature = "alloc", {{ cfg_attr }}))]
+{%- else %}
+#[cfg(feature = "alloc")]
+{%- endif %}
+impl TryFrom<Arc<[u8]>> for {{ s.lazy_name }} {
+    type Error = Error;
+    fn try_from(buf: Arc<[u8]>) -> Result<Self, Error> {
+        let len = Self::xdr_validate(&buf, DEFAULT_XDR_DEPTH_LIMIT)?;
+        Ok(Self(LazyHandle::from_arc(buf, 0, len)))
+    }
+}
+
+{%- if let Some(cfg_attr) = s.cfg %}
+#[cfg(all(feature = "alloc", {{ cfg_attr }}))]
+{%- else %}
+#[cfg(feature = "alloc")]
+{%- endif %}
+impl {{ s.lazy_name }} {
+{%- for m in s.members %}
+    /// Access field `{{ m.name }}`.
+    #[must_use]
+{%- if m.lazy_accessor.var_skips.is_empty() %}
+    pub fn {{ m.name }}(&self) -> {{ m.lazy_type }} {
+        <{{ m.lazy_type }} as LazyXdr>::from_xdr_at(&self.0, {{ m.lazy_accessor.initial_fixed }})
+    }
+{%- else %}
+    pub fn {{ m.name }}(&self) -> {{ m.lazy_type }} {
+        let buf = self.0.as_slice();
+        let mut pos: u32 = {{ m.lazy_accessor.initial_fixed }};
+{%- for skip in m.lazy_accessor.var_skips %}
+        pos += <{{ skip.lazy_type }} as LazyXdr>::xdr_len(&buf[pos as usize..]);
+{%- if skip.post_fixed > 0 %}
+        pos += {{ skip.post_fixed }};
+{%- endif %}
+{%- endfor %}
+        <{{ m.lazy_type }} as LazyXdr>::from_xdr_at(&self.0, pos)
+    }
+{%- endif %}
+{%- endfor %}
+}
+
+{%- if let Some(cfg_attr) = s.cfg %}
+#[cfg(all(feature = "alloc", feature = "std", {{ cfg_attr }}))]
+{%- else %}
+#[cfg(all(feature = "alloc", feature = "std"))]
+{%- endif %}
+impl TryFrom<&{{ s.name }}> for {{ s.lazy_name }} {
+    type Error = Error;
+    fn try_from(val: &{{ s.name }}) -> Result<Self, Error> {
+        let mut buf = Vec::new();
+        val.write_xdr(&mut Limited::new(&mut buf, Limits::none()))?;
+        let arc: Arc<[u8]> = buf.into();
+        Self::try_from(arc)
+    }
+}
+
+{%- if let Some(cfg_attr) = s.cfg %}
+#[cfg(all(feature = "alloc", feature = "std", {{ cfg_attr }}))]
+{%- else %}
+#[cfg(all(feature = "alloc", feature = "std"))]
+{%- endif %}
+impl TryFrom<&{{ s.lazy_name }}> for {{ s.name }} {
+    type Error = Error;
+    fn try_from(lazy: &{{ s.lazy_name }}) -> Result<Self, Error> {
+        let buf = lazy.as_ref().as_slice();
+        Self::read_xdr(&mut Limited::new(&mut &buf[..], Limits::none()))
+    }
+}

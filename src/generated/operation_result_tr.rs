@@ -1,5 +1,10 @@
 #[allow(unused_imports, clippy::wildcard_imports)]
 use super::*;
+#[cfg(feature = "alloc")]
+extern crate alloc;
+#[cfg(feature = "alloc")]
+#[allow(unused_imports)]
+use alloc::sync::Arc;
 
 /// OperationResultTr is an XDR NestedUnion defined as:
 ///
@@ -402,5 +407,709 @@ impl WriteXdr for OperationResultTr {
             };
             Ok(())
         })
+    }
+}
+
+#[cfg(feature = "alloc")]
+/// Lazy wrapper for [`OperationResultTr`].
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+pub struct LazyOperationResultTr(LazyHandle);
+#[cfg(feature = "alloc")]
+impl PartialOrd for LazyOperationResultTr {
+    fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+#[cfg(feature = "alloc")]
+impl Ord for LazyOperationResultTr {
+    fn cmp(&self, other: &Self) -> core::cmp::Ordering {
+        let ord = self.discriminant().cmp(&other.discriminant());
+        if ord != core::cmp::Ordering::Equal {
+            return ord;
+        }
+        #[allow(clippy::match_same_arms)]
+        match self.discriminant_i32() {
+            0 => self.as_create_account().cmp(&other.as_create_account()),
+            1 => self.as_payment().cmp(&other.as_payment()),
+            2 => self
+                .as_path_payment_strict_receive()
+                .cmp(&other.as_path_payment_strict_receive()),
+            3 => self
+                .as_manage_sell_offer()
+                .cmp(&other.as_manage_sell_offer()),
+            4 => self
+                .as_create_passive_sell_offer()
+                .cmp(&other.as_create_passive_sell_offer()),
+            5 => self.as_set_options().cmp(&other.as_set_options()),
+            6 => self.as_change_trust().cmp(&other.as_change_trust()),
+            7 => self.as_allow_trust().cmp(&other.as_allow_trust()),
+            8 => self.as_account_merge().cmp(&other.as_account_merge()),
+            9 => self.as_inflation().cmp(&other.as_inflation()),
+            10 => self.as_manage_data().cmp(&other.as_manage_data()),
+            11 => self.as_bump_sequence().cmp(&other.as_bump_sequence()),
+            12 => self.as_manage_buy_offer().cmp(&other.as_manage_buy_offer()),
+            13 => self
+                .as_path_payment_strict_send()
+                .cmp(&other.as_path_payment_strict_send()),
+            14 => self
+                .as_create_claimable_balance()
+                .cmp(&other.as_create_claimable_balance()),
+            15 => self
+                .as_claim_claimable_balance()
+                .cmp(&other.as_claim_claimable_balance()),
+            16 => self
+                .as_begin_sponsoring_future_reserves()
+                .cmp(&other.as_begin_sponsoring_future_reserves()),
+            17 => self
+                .as_end_sponsoring_future_reserves()
+                .cmp(&other.as_end_sponsoring_future_reserves()),
+            18 => self
+                .as_revoke_sponsorship()
+                .cmp(&other.as_revoke_sponsorship()),
+            19 => self.as_clawback().cmp(&other.as_clawback()),
+            20 => self
+                .as_clawback_claimable_balance()
+                .cmp(&other.as_clawback_claimable_balance()),
+            21 => self
+                .as_set_trust_line_flags()
+                .cmp(&other.as_set_trust_line_flags()),
+            22 => self
+                .as_liquidity_pool_deposit()
+                .cmp(&other.as_liquidity_pool_deposit()),
+            23 => self
+                .as_liquidity_pool_withdraw()
+                .cmp(&other.as_liquidity_pool_withdraw()),
+            24 => self
+                .as_invoke_host_function()
+                .cmp(&other.as_invoke_host_function()),
+            25 => self
+                .as_extend_footprint_ttl()
+                .cmp(&other.as_extend_footprint_ttl()),
+            26 => self
+                .as_restore_footprint()
+                .cmp(&other.as_restore_footprint()),
+            _ => core::cmp::Ordering::Equal,
+        }
+    }
+}
+#[cfg(feature = "alloc")]
+impl LazyXdr for LazyOperationResultTr {
+    fn xdr_validate(buf: &[u8], depth: u32) -> Result<u32, Error> {
+        #[allow(unused_variables)]
+        let depth = depth.checked_sub(1).ok_or(Error::DepthLimitExceeded)?;
+        if buf.len() < 4 {
+            return Err(Error::Invalid);
+        }
+        let disc = i32::from_be_bytes([buf[0], buf[1], buf[2], buf[3]]);
+        #[allow(unused_mut)]
+        let mut pos: u32 = 4;
+        #[allow(clippy::match_same_arms)]
+        match disc {
+            0 => {
+                let field_len = <LazyCreateAccountResult as LazyXdr>::xdr_validate(
+                    &buf[pos as usize..],
+                    depth,
+                )?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            1 => {
+                let field_len =
+                    <LazyPaymentResult as LazyXdr>::xdr_validate(&buf[pos as usize..], depth)?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            2 => {
+                let field_len = <LazyPathPaymentStrictReceiveResult as LazyXdr>::xdr_validate(
+                    &buf[pos as usize..],
+                    depth,
+                )?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            3 => {
+                let field_len = <LazyManageSellOfferResult as LazyXdr>::xdr_validate(
+                    &buf[pos as usize..],
+                    depth,
+                )?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            4 => {
+                let field_len = <LazyManageSellOfferResult as LazyXdr>::xdr_validate(
+                    &buf[pos as usize..],
+                    depth,
+                )?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            5 => {
+                let field_len =
+                    <LazySetOptionsResult as LazyXdr>::xdr_validate(&buf[pos as usize..], depth)?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            6 => {
+                let field_len =
+                    <LazyChangeTrustResult as LazyXdr>::xdr_validate(&buf[pos as usize..], depth)?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            7 => {
+                let field_len =
+                    <LazyAllowTrustResult as LazyXdr>::xdr_validate(&buf[pos as usize..], depth)?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            8 => {
+                let field_len =
+                    <LazyAccountMergeResult as LazyXdr>::xdr_validate(&buf[pos as usize..], depth)?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            9 => {
+                let field_len =
+                    <LazyInflationResult as LazyXdr>::xdr_validate(&buf[pos as usize..], depth)?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            10 => {
+                let field_len =
+                    <LazyManageDataResult as LazyXdr>::xdr_validate(&buf[pos as usize..], depth)?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            11 => {
+                let field_len =
+                    <LazyBumpSequenceResult as LazyXdr>::xdr_validate(&buf[pos as usize..], depth)?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            12 => {
+                let field_len = <LazyManageBuyOfferResult as LazyXdr>::xdr_validate(
+                    &buf[pos as usize..],
+                    depth,
+                )?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            13 => {
+                let field_len = <LazyPathPaymentStrictSendResult as LazyXdr>::xdr_validate(
+                    &buf[pos as usize..],
+                    depth,
+                )?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            14 => {
+                let field_len = <LazyCreateClaimableBalanceResult as LazyXdr>::xdr_validate(
+                    &buf[pos as usize..],
+                    depth,
+                )?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            15 => {
+                let field_len = <LazyClaimClaimableBalanceResult as LazyXdr>::xdr_validate(
+                    &buf[pos as usize..],
+                    depth,
+                )?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            16 => {
+                let field_len = <LazyBeginSponsoringFutureReservesResult as LazyXdr>::xdr_validate(
+                    &buf[pos as usize..],
+                    depth,
+                )?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            17 => {
+                let field_len = <LazyEndSponsoringFutureReservesResult as LazyXdr>::xdr_validate(
+                    &buf[pos as usize..],
+                    depth,
+                )?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            18 => {
+                let field_len = <LazyRevokeSponsorshipResult as LazyXdr>::xdr_validate(
+                    &buf[pos as usize..],
+                    depth,
+                )?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            19 => {
+                let field_len =
+                    <LazyClawbackResult as LazyXdr>::xdr_validate(&buf[pos as usize..], depth)?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            20 => {
+                let field_len = <LazyClawbackClaimableBalanceResult as LazyXdr>::xdr_validate(
+                    &buf[pos as usize..],
+                    depth,
+                )?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            21 => {
+                let field_len = <LazySetTrustLineFlagsResult as LazyXdr>::xdr_validate(
+                    &buf[pos as usize..],
+                    depth,
+                )?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            22 => {
+                let field_len = <LazyLiquidityPoolDepositResult as LazyXdr>::xdr_validate(
+                    &buf[pos as usize..],
+                    depth,
+                )?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            23 => {
+                let field_len = <LazyLiquidityPoolWithdrawResult as LazyXdr>::xdr_validate(
+                    &buf[pos as usize..],
+                    depth,
+                )?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            24 => {
+                let field_len = <LazyInvokeHostFunctionResult as LazyXdr>::xdr_validate(
+                    &buf[pos as usize..],
+                    depth,
+                )?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            25 => {
+                let field_len = <LazyExtendFootprintTtlResult as LazyXdr>::xdr_validate(
+                    &buf[pos as usize..],
+                    depth,
+                )?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            26 => {
+                let field_len = <LazyRestoreFootprintResult as LazyXdr>::xdr_validate(
+                    &buf[pos as usize..],
+                    depth,
+                )?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            _ => return Err(Error::Invalid),
+        }
+        Ok(pos)
+    }
+
+    fn xdr_len(buf: &[u8]) -> u32 {
+        let disc = i32::from_be_bytes([buf[0], buf[1], buf[2], buf[3]]);
+        #[allow(unused_mut)]
+        let mut pos: u32 = 4;
+        #[allow(clippy::match_same_arms)]
+        match disc {
+            0 => {
+                pos += <LazyCreateAccountResult as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            1 => {
+                pos += <LazyPaymentResult as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            2 => {
+                pos +=
+                    <LazyPathPaymentStrictReceiveResult as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            3 => {
+                pos += <LazyManageSellOfferResult as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            4 => {
+                pos += <LazyManageSellOfferResult as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            5 => {
+                pos += <LazySetOptionsResult as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            6 => {
+                pos += <LazyChangeTrustResult as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            7 => {
+                pos += <LazyAllowTrustResult as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            8 => {
+                pos += <LazyAccountMergeResult as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            9 => {
+                pos += <LazyInflationResult as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            10 => {
+                pos += <LazyManageDataResult as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            11 => {
+                pos += <LazyBumpSequenceResult as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            12 => {
+                pos += <LazyManageBuyOfferResult as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            13 => {
+                pos += <LazyPathPaymentStrictSendResult as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            14 => {
+                pos += <LazyCreateClaimableBalanceResult as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            15 => {
+                pos += <LazyClaimClaimableBalanceResult as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            16 => {
+                pos += <LazyBeginSponsoringFutureReservesResult as LazyXdr>::xdr_len(
+                    &buf[pos as usize..],
+                );
+            }
+            17 => {
+                pos += <LazyEndSponsoringFutureReservesResult as LazyXdr>::xdr_len(
+                    &buf[pos as usize..],
+                );
+            }
+            18 => {
+                pos += <LazyRevokeSponsorshipResult as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            19 => {
+                pos += <LazyClawbackResult as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            20 => {
+                pos +=
+                    <LazyClawbackClaimableBalanceResult as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            21 => {
+                pos += <LazySetTrustLineFlagsResult as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            22 => {
+                pos += <LazyLiquidityPoolDepositResult as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            23 => {
+                pos += <LazyLiquidityPoolWithdrawResult as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            24 => {
+                pos += <LazyInvokeHostFunctionResult as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            25 => {
+                pos += <LazyExtendFootprintTtlResult as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            26 => {
+                pos += <LazyRestoreFootprintResult as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            _ => {}
+        }
+        pos
+    }
+
+    fn from_xdr_at(parent: &LazyHandle, offset: u32) -> Self {
+        let buf = &parent.as_slice()[offset as usize..];
+        let len = Self::xdr_len(buf);
+        Self(parent.sub_handle(offset, len))
+    }
+}
+#[cfg(feature = "alloc")]
+impl From<LazyHandle> for LazyOperationResultTr {
+    fn from(h: LazyHandle) -> Self {
+        Self(h)
+    }
+}
+#[cfg(feature = "alloc")]
+impl AsRef<LazyHandle> for LazyOperationResultTr {
+    fn as_ref(&self) -> &LazyHandle {
+        &self.0
+    }
+}
+#[cfg(feature = "alloc")]
+impl TryFrom<Arc<[u8]>> for LazyOperationResultTr {
+    type Error = Error;
+    fn try_from(buf: Arc<[u8]>) -> Result<Self, Error> {
+        let len = Self::xdr_validate(&buf, DEFAULT_XDR_DEPTH_LIMIT)?;
+        Ok(Self(LazyHandle::from_arc(buf, 0, len)))
+    }
+}
+#[cfg(feature = "alloc")]
+impl LazyOperationResultTr {
+    /// Get the discriminant value as i32.
+    #[must_use]
+    pub fn discriminant_i32(&self) -> i32 {
+        i32::from_xdr_at(&self.0, 0)
+    }
+
+    /// Get the discriminant.
+    #[must_use]
+    pub fn discriminant(&self) -> OperationType {
+        // Validated — unwrap is safe.
+        OperationType::try_from(self.discriminant_i32()).unwrap()
+    }
+    /// Access arm `CreateAccount`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_create_account(&self) -> Option<LazyCreateAccountResult> {
+        if self.discriminant_i32() == 0 {
+            Some(<LazyCreateAccountResult as LazyXdr>::from_xdr_at(
+                &self.0, 4,
+            ))
+        } else {
+            None
+        }
+    }
+    /// Access arm `Payment`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_payment(&self) -> Option<LazyPaymentResult> {
+        if self.discriminant_i32() == 1 {
+            Some(<LazyPaymentResult as LazyXdr>::from_xdr_at(&self.0, 4))
+        } else {
+            None
+        }
+    }
+    /// Access arm `PathPaymentStrictReceive`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_path_payment_strict_receive(&self) -> Option<LazyPathPaymentStrictReceiveResult> {
+        if self.discriminant_i32() == 2 {
+            Some(<LazyPathPaymentStrictReceiveResult as LazyXdr>::from_xdr_at(&self.0, 4))
+        } else {
+            None
+        }
+    }
+    /// Access arm `ManageSellOffer`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_manage_sell_offer(&self) -> Option<LazyManageSellOfferResult> {
+        if self.discriminant_i32() == 3 {
+            Some(<LazyManageSellOfferResult as LazyXdr>::from_xdr_at(
+                &self.0, 4,
+            ))
+        } else {
+            None
+        }
+    }
+    /// Access arm `CreatePassiveSellOffer`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_create_passive_sell_offer(&self) -> Option<LazyManageSellOfferResult> {
+        if self.discriminant_i32() == 4 {
+            Some(<LazyManageSellOfferResult as LazyXdr>::from_xdr_at(
+                &self.0, 4,
+            ))
+        } else {
+            None
+        }
+    }
+    /// Access arm `SetOptions`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_set_options(&self) -> Option<LazySetOptionsResult> {
+        if self.discriminant_i32() == 5 {
+            Some(<LazySetOptionsResult as LazyXdr>::from_xdr_at(&self.0, 4))
+        } else {
+            None
+        }
+    }
+    /// Access arm `ChangeTrust`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_change_trust(&self) -> Option<LazyChangeTrustResult> {
+        if self.discriminant_i32() == 6 {
+            Some(<LazyChangeTrustResult as LazyXdr>::from_xdr_at(&self.0, 4))
+        } else {
+            None
+        }
+    }
+    /// Access arm `AllowTrust`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_allow_trust(&self) -> Option<LazyAllowTrustResult> {
+        if self.discriminant_i32() == 7 {
+            Some(<LazyAllowTrustResult as LazyXdr>::from_xdr_at(&self.0, 4))
+        } else {
+            None
+        }
+    }
+    /// Access arm `AccountMerge`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_account_merge(&self) -> Option<LazyAccountMergeResult> {
+        if self.discriminant_i32() == 8 {
+            Some(<LazyAccountMergeResult as LazyXdr>::from_xdr_at(&self.0, 4))
+        } else {
+            None
+        }
+    }
+    /// Access arm `Inflation`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_inflation(&self) -> Option<LazyInflationResult> {
+        if self.discriminant_i32() == 9 {
+            Some(<LazyInflationResult as LazyXdr>::from_xdr_at(&self.0, 4))
+        } else {
+            None
+        }
+    }
+    /// Access arm `ManageData`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_manage_data(&self) -> Option<LazyManageDataResult> {
+        if self.discriminant_i32() == 10 {
+            Some(<LazyManageDataResult as LazyXdr>::from_xdr_at(&self.0, 4))
+        } else {
+            None
+        }
+    }
+    /// Access arm `BumpSequence`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_bump_sequence(&self) -> Option<LazyBumpSequenceResult> {
+        if self.discriminant_i32() == 11 {
+            Some(<LazyBumpSequenceResult as LazyXdr>::from_xdr_at(&self.0, 4))
+        } else {
+            None
+        }
+    }
+    /// Access arm `ManageBuyOffer`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_manage_buy_offer(&self) -> Option<LazyManageBuyOfferResult> {
+        if self.discriminant_i32() == 12 {
+            Some(<LazyManageBuyOfferResult as LazyXdr>::from_xdr_at(
+                &self.0, 4,
+            ))
+        } else {
+            None
+        }
+    }
+    /// Access arm `PathPaymentStrictSend`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_path_payment_strict_send(&self) -> Option<LazyPathPaymentStrictSendResult> {
+        if self.discriminant_i32() == 13 {
+            Some(<LazyPathPaymentStrictSendResult as LazyXdr>::from_xdr_at(
+                &self.0, 4,
+            ))
+        } else {
+            None
+        }
+    }
+    /// Access arm `CreateClaimableBalance`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_create_claimable_balance(&self) -> Option<LazyCreateClaimableBalanceResult> {
+        if self.discriminant_i32() == 14 {
+            Some(<LazyCreateClaimableBalanceResult as LazyXdr>::from_xdr_at(
+                &self.0, 4,
+            ))
+        } else {
+            None
+        }
+    }
+    /// Access arm `ClaimClaimableBalance`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_claim_claimable_balance(&self) -> Option<LazyClaimClaimableBalanceResult> {
+        if self.discriminant_i32() == 15 {
+            Some(<LazyClaimClaimableBalanceResult as LazyXdr>::from_xdr_at(
+                &self.0, 4,
+            ))
+        } else {
+            None
+        }
+    }
+    /// Access arm `BeginSponsoringFutureReserves`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_begin_sponsoring_future_reserves(
+        &self,
+    ) -> Option<LazyBeginSponsoringFutureReservesResult> {
+        if self.discriminant_i32() == 16 {
+            Some(<LazyBeginSponsoringFutureReservesResult as LazyXdr>::from_xdr_at(&self.0, 4))
+        } else {
+            None
+        }
+    }
+    /// Access arm `EndSponsoringFutureReserves`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_end_sponsoring_future_reserves(
+        &self,
+    ) -> Option<LazyEndSponsoringFutureReservesResult> {
+        if self.discriminant_i32() == 17 {
+            Some(<LazyEndSponsoringFutureReservesResult as LazyXdr>::from_xdr_at(&self.0, 4))
+        } else {
+            None
+        }
+    }
+    /// Access arm `RevokeSponsorship`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_revoke_sponsorship(&self) -> Option<LazyRevokeSponsorshipResult> {
+        if self.discriminant_i32() == 18 {
+            Some(<LazyRevokeSponsorshipResult as LazyXdr>::from_xdr_at(
+                &self.0, 4,
+            ))
+        } else {
+            None
+        }
+    }
+    /// Access arm `Clawback`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_clawback(&self) -> Option<LazyClawbackResult> {
+        if self.discriminant_i32() == 19 {
+            Some(<LazyClawbackResult as LazyXdr>::from_xdr_at(&self.0, 4))
+        } else {
+            None
+        }
+    }
+    /// Access arm `ClawbackClaimableBalance`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_clawback_claimable_balance(&self) -> Option<LazyClawbackClaimableBalanceResult> {
+        if self.discriminant_i32() == 20 {
+            Some(<LazyClawbackClaimableBalanceResult as LazyXdr>::from_xdr_at(&self.0, 4))
+        } else {
+            None
+        }
+    }
+    /// Access arm `SetTrustLineFlags`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_set_trust_line_flags(&self) -> Option<LazySetTrustLineFlagsResult> {
+        if self.discriminant_i32() == 21 {
+            Some(<LazySetTrustLineFlagsResult as LazyXdr>::from_xdr_at(
+                &self.0, 4,
+            ))
+        } else {
+            None
+        }
+    }
+    /// Access arm `LiquidityPoolDeposit`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_liquidity_pool_deposit(&self) -> Option<LazyLiquidityPoolDepositResult> {
+        if self.discriminant_i32() == 22 {
+            Some(<LazyLiquidityPoolDepositResult as LazyXdr>::from_xdr_at(
+                &self.0, 4,
+            ))
+        } else {
+            None
+        }
+    }
+    /// Access arm `LiquidityPoolWithdraw`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_liquidity_pool_withdraw(&self) -> Option<LazyLiquidityPoolWithdrawResult> {
+        if self.discriminant_i32() == 23 {
+            Some(<LazyLiquidityPoolWithdrawResult as LazyXdr>::from_xdr_at(
+                &self.0, 4,
+            ))
+        } else {
+            None
+        }
+    }
+    /// Access arm `InvokeHostFunction`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_invoke_host_function(&self) -> Option<LazyInvokeHostFunctionResult> {
+        if self.discriminant_i32() == 24 {
+            Some(<LazyInvokeHostFunctionResult as LazyXdr>::from_xdr_at(
+                &self.0, 4,
+            ))
+        } else {
+            None
+        }
+    }
+    /// Access arm `ExtendFootprintTtl`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_extend_footprint_ttl(&self) -> Option<LazyExtendFootprintTtlResult> {
+        if self.discriminant_i32() == 25 {
+            Some(<LazyExtendFootprintTtlResult as LazyXdr>::from_xdr_at(
+                &self.0, 4,
+            ))
+        } else {
+            None
+        }
+    }
+    /// Access arm `RestoreFootprint`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_restore_footprint(&self) -> Option<LazyRestoreFootprintResult> {
+        if self.discriminant_i32() == 26 {
+            Some(<LazyRestoreFootprintResult as LazyXdr>::from_xdr_at(
+                &self.0, 4,
+            ))
+        } else {
+            None
+        }
+    }
+}
+#[cfg(all(feature = "alloc", feature = "std"))]
+impl TryFrom<&OperationResultTr> for LazyOperationResultTr {
+    type Error = Error;
+    fn try_from(val: &OperationResultTr) -> Result<Self, Error> {
+        let mut buf = Vec::new();
+        val.write_xdr(&mut Limited::new(&mut buf, Limits::none()))?;
+        let arc: Arc<[u8]> = buf.into();
+        Self::try_from(arc)
+    }
+}
+#[cfg(all(feature = "alloc", feature = "std"))]
+impl TryFrom<&LazyOperationResultTr> for OperationResultTr {
+    type Error = Error;
+    fn try_from(lazy: &LazyOperationResultTr) -> Result<Self, Error> {
+        let buf = lazy.as_ref().as_slice();
+        Self::read_xdr(&mut Limited::new(&mut &buf[..], Limits::none()))
     }
 }

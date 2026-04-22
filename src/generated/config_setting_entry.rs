@@ -1,5 +1,10 @@
 #[allow(unused_imports, clippy::wildcard_imports)]
 use super::*;
+#[cfg(feature = "alloc")]
+extern crate alloc;
+#[cfg(feature = "alloc")]
+#[allow(unused_imports)]
+use alloc::sync::Arc;
 
 /// ConfigSettingEntry is an XDR Union defined as:
 ///
@@ -360,5 +365,588 @@ impl WriteXdr for ConfigSettingEntry {
             };
             Ok(())
         })
+    }
+}
+
+#[cfg(feature = "alloc")]
+/// Lazy wrapper for [`ConfigSettingEntry`].
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+pub struct LazyConfigSettingEntry(LazyHandle);
+#[cfg(feature = "alloc")]
+impl PartialOrd for LazyConfigSettingEntry {
+    fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+#[cfg(feature = "alloc")]
+impl Ord for LazyConfigSettingEntry {
+    fn cmp(&self, other: &Self) -> core::cmp::Ordering {
+        let ord = self.discriminant().cmp(&other.discriminant());
+        if ord != core::cmp::Ordering::Equal {
+            return ord;
+        }
+        #[allow(clippy::match_same_arms)]
+        match self.discriminant_i32() {
+            0 => self
+                .as_contract_max_size_bytes()
+                .cmp(&other.as_contract_max_size_bytes()),
+            1 => self
+                .as_contract_compute_v0()
+                .cmp(&other.as_contract_compute_v0()),
+            2 => self
+                .as_contract_ledger_cost_v0()
+                .cmp(&other.as_contract_ledger_cost_v0()),
+            3 => self
+                .as_contract_historical_data_v0()
+                .cmp(&other.as_contract_historical_data_v0()),
+            4 => self
+                .as_contract_events_v0()
+                .cmp(&other.as_contract_events_v0()),
+            5 => self
+                .as_contract_bandwidth_v0()
+                .cmp(&other.as_contract_bandwidth_v0()),
+            6 => self
+                .as_contract_cost_params_cpu_instructions()
+                .cmp(&other.as_contract_cost_params_cpu_instructions()),
+            7 => self
+                .as_contract_cost_params_memory_bytes()
+                .cmp(&other.as_contract_cost_params_memory_bytes()),
+            8 => self
+                .as_contract_data_key_size_bytes()
+                .cmp(&other.as_contract_data_key_size_bytes()),
+            9 => self
+                .as_contract_data_entry_size_bytes()
+                .cmp(&other.as_contract_data_entry_size_bytes()),
+            10 => self.as_state_archival().cmp(&other.as_state_archival()),
+            11 => self
+                .as_contract_execution_lanes()
+                .cmp(&other.as_contract_execution_lanes()),
+            12 => self
+                .as_live_soroban_state_size_window()
+                .cmp(&other.as_live_soroban_state_size_window()),
+            13 => self
+                .as_eviction_iterator()
+                .cmp(&other.as_eviction_iterator()),
+            14 => self
+                .as_contract_parallel_compute_v0()
+                .cmp(&other.as_contract_parallel_compute_v0()),
+            15 => self
+                .as_contract_ledger_cost_ext_v0()
+                .cmp(&other.as_contract_ledger_cost_ext_v0()),
+            16 => self.as_scp_timing().cmp(&other.as_scp_timing()),
+            17 => self
+                .as_frozen_ledger_keys()
+                .cmp(&other.as_frozen_ledger_keys()),
+            18 => self
+                .as_frozen_ledger_keys_delta()
+                .cmp(&other.as_frozen_ledger_keys_delta()),
+            19 => self
+                .as_freeze_bypass_txs()
+                .cmp(&other.as_freeze_bypass_txs()),
+            20 => self
+                .as_freeze_bypass_txs_delta()
+                .cmp(&other.as_freeze_bypass_txs_delta()),
+            _ => core::cmp::Ordering::Equal,
+        }
+    }
+}
+#[cfg(feature = "alloc")]
+impl LazyXdr for LazyConfigSettingEntry {
+    fn xdr_validate(buf: &[u8], depth: u32) -> Result<u32, Error> {
+        #[allow(unused_variables)]
+        let depth = depth.checked_sub(1).ok_or(Error::DepthLimitExceeded)?;
+        if buf.len() < 4 {
+            return Err(Error::Invalid);
+        }
+        let disc = i32::from_be_bytes([buf[0], buf[1], buf[2], buf[3]]);
+        #[allow(unused_mut)]
+        let mut pos: u32 = 4;
+        #[allow(clippy::match_same_arms)]
+        match disc {
+            0 => {
+                let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..], depth)?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            1 => {
+                let field_len = <LazyConfigSettingContractComputeV0 as LazyXdr>::xdr_validate(
+                    &buf[pos as usize..],
+                    depth,
+                )?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            2 => {
+                let field_len = <LazyConfigSettingContractLedgerCostV0 as LazyXdr>::xdr_validate(
+                    &buf[pos as usize..],
+                    depth,
+                )?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            3 => {
+                let field_len =
+                    <LazyConfigSettingContractHistoricalDataV0 as LazyXdr>::xdr_validate(
+                        &buf[pos as usize..],
+                        depth,
+                    )?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            4 => {
+                let field_len = <LazyConfigSettingContractEventsV0 as LazyXdr>::xdr_validate(
+                    &buf[pos as usize..],
+                    depth,
+                )?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            5 => {
+                let field_len = <LazyConfigSettingContractBandwidthV0 as LazyXdr>::xdr_validate(
+                    &buf[pos as usize..],
+                    depth,
+                )?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            6 => {
+                let field_len =
+                    <LazyContractCostParams as LazyXdr>::xdr_validate(&buf[pos as usize..], depth)?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            7 => {
+                let field_len =
+                    <LazyContractCostParams as LazyXdr>::xdr_validate(&buf[pos as usize..], depth)?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            8 => {
+                let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..], depth)?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            9 => {
+                let field_len = <u32 as LazyXdr>::xdr_validate(&buf[pos as usize..], depth)?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            10 => {
+                let field_len = <LazyStateArchivalSettings as LazyXdr>::xdr_validate(
+                    &buf[pos as usize..],
+                    depth,
+                )?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            11 => {
+                let field_len =
+                    <LazyConfigSettingContractExecutionLanesV0 as LazyXdr>::xdr_validate(
+                        &buf[pos as usize..],
+                        depth,
+                    )?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            12 => {
+                let field_len =
+                    <LazyVecM<u64> as LazyXdr>::xdr_validate(&buf[pos as usize..], depth)?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            13 => {
+                let field_len =
+                    <LazyEvictionIterator as LazyXdr>::xdr_validate(&buf[pos as usize..], depth)?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            14 => {
+                let field_len =
+                    <LazyConfigSettingContractParallelComputeV0 as LazyXdr>::xdr_validate(
+                        &buf[pos as usize..],
+                        depth,
+                    )?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            15 => {
+                let field_len =
+                    <LazyConfigSettingContractLedgerCostExtV0 as LazyXdr>::xdr_validate(
+                        &buf[pos as usize..],
+                        depth,
+                    )?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            16 => {
+                let field_len = <LazyConfigSettingScpTiming as LazyXdr>::xdr_validate(
+                    &buf[pos as usize..],
+                    depth,
+                )?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            17 => {
+                let field_len =
+                    <LazyFrozenLedgerKeys as LazyXdr>::xdr_validate(&buf[pos as usize..], depth)?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            18 => {
+                let field_len = <LazyFrozenLedgerKeysDelta as LazyXdr>::xdr_validate(
+                    &buf[pos as usize..],
+                    depth,
+                )?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            19 => {
+                let field_len =
+                    <LazyFreezeBypassTxs as LazyXdr>::xdr_validate(&buf[pos as usize..], depth)?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            20 => {
+                let field_len = <LazyFreezeBypassTxsDelta as LazyXdr>::xdr_validate(
+                    &buf[pos as usize..],
+                    depth,
+                )?;
+                pos = pos.checked_add(field_len).ok_or(Error::LengthExceedsMax)?;
+            }
+            _ => return Err(Error::Invalid),
+        }
+        Ok(pos)
+    }
+
+    fn xdr_len(buf: &[u8]) -> u32 {
+        let disc = i32::from_be_bytes([buf[0], buf[1], buf[2], buf[3]]);
+        #[allow(unused_mut)]
+        let mut pos: u32 = 4;
+        #[allow(clippy::match_same_arms)]
+        match disc {
+            0 => {
+                pos += <u32 as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            1 => {
+                pos +=
+                    <LazyConfigSettingContractComputeV0 as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            2 => {
+                pos += <LazyConfigSettingContractLedgerCostV0 as LazyXdr>::xdr_len(
+                    &buf[pos as usize..],
+                );
+            }
+            3 => {
+                pos += <LazyConfigSettingContractHistoricalDataV0 as LazyXdr>::xdr_len(
+                    &buf[pos as usize..],
+                );
+            }
+            4 => {
+                pos +=
+                    <LazyConfigSettingContractEventsV0 as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            5 => {
+                pos += <LazyConfigSettingContractBandwidthV0 as LazyXdr>::xdr_len(
+                    &buf[pos as usize..],
+                );
+            }
+            6 => {
+                pos += <LazyContractCostParams as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            7 => {
+                pos += <LazyContractCostParams as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            8 => {
+                pos += <u32 as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            9 => {
+                pos += <u32 as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            10 => {
+                pos += <LazyStateArchivalSettings as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            11 => {
+                pos += <LazyConfigSettingContractExecutionLanesV0 as LazyXdr>::xdr_len(
+                    &buf[pos as usize..],
+                );
+            }
+            12 => {
+                pos += <LazyVecM<u64> as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            13 => {
+                pos += <LazyEvictionIterator as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            14 => {
+                pos += <LazyConfigSettingContractParallelComputeV0 as LazyXdr>::xdr_len(
+                    &buf[pos as usize..],
+                );
+            }
+            15 => {
+                pos += <LazyConfigSettingContractLedgerCostExtV0 as LazyXdr>::xdr_len(
+                    &buf[pos as usize..],
+                );
+            }
+            16 => {
+                pos += <LazyConfigSettingScpTiming as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            17 => {
+                pos += <LazyFrozenLedgerKeys as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            18 => {
+                pos += <LazyFrozenLedgerKeysDelta as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            19 => {
+                pos += <LazyFreezeBypassTxs as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            20 => {
+                pos += <LazyFreezeBypassTxsDelta as LazyXdr>::xdr_len(&buf[pos as usize..]);
+            }
+            _ => {}
+        }
+        pos
+    }
+
+    fn from_xdr_at(parent: &LazyHandle, offset: u32) -> Self {
+        let buf = &parent.as_slice()[offset as usize..];
+        let len = Self::xdr_len(buf);
+        Self(parent.sub_handle(offset, len))
+    }
+}
+#[cfg(feature = "alloc")]
+impl From<LazyHandle> for LazyConfigSettingEntry {
+    fn from(h: LazyHandle) -> Self {
+        Self(h)
+    }
+}
+#[cfg(feature = "alloc")]
+impl AsRef<LazyHandle> for LazyConfigSettingEntry {
+    fn as_ref(&self) -> &LazyHandle {
+        &self.0
+    }
+}
+#[cfg(feature = "alloc")]
+impl TryFrom<Arc<[u8]>> for LazyConfigSettingEntry {
+    type Error = Error;
+    fn try_from(buf: Arc<[u8]>) -> Result<Self, Error> {
+        let len = Self::xdr_validate(&buf, DEFAULT_XDR_DEPTH_LIMIT)?;
+        Ok(Self(LazyHandle::from_arc(buf, 0, len)))
+    }
+}
+#[cfg(feature = "alloc")]
+impl LazyConfigSettingEntry {
+    /// Get the discriminant value as i32.
+    #[must_use]
+    pub fn discriminant_i32(&self) -> i32 {
+        i32::from_xdr_at(&self.0, 0)
+    }
+
+    /// Get the discriminant.
+    #[must_use]
+    pub fn discriminant(&self) -> ConfigSettingId {
+        // Validated — unwrap is safe.
+        ConfigSettingId::try_from(self.discriminant_i32()).unwrap()
+    }
+    /// Access arm `ContractMaxSizeBytes`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_contract_max_size_bytes(&self) -> Option<u32> {
+        if self.discriminant_i32() == 0 {
+            Some(<u32 as LazyXdr>::from_xdr_at(&self.0, 4))
+        } else {
+            None
+        }
+    }
+    /// Access arm `ContractComputeV0`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_contract_compute_v0(&self) -> Option<LazyConfigSettingContractComputeV0> {
+        if self.discriminant_i32() == 1 {
+            Some(<LazyConfigSettingContractComputeV0 as LazyXdr>::from_xdr_at(&self.0, 4))
+        } else {
+            None
+        }
+    }
+    /// Access arm `ContractLedgerCostV0`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_contract_ledger_cost_v0(&self) -> Option<LazyConfigSettingContractLedgerCostV0> {
+        if self.discriminant_i32() == 2 {
+            Some(<LazyConfigSettingContractLedgerCostV0 as LazyXdr>::from_xdr_at(&self.0, 4))
+        } else {
+            None
+        }
+    }
+    /// Access arm `ContractHistoricalDataV0`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_contract_historical_data_v0(
+        &self,
+    ) -> Option<LazyConfigSettingContractHistoricalDataV0> {
+        if self.discriminant_i32() == 3 {
+            Some(<LazyConfigSettingContractHistoricalDataV0 as LazyXdr>::from_xdr_at(&self.0, 4))
+        } else {
+            None
+        }
+    }
+    /// Access arm `ContractEventsV0`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_contract_events_v0(&self) -> Option<LazyConfigSettingContractEventsV0> {
+        if self.discriminant_i32() == 4 {
+            Some(<LazyConfigSettingContractEventsV0 as LazyXdr>::from_xdr_at(
+                &self.0, 4,
+            ))
+        } else {
+            None
+        }
+    }
+    /// Access arm `ContractBandwidthV0`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_contract_bandwidth_v0(&self) -> Option<LazyConfigSettingContractBandwidthV0> {
+        if self.discriminant_i32() == 5 {
+            Some(<LazyConfigSettingContractBandwidthV0 as LazyXdr>::from_xdr_at(&self.0, 4))
+        } else {
+            None
+        }
+    }
+    /// Access arm `ContractCostParamsCpuInstructions`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_contract_cost_params_cpu_instructions(&self) -> Option<LazyContractCostParams> {
+        if self.discriminant_i32() == 6 {
+            Some(<LazyContractCostParams as LazyXdr>::from_xdr_at(&self.0, 4))
+        } else {
+            None
+        }
+    }
+    /// Access arm `ContractCostParamsMemoryBytes`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_contract_cost_params_memory_bytes(&self) -> Option<LazyContractCostParams> {
+        if self.discriminant_i32() == 7 {
+            Some(<LazyContractCostParams as LazyXdr>::from_xdr_at(&self.0, 4))
+        } else {
+            None
+        }
+    }
+    /// Access arm `ContractDataKeySizeBytes`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_contract_data_key_size_bytes(&self) -> Option<u32> {
+        if self.discriminant_i32() == 8 {
+            Some(<u32 as LazyXdr>::from_xdr_at(&self.0, 4))
+        } else {
+            None
+        }
+    }
+    /// Access arm `ContractDataEntrySizeBytes`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_contract_data_entry_size_bytes(&self) -> Option<u32> {
+        if self.discriminant_i32() == 9 {
+            Some(<u32 as LazyXdr>::from_xdr_at(&self.0, 4))
+        } else {
+            None
+        }
+    }
+    /// Access arm `StateArchival`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_state_archival(&self) -> Option<LazyStateArchivalSettings> {
+        if self.discriminant_i32() == 10 {
+            Some(<LazyStateArchivalSettings as LazyXdr>::from_xdr_at(
+                &self.0, 4,
+            ))
+        } else {
+            None
+        }
+    }
+    /// Access arm `ContractExecutionLanes`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_contract_execution_lanes(&self) -> Option<LazyConfigSettingContractExecutionLanesV0> {
+        if self.discriminant_i32() == 11 {
+            Some(<LazyConfigSettingContractExecutionLanesV0 as LazyXdr>::from_xdr_at(&self.0, 4))
+        } else {
+            None
+        }
+    }
+    /// Access arm `LiveSorobanStateSizeWindow`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_live_soroban_state_size_window(&self) -> Option<LazyVecM<u64>> {
+        if self.discriminant_i32() == 12 {
+            Some(<LazyVecM<u64> as LazyXdr>::from_xdr_at(&self.0, 4))
+        } else {
+            None
+        }
+    }
+    /// Access arm `EvictionIterator`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_eviction_iterator(&self) -> Option<LazyEvictionIterator> {
+        if self.discriminant_i32() == 13 {
+            Some(<LazyEvictionIterator as LazyXdr>::from_xdr_at(&self.0, 4))
+        } else {
+            None
+        }
+    }
+    /// Access arm `ContractParallelComputeV0`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_contract_parallel_compute_v0(
+        &self,
+    ) -> Option<LazyConfigSettingContractParallelComputeV0> {
+        if self.discriminant_i32() == 14 {
+            Some(<LazyConfigSettingContractParallelComputeV0 as LazyXdr>::from_xdr_at(&self.0, 4))
+        } else {
+            None
+        }
+    }
+    /// Access arm `ContractLedgerCostExtV0`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_contract_ledger_cost_ext_v0(
+        &self,
+    ) -> Option<LazyConfigSettingContractLedgerCostExtV0> {
+        if self.discriminant_i32() == 15 {
+            Some(<LazyConfigSettingContractLedgerCostExtV0 as LazyXdr>::from_xdr_at(&self.0, 4))
+        } else {
+            None
+        }
+    }
+    /// Access arm `ScpTiming`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_scp_timing(&self) -> Option<LazyConfigSettingScpTiming> {
+        if self.discriminant_i32() == 16 {
+            Some(<LazyConfigSettingScpTiming as LazyXdr>::from_xdr_at(
+                &self.0, 4,
+            ))
+        } else {
+            None
+        }
+    }
+    /// Access arm `FrozenLedgerKeys`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_frozen_ledger_keys(&self) -> Option<LazyFrozenLedgerKeys> {
+        if self.discriminant_i32() == 17 {
+            Some(<LazyFrozenLedgerKeys as LazyXdr>::from_xdr_at(&self.0, 4))
+        } else {
+            None
+        }
+    }
+    /// Access arm `FrozenLedgerKeysDelta`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_frozen_ledger_keys_delta(&self) -> Option<LazyFrozenLedgerKeysDelta> {
+        if self.discriminant_i32() == 18 {
+            Some(<LazyFrozenLedgerKeysDelta as LazyXdr>::from_xdr_at(
+                &self.0, 4,
+            ))
+        } else {
+            None
+        }
+    }
+    /// Access arm `FreezeBypassTxs`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_freeze_bypass_txs(&self) -> Option<LazyFreezeBypassTxs> {
+        if self.discriminant_i32() == 19 {
+            Some(<LazyFreezeBypassTxs as LazyXdr>::from_xdr_at(&self.0, 4))
+        } else {
+            None
+        }
+    }
+    /// Access arm `FreezeBypassTxsDelta`. Returns `Some` if the discriminant matches.
+    #[must_use]
+    pub fn as_freeze_bypass_txs_delta(&self) -> Option<LazyFreezeBypassTxsDelta> {
+        if self.discriminant_i32() == 20 {
+            Some(<LazyFreezeBypassTxsDelta as LazyXdr>::from_xdr_at(
+                &self.0, 4,
+            ))
+        } else {
+            None
+        }
+    }
+}
+#[cfg(all(feature = "alloc", feature = "std"))]
+impl TryFrom<&ConfigSettingEntry> for LazyConfigSettingEntry {
+    type Error = Error;
+    fn try_from(val: &ConfigSettingEntry) -> Result<Self, Error> {
+        let mut buf = Vec::new();
+        val.write_xdr(&mut Limited::new(&mut buf, Limits::none()))?;
+        let arc: Arc<[u8]> = buf.into();
+        Self::try_from(arc)
+    }
+}
+#[cfg(all(feature = "alloc", feature = "std"))]
+impl TryFrom<&LazyConfigSettingEntry> for ConfigSettingEntry {
+    type Error = Error;
+    fn try_from(lazy: &LazyConfigSettingEntry) -> Result<Self, Error> {
+        let buf = lazy.as_ref().as_slice();
+        Self::read_xdr(&mut Limited::new(&mut &buf[..], Limits::none()))
     }
 }
