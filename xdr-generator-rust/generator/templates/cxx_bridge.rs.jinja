@@ -21,14 +21,17 @@ use alloc::sync::Arc;
 
 #[repr(transparent)]
 pub struct {{ s.lazy_name }}W(stellar_xdr::{{ s.lazy_name }});
+pub struct {{ s.lazy_name }}VecW(Vec<stellar_xdr::{{ s.lazy_name }}>);
 {%- when CxxBridgeDefinition::Union(u) %}
 
 #[repr(transparent)]
 pub struct {{ u.lazy_name }}W(stellar_xdr::{{ u.lazy_name }});
+pub struct {{ u.lazy_name }}VecW(Vec<stellar_xdr::{{ u.lazy_name }}>);
 {%- when CxxBridgeDefinition::TypedefNewtype(t) %}
 
 #[repr(transparent)]
 pub struct {{ t.lazy_name }}W(stellar_xdr::{{ t.lazy_name }});
+pub struct {{ t.lazy_name }}VecW(Vec<stellar_xdr::{{ t.lazy_name }}>);
 {%- when CxxBridgeDefinition::OpaqueOnly(o) %}
 
 #[repr(transparent)]
@@ -41,66 +44,120 @@ pub struct {{ o.lazy_name }}W(stellar_xdr::{{ o.lazy_name }});
 {%- match def %}
 {%- when CxxBridgeDefinition::Struct(s) %}
 
-fn new_{{ s.lazy_name|lower }}(buf: &[u8]) -> Result<Box<{{ s.lazy_name }}W>, stellar_xdr::Error> {
+fn new_{{ s.lazy_snake_name }}(buf: &[u8]) -> Result<Box<{{ s.lazy_name }}W>, stellar_xdr::Error> {
     let arc: Arc<[u8]> = buf.into();
     Ok(Box::new({{ s.lazy_name }}W(stellar_xdr::{{ s.lazy_name }}::try_from(arc)?)))
 }
-fn {{ s.lazy_name|lower }}_xdr_bytes(h: &{{ s.lazy_name }}W) -> &[u8] {
+fn {{ s.lazy_snake_name }}_xdr_bytes(h: &{{ s.lazy_name }}W) -> &[u8] {
     h.0.as_ref().as_slice()
 }
-fn {{ s.lazy_name|lower }}_clone(h: &{{ s.lazy_name }}W) -> Box<{{ s.lazy_name }}W> {
+fn {{ s.lazy_snake_name }}_clone(h: &{{ s.lazy_name }}W) -> Box<{{ s.lazy_name }}W> {
     Box::new({{ s.lazy_name }}W(h.0.clone()))
 }
 {%- for m in s.members %}
 {%- if m.lazy_is_scalar %}
-fn {{ s.lazy_name|lower }}_{{ m.name }}(h: &{{ s.lazy_name }}W) -> {{ m.lazy_type }} {
+fn {{ s.lazy_snake_name }}_{{ m.name }}(h: &{{ s.lazy_name }}W) -> {{ m.lazy_type }} {
     h.0.{{ m.name }}()
 }
 {%- else %}
-fn {{ s.lazy_name|lower }}_{{ m.name }}(h: &{{ s.lazy_name }}W) -> Box<{{ m.lazy_type }}W> {
+fn {{ s.lazy_snake_name }}_{{ m.name }}(h: &{{ s.lazy_name }}W) -> Box<{{ m.lazy_type }}W> {
     Box::new({{ m.lazy_type }}W(h.0.{{ m.name }}()))
 }
 {%- endif %}
 {%- endfor %}
+
+fn new_{{ s.lazy_snake_name }}_vec() -> Box<{{ s.lazy_name }}VecW> {
+    Box::new({{ s.lazy_name }}VecW(Vec::new()))
+}
+impl {{ s.lazy_name }}VecW {
+    fn push(&mut self, h: Box<{{ s.lazy_name }}W>) {
+        self.0.push(h.0);
+    }
+    fn pop(&mut self) -> Result<Box<{{ s.lazy_name }}W>, stellar_xdr::Error> {
+        self.0.pop().map(|v| Box::new({{ s.lazy_name }}W(v))).ok_or(stellar_xdr::Error::Invalid)
+    }
+    fn len(&self) -> usize {
+        self.0.len()
+    }
+    fn get(&self, i: usize) -> Box<{{ s.lazy_name }}W> {
+        Box::new({{ s.lazy_name }}W(self.0[i].clone()))
+    }
+}
 {%- when CxxBridgeDefinition::Union(u) %}
 
-fn new_{{ u.lazy_name|lower }}(buf: &[u8]) -> Result<Box<{{ u.lazy_name }}W>, stellar_xdr::Error> {
+fn new_{{ u.lazy_snake_name }}(buf: &[u8]) -> Result<Box<{{ u.lazy_name }}W>, stellar_xdr::Error> {
     let arc: Arc<[u8]> = buf.into();
     Ok(Box::new({{ u.lazy_name }}W(stellar_xdr::{{ u.lazy_name }}::try_from(arc)?)))
 }
-fn {{ u.lazy_name|lower }}_xdr_bytes(h: &{{ u.lazy_name }}W) -> &[u8] {
+fn {{ u.lazy_snake_name }}_xdr_bytes(h: &{{ u.lazy_name }}W) -> &[u8] {
     h.0.as_ref().as_slice()
 }
-fn {{ u.lazy_name|lower }}_clone(h: &{{ u.lazy_name }}W) -> Box<{{ u.lazy_name }}W> {
+fn {{ u.lazy_snake_name }}_clone(h: &{{ u.lazy_name }}W) -> Box<{{ u.lazy_name }}W> {
     Box::new({{ u.lazy_name }}W(h.0.clone()))
 }
-fn {{ u.lazy_name|lower }}_discriminant(h: &{{ u.lazy_name }}W) -> i32 {
+fn {{ u.lazy_snake_name }}_discriminant(h: &{{ u.lazy_name }}W) -> i32 {
     h.0.discriminant_i32()
 }
 {%- for arm in u.arms %}
 {%- if !arm.is_void %}
 {%- if arm.is_scalar %}
-fn {{ u.lazy_name|lower }}_as_{{ arm.lazy_method_name }}(h: &{{ u.lazy_name }}W) -> Result<{{ arm.lazy_type.as_ref().unwrap() }}, stellar_xdr::Error> {
+fn {{ u.lazy_snake_name }}_as_{{ arm.lazy_method_name }}(h: &{{ u.lazy_name }}W) -> Result<{{ arm.lazy_type.as_ref().unwrap() }}, stellar_xdr::Error> {
     h.0.as_{{ arm.lazy_method_name }}().ok_or(stellar_xdr::Error::Invalid)
 }
 {%- else %}
-fn {{ u.lazy_name|lower }}_as_{{ arm.lazy_method_name }}(h: &{{ u.lazy_name }}W) -> Result<Box<{{ arm.lazy_type.as_ref().unwrap() }}W>, stellar_xdr::Error> {
+fn {{ u.lazy_snake_name }}_as_{{ arm.lazy_method_name }}(h: &{{ u.lazy_name }}W) -> Result<Box<{{ arm.lazy_type.as_ref().unwrap() }}W>, stellar_xdr::Error> {
     h.0.as_{{ arm.lazy_method_name }}().map(|v| Box::new({{ arm.lazy_type.as_ref().unwrap() }}W(v))).ok_or(stellar_xdr::Error::Invalid)
 }
 {%- endif %}
 {%- endif %}
 {%- endfor %}
+
+fn new_{{ u.lazy_snake_name }}_vec() -> Box<{{ u.lazy_name }}VecW> {
+    Box::new({{ u.lazy_name }}VecW(Vec::new()))
+}
+impl {{ u.lazy_name }}VecW {
+    fn push(&mut self, h: Box<{{ u.lazy_name }}W>) {
+        self.0.push(h.0);
+    }
+    fn pop(&mut self) -> Result<Box<{{ u.lazy_name }}W>, stellar_xdr::Error> {
+        self.0.pop().map(|v| Box::new({{ u.lazy_name }}W(v))).ok_or(stellar_xdr::Error::Invalid)
+    }
+    fn len(&self) -> usize {
+        self.0.len()
+    }
+    fn get(&self, i: usize) -> Box<{{ u.lazy_name }}W> {
+        Box::new({{ u.lazy_name }}W(self.0[i].clone()))
+    }
+}
 {%- when CxxBridgeDefinition::TypedefNewtype(t) %}
 
-fn new_{{ t.lazy_name|lower }}(buf: &[u8]) -> Result<Box<{{ t.lazy_name }}W>, stellar_xdr::Error> {
+fn new_{{ t.lazy_snake_name }}(buf: &[u8]) -> Result<Box<{{ t.lazy_name }}W>, stellar_xdr::Error> {
     let arc: Arc<[u8]> = buf.into();
     Ok(Box::new({{ t.lazy_name }}W(stellar_xdr::{{ t.lazy_name }}::try_from(arc)?)))
 }
-fn {{ t.lazy_name|lower }}_xdr_bytes(h: &{{ t.lazy_name }}W) -> &[u8] {
+fn {{ t.lazy_snake_name }}_xdr_bytes(h: &{{ t.lazy_name }}W) -> &[u8] {
     h.0.as_ref().as_slice()
 }
-fn {{ t.lazy_name|lower }}_clone(h: &{{ t.lazy_name }}W) -> Box<{{ t.lazy_name }}W> {
+fn {{ t.lazy_snake_name }}_clone(h: &{{ t.lazy_name }}W) -> Box<{{ t.lazy_name }}W> {
     Box::new({{ t.lazy_name }}W(h.0.clone()))
+}
+
+fn new_{{ t.lazy_snake_name }}_vec() -> Box<{{ t.lazy_name }}VecW> {
+    Box::new({{ t.lazy_name }}VecW(Vec::new()))
+}
+impl {{ t.lazy_name }}VecW {
+    fn push(&mut self, h: Box<{{ t.lazy_name }}W>) {
+        self.0.push(h.0);
+    }
+    fn pop(&mut self) -> Result<Box<{{ t.lazy_name }}W>, stellar_xdr::Error> {
+        self.0.pop().map(|v| Box::new({{ t.lazy_name }}W(v))).ok_or(stellar_xdr::Error::Invalid)
+    }
+    fn len(&self) -> usize {
+        self.0.len()
+    }
+    fn get(&self, i: usize) -> Box<{{ t.lazy_name }}W> {
+        Box::new({{ t.lazy_name }}W(self.0[i].clone()))
+    }
 }
 {%- when CxxBridgeDefinition::OpaqueOnly(_o) %}
 {# No functions for opaque-only types #}
@@ -117,40 +174,64 @@ mod ffi {
 
         #[cxx_name = "{{ s.lazy_name }}"]
         type {{ s.lazy_name }}W;
-        fn new_{{ s.lazy_name|lower }}(buf: &[u8]) -> Result<Box<{{ s.lazy_name }}W>>;
-        fn {{ s.lazy_name|lower }}_xdr_bytes(h: &{{ s.lazy_name }}W) -> &[u8];
-        fn {{ s.lazy_name|lower }}_clone(h: &{{ s.lazy_name }}W) -> Box<{{ s.lazy_name }}W>;
+        fn new_{{ s.lazy_snake_name }}(buf: &[u8]) -> Result<Box<{{ s.lazy_name }}W>>;
+        fn {{ s.lazy_snake_name }}_xdr_bytes(h: &{{ s.lazy_name }}W) -> &[u8];
+        fn {{ s.lazy_snake_name }}_clone(h: &{{ s.lazy_name }}W) -> Box<{{ s.lazy_name }}W>;
 {%- for m in s.members %}
 {%- if m.lazy_is_scalar %}
-        fn {{ s.lazy_name|lower }}_{{ m.name }}(h: &{{ s.lazy_name }}W) -> {{ m.cxx_scalar_type }};
+        fn {{ s.lazy_snake_name }}_{{ m.name }}(h: &{{ s.lazy_name }}W) -> {{ m.cxx_scalar_type }};
 {%- else %}
-        fn {{ s.lazy_name|lower }}_{{ m.name }}(h: &{{ s.lazy_name }}W) -> Box<{{ m.lazy_type }}W>;
+        fn {{ s.lazy_snake_name }}_{{ m.name }}(h: &{{ s.lazy_name }}W) -> Box<{{ m.lazy_type }}W>;
 {%- endif %}
 {%- endfor %}
+
+        #[cxx_name = "{{ s.lazy_name }}Vec"]
+        type {{ s.lazy_name }}VecW;
+        fn new_{{ s.lazy_snake_name }}_vec() -> Box<{{ s.lazy_name }}VecW>;
+        fn push(self: &mut {{ s.lazy_name }}VecW, h: Box<{{ s.lazy_name }}W>);
+        fn pop(self: &mut {{ s.lazy_name }}VecW) -> Result<Box<{{ s.lazy_name }}W>>;
+        fn len(self: &{{ s.lazy_name }}VecW) -> usize;
+        fn get(self: &{{ s.lazy_name }}VecW, i: usize) -> Box<{{ s.lazy_name }}W>;
 {%- when CxxBridgeDefinition::Union(u) %}
 
         #[cxx_name = "{{ u.lazy_name }}"]
         type {{ u.lazy_name }}W;
-        fn new_{{ u.lazy_name|lower }}(buf: &[u8]) -> Result<Box<{{ u.lazy_name }}W>>;
-        fn {{ u.lazy_name|lower }}_xdr_bytes(h: &{{ u.lazy_name }}W) -> &[u8];
-        fn {{ u.lazy_name|lower }}_clone(h: &{{ u.lazy_name }}W) -> Box<{{ u.lazy_name }}W>;
-        fn {{ u.lazy_name|lower }}_discriminant(h: &{{ u.lazy_name }}W) -> i32;
+        fn new_{{ u.lazy_snake_name }}(buf: &[u8]) -> Result<Box<{{ u.lazy_name }}W>>;
+        fn {{ u.lazy_snake_name }}_xdr_bytes(h: &{{ u.lazy_name }}W) -> &[u8];
+        fn {{ u.lazy_snake_name }}_clone(h: &{{ u.lazy_name }}W) -> Box<{{ u.lazy_name }}W>;
+        fn {{ u.lazy_snake_name }}_discriminant(h: &{{ u.lazy_name }}W) -> i32;
 {%- for arm in u.arms %}
 {%- if !arm.is_void %}
 {%- if arm.is_scalar %}
-        fn {{ u.lazy_name|lower }}_as_{{ arm.lazy_method_name }}(h: &{{ u.lazy_name }}W) -> Result<{{ arm.cxx_scalar_type }}>;
+        fn {{ u.lazy_snake_name }}_as_{{ arm.lazy_method_name }}(h: &{{ u.lazy_name }}W) -> Result<{{ arm.cxx_scalar_type }}>;
 {%- else %}
-        fn {{ u.lazy_name|lower }}_as_{{ arm.lazy_method_name }}(h: &{{ u.lazy_name }}W) -> Result<Box<{{ arm.lazy_type.as_ref().unwrap() }}W>>;
+        fn {{ u.lazy_snake_name }}_as_{{ arm.lazy_method_name }}(h: &{{ u.lazy_name }}W) -> Result<Box<{{ arm.lazy_type.as_ref().unwrap() }}W>>;
 {%- endif %}
 {%- endif %}
 {%- endfor %}
+
+        #[cxx_name = "{{ u.lazy_name }}Vec"]
+        type {{ u.lazy_name }}VecW;
+        fn new_{{ u.lazy_snake_name }}_vec() -> Box<{{ u.lazy_name }}VecW>;
+        fn push(self: &mut {{ u.lazy_name }}VecW, h: Box<{{ u.lazy_name }}W>);
+        fn pop(self: &mut {{ u.lazy_name }}VecW) -> Result<Box<{{ u.lazy_name }}W>>;
+        fn len(self: &{{ u.lazy_name }}VecW) -> usize;
+        fn get(self: &{{ u.lazy_name }}VecW, i: usize) -> Box<{{ u.lazy_name }}W>;
 {%- when CxxBridgeDefinition::TypedefNewtype(t) %}
 
         #[cxx_name = "{{ t.lazy_name }}"]
         type {{ t.lazy_name }}W;
-        fn new_{{ t.lazy_name|lower }}(buf: &[u8]) -> Result<Box<{{ t.lazy_name }}W>>;
-        fn {{ t.lazy_name|lower }}_xdr_bytes(h: &{{ t.lazy_name }}W) -> &[u8];
-        fn {{ t.lazy_name|lower }}_clone(h: &{{ t.lazy_name }}W) -> Box<{{ t.lazy_name }}W>;
+        fn new_{{ t.lazy_snake_name }}(buf: &[u8]) -> Result<Box<{{ t.lazy_name }}W>>;
+        fn {{ t.lazy_snake_name }}_xdr_bytes(h: &{{ t.lazy_name }}W) -> &[u8];
+        fn {{ t.lazy_snake_name }}_clone(h: &{{ t.lazy_name }}W) -> Box<{{ t.lazy_name }}W>;
+
+        #[cxx_name = "{{ t.lazy_name }}Vec"]
+        type {{ t.lazy_name }}VecW;
+        fn new_{{ t.lazy_snake_name }}_vec() -> Box<{{ t.lazy_name }}VecW>;
+        fn push(self: &mut {{ t.lazy_name }}VecW, h: Box<{{ t.lazy_name }}W>);
+        fn pop(self: &mut {{ t.lazy_name }}VecW) -> Result<Box<{{ t.lazy_name }}W>>;
+        fn len(self: &{{ t.lazy_name }}VecW) -> usize;
+        fn get(self: &{{ t.lazy_name }}VecW, i: usize) -> Box<{{ t.lazy_name }}W>;
 {%- when CxxBridgeDefinition::OpaqueOnly(o) %}
 
         #[cxx_name = "{{ o.lazy_name }}"]

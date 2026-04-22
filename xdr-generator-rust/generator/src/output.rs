@@ -26,6 +26,7 @@ pub enum CxxBridgeDefinition {
 
 pub struct CxxBridgeStruct {
     pub lazy_name: String,
+    pub lazy_snake_name: String,
     pub members: Vec<CxxBridgeStructMember>,
 }
 
@@ -39,6 +40,7 @@ pub struct CxxBridgeStructMember {
 
 pub struct CxxBridgeUnion {
     pub lazy_name: String,
+    pub lazy_snake_name: String,
     pub arms: Vec<CxxBridgeUnionArm>,
 }
 
@@ -52,10 +54,12 @@ pub struct CxxBridgeUnionArm {
 
 pub struct CxxBridgeTypedefNewtype {
     pub lazy_name: String,
+    pub lazy_snake_name: String,
 }
 
 pub struct CxxBridgeOpaqueOnly {
     pub lazy_name: String,
+    pub lazy_snake_name: String,
 }
 
 #[derive(Template)]

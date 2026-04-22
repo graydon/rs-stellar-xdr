@@ -10,6 +10,7 @@ use xdr_parser::types::{is_builtin_type, is_fixed_array, is_fixed_opaque, is_var
 
 use crate::naming::{case_value, field_name, mod_name, source_comment, type_name};
 use crate::options::RustOptions;
+use heck::ToSnakeCase;
 use crate::output::{
     ConstOutput, CxxBridgeDefinition, CxxBridgeOpaqueOnly, CxxBridgeStruct, CxxBridgeStructMember,
     CxxBridgeTemplate, CxxBridgeTypedefNewtype, CxxBridgeUnion, CxxBridgeUnionArm,
@@ -604,6 +605,7 @@ impl RustGenerator {
                         .collect();
                     definitions.push(CxxBridgeDefinition::Struct(CxxBridgeStruct {
                         lazy_name: format!("Lazy{rust_name}"),
+                        lazy_snake_name: format!("Lazy{rust_name}").to_snake_case(),
                         members,
                     }));
                 }
@@ -664,6 +666,7 @@ impl RustGenerator {
                         .collect();
                     definitions.push(CxxBridgeDefinition::Union(CxxBridgeUnion {
                         lazy_name: format!("Lazy{rust_name}"),
+                        lazy_snake_name: format!("Lazy{rust_name}").to_snake_case(),
                         arms,
                     }));
                 }
@@ -671,6 +674,7 @@ impl RustGenerator {
                     definitions.push(CxxBridgeDefinition::TypedefNewtype(
                         CxxBridgeTypedefNewtype {
                             lazy_name: format!("Lazy{rust_name}"),
+                            lazy_snake_name: format!("Lazy{rust_name}").to_snake_case(),
                         },
                     ));
                 }
@@ -723,7 +727,7 @@ impl RustGenerator {
         for name in referenced {
             if seen.insert(name.clone()) {
                 definitions.push(CxxBridgeDefinition::OpaqueOnly(
-                    CxxBridgeOpaqueOnly { lazy_name: name },
+                    CxxBridgeOpaqueOnly { lazy_name: name.clone(), lazy_snake_name: name.to_snake_case() },
                 ));
             }
         }
