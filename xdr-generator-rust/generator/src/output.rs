@@ -21,6 +21,7 @@ pub enum CxxBridgeDefinition {
     Struct(CxxBridgeStruct),
     Union(CxxBridgeUnion),
     TypedefNewtype(CxxBridgeTypedefNewtype),
+    OpaqueOnly(CxxBridgeOpaqueOnly),
 }
 
 pub struct CxxBridgeStruct {
@@ -43,11 +44,17 @@ pub struct CxxBridgeUnion {
 
 pub struct CxxBridgeUnionArm {
     pub is_void: bool,
+    pub is_scalar: bool,
     pub lazy_type: Option<String>,
+    pub cxx_scalar_type: String,
     pub lazy_method_name: String,
 }
 
 pub struct CxxBridgeTypedefNewtype {
+    pub lazy_name: String,
+}
+
+pub struct CxxBridgeOpaqueOnly {
     pub lazy_name: String,
 }
 

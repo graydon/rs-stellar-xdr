@@ -1,105 +1,160 @@
 // Auto-generated CXX bridge module for lazy XDR types.
 // Do not edit manually.
+//
+// This module lives inside the stellar-core crate and bridges
+// lazy XDR types from the stellar-xdr crate to C++ via CXX.
+//
+// We use #[repr(transparent)] newtype wrappers around each foreign
+// lazy type so that CXX can implement its traits on local types.
+// The #[cxx_name] attribute keeps the C++ names clean.
 
-// Support impl blocks for the bridged types.
-// These add cxx_* methods that the bridge module's extern "Rust" block refers to.
+#![allow(clippy::boxed_local)]
+#![allow(dead_code)]
 
-use crate::generated::lazy::*;
 extern crate alloc;
 use alloc::sync::Arc;
 
+// --- Newtype wrappers ---
 {%- for def in definitions %}
 {%- match def %}
 {%- when CxxBridgeDefinition::Struct(s) %}
 
-impl {{ s.lazy_name }} {
-    pub fn cxx_from_bytes(buf: &[u8]) -> Result<Box<{{ s.lazy_name }}>, crate::generated::Error> {
-        let arc: Arc<[u8]> = buf.into();
-        let lazy = {{ s.lazy_name }}::try_from(arc)?;
-        Ok(Box::new(lazy))
-    }
-{%- for m in s.members %}
-{%- if m.lazy_is_scalar %}
-    pub fn cxx_{{ m.name }}(self: &{{ s.lazy_name }}) -> {{ m.lazy_type }} {
-        self.{{ m.name }}()
-    }
-{%- else %}
-    pub fn cxx_{{ m.name }}(self: &{{ s.lazy_name }}) -> Box<{{ m.lazy_type }}> {
-        Box::new(self.{{ m.name }}())
-    }
-{%- endif %}
-{%- endfor %}
-}
+#[repr(transparent)]
+pub struct {{ s.lazy_name }}W(stellar_xdr::{{ s.lazy_name }});
 {%- when CxxBridgeDefinition::Union(u) %}
 
-impl {{ u.lazy_name }} {
-    pub fn cxx_from_bytes(buf: &[u8]) -> Result<Box<{{ u.lazy_name }}>, crate::generated::Error> {
-        let arc: Arc<[u8]> = buf.into();
-        let lazy = {{ u.lazy_name }}::try_from(arc)?;
-        Ok(Box::new(lazy))
-    }
-
-    pub fn cxx_discriminant_i32(self: &{{ u.lazy_name }}) -> i32 {
-        self.discriminant_i32()
-    }
-{%- for arm in u.arms %}
-{%- if !arm.is_void %}
-
-    pub fn cxx_as_{{ arm.lazy_method_name }}(self: &{{ u.lazy_name }}) -> Result<Box<{{ arm.lazy_type.as_ref().unwrap() }}>, crate::generated::Error> {
-        self.as_{{ arm.lazy_method_name }}()
-            .map(Box::new)
-            .ok_or(crate::generated::Error::Invalid)
-    }
-{%- endif %}
-{%- endfor %}
-}
+#[repr(transparent)]
+pub struct {{ u.lazy_name }}W(stellar_xdr::{{ u.lazy_name }});
 {%- when CxxBridgeDefinition::TypedefNewtype(t) %}
 
-impl {{ t.lazy_name }} {
-    pub fn cxx_from_bytes(buf: &[u8]) -> Result<Box<{{ t.lazy_name }}>, crate::generated::Error> {
-        let arc: Arc<[u8]> = buf.into();
-        let lazy = {{ t.lazy_name }}::try_from(arc)?;
-        Ok(Box::new(lazy))
-    }
-}
+#[repr(transparent)]
+pub struct {{ t.lazy_name }}W(stellar_xdr::{{ t.lazy_name }});
+{%- when CxxBridgeDefinition::OpaqueOnly(o) %}
+
+#[repr(transparent)]
+pub struct {{ o.lazy_name }}W(stellar_xdr::{{ o.lazy_name }});
 {%- endmatch %}
 {%- endfor %}
 
-// CXX bridge module declaration.
-// This module is processed by the cxx crate's code generator.
-#[cxx::bridge]
+// --- Free functions ---
+{%- for def in definitions %}
+{%- match def %}
+{%- when CxxBridgeDefinition::Struct(s) %}
+
+fn new_{{ s.lazy_name|lower }}(buf: &[u8]) -> Result<Box<{{ s.lazy_name }}W>, stellar_xdr::Error> {
+    let arc: Arc<[u8]> = buf.into();
+    Ok(Box::new({{ s.lazy_name }}W(stellar_xdr::{{ s.lazy_name }}::try_from(arc)?)))
+}
+fn {{ s.lazy_name|lower }}_xdr_bytes(h: &{{ s.lazy_name }}W) -> &[u8] {
+    h.0.as_ref().as_slice()
+}
+fn {{ s.lazy_name|lower }}_clone(h: &{{ s.lazy_name }}W) -> Box<{{ s.lazy_name }}W> {
+    Box::new({{ s.lazy_name }}W(h.0.clone()))
+}
+{%- for m in s.members %}
+{%- if m.lazy_is_scalar %}
+fn {{ s.lazy_name|lower }}_{{ m.name }}(h: &{{ s.lazy_name }}W) -> {{ m.lazy_type }} {
+    h.0.{{ m.name }}()
+}
+{%- else %}
+fn {{ s.lazy_name|lower }}_{{ m.name }}(h: &{{ s.lazy_name }}W) -> Box<{{ m.lazy_type }}W> {
+    Box::new({{ m.lazy_type }}W(h.0.{{ m.name }}()))
+}
+{%- endif %}
+{%- endfor %}
+{%- when CxxBridgeDefinition::Union(u) %}
+
+fn new_{{ u.lazy_name|lower }}(buf: &[u8]) -> Result<Box<{{ u.lazy_name }}W>, stellar_xdr::Error> {
+    let arc: Arc<[u8]> = buf.into();
+    Ok(Box::new({{ u.lazy_name }}W(stellar_xdr::{{ u.lazy_name }}::try_from(arc)?)))
+}
+fn {{ u.lazy_name|lower }}_xdr_bytes(h: &{{ u.lazy_name }}W) -> &[u8] {
+    h.0.as_ref().as_slice()
+}
+fn {{ u.lazy_name|lower }}_clone(h: &{{ u.lazy_name }}W) -> Box<{{ u.lazy_name }}W> {
+    Box::new({{ u.lazy_name }}W(h.0.clone()))
+}
+fn {{ u.lazy_name|lower }}_discriminant(h: &{{ u.lazy_name }}W) -> i32 {
+    h.0.discriminant_i32()
+}
+{%- for arm in u.arms %}
+{%- if !arm.is_void %}
+{%- if arm.is_scalar %}
+fn {{ u.lazy_name|lower }}_as_{{ arm.lazy_method_name }}(h: &{{ u.lazy_name }}W) -> Result<{{ arm.lazy_type.as_ref().unwrap() }}, stellar_xdr::Error> {
+    h.0.as_{{ arm.lazy_method_name }}().ok_or(stellar_xdr::Error::Invalid)
+}
+{%- else %}
+fn {{ u.lazy_name|lower }}_as_{{ arm.lazy_method_name }}(h: &{{ u.lazy_name }}W) -> Result<Box<{{ arm.lazy_type.as_ref().unwrap() }}W>, stellar_xdr::Error> {
+    h.0.as_{{ arm.lazy_method_name }}().map(|v| Box::new({{ arm.lazy_type.as_ref().unwrap() }}W(v))).ok_or(stellar_xdr::Error::Invalid)
+}
+{%- endif %}
+{%- endif %}
+{%- endfor %}
+{%- when CxxBridgeDefinition::TypedefNewtype(t) %}
+
+fn new_{{ t.lazy_name|lower }}(buf: &[u8]) -> Result<Box<{{ t.lazy_name }}W>, stellar_xdr::Error> {
+    let arc: Arc<[u8]> = buf.into();
+    Ok(Box::new({{ t.lazy_name }}W(stellar_xdr::{{ t.lazy_name }}::try_from(arc)?)))
+}
+fn {{ t.lazy_name|lower }}_xdr_bytes(h: &{{ t.lazy_name }}W) -> &[u8] {
+    h.0.as_ref().as_slice()
+}
+fn {{ t.lazy_name|lower }}_clone(h: &{{ t.lazy_name }}W) -> Box<{{ t.lazy_name }}W> {
+    Box::new({{ t.lazy_name }}W(h.0.clone()))
+}
+{%- when CxxBridgeDefinition::OpaqueOnly(_o) %}
+{# No functions for opaque-only types #}
+{%- endmatch %}
+{%- endfor %}
+
+// --- CXX bridge declaration ---
+#[cxx::bridge(namespace = "stellar::lazy_xdr")]
 mod ffi {
     extern "Rust" {
 {%- for def in definitions %}
 {%- match def %}
 {%- when CxxBridgeDefinition::Struct(s) %}
 
-        // {{ s.lazy_name }}
-        type {{ s.lazy_name }};
-        fn cxx_from_bytes(buf: &[u8]) -> Result<Box<{{ s.lazy_name }}>>;
+        #[cxx_name = "{{ s.lazy_name }}"]
+        type {{ s.lazy_name }}W;
+        fn new_{{ s.lazy_name|lower }}(buf: &[u8]) -> Result<Box<{{ s.lazy_name }}W>>;
+        fn {{ s.lazy_name|lower }}_xdr_bytes(h: &{{ s.lazy_name }}W) -> &[u8];
+        fn {{ s.lazy_name|lower }}_clone(h: &{{ s.lazy_name }}W) -> Box<{{ s.lazy_name }}W>;
 {%- for m in s.members %}
 {%- if m.lazy_is_scalar %}
-        fn cxx_{{ m.name }}(self: &{{ s.lazy_name }}) -> {{ m.cxx_scalar_type }};
+        fn {{ s.lazy_name|lower }}_{{ m.name }}(h: &{{ s.lazy_name }}W) -> {{ m.cxx_scalar_type }};
 {%- else %}
-        fn cxx_{{ m.name }}(self: &{{ s.lazy_name }}) -> Box<{{ m.lazy_type }}>;
+        fn {{ s.lazy_name|lower }}_{{ m.name }}(h: &{{ s.lazy_name }}W) -> Box<{{ m.lazy_type }}W>;
 {%- endif %}
 {%- endfor %}
 {%- when CxxBridgeDefinition::Union(u) %}
 
-        // {{ u.lazy_name }}
-        type {{ u.lazy_name }};
-        fn cxx_from_bytes(buf: &[u8]) -> Result<Box<{{ u.lazy_name }}>>;
-        fn cxx_discriminant_i32(self: &{{ u.lazy_name }}) -> i32;
+        #[cxx_name = "{{ u.lazy_name }}"]
+        type {{ u.lazy_name }}W;
+        fn new_{{ u.lazy_name|lower }}(buf: &[u8]) -> Result<Box<{{ u.lazy_name }}W>>;
+        fn {{ u.lazy_name|lower }}_xdr_bytes(h: &{{ u.lazy_name }}W) -> &[u8];
+        fn {{ u.lazy_name|lower }}_clone(h: &{{ u.lazy_name }}W) -> Box<{{ u.lazy_name }}W>;
+        fn {{ u.lazy_name|lower }}_discriminant(h: &{{ u.lazy_name }}W) -> i32;
 {%- for arm in u.arms %}
 {%- if !arm.is_void %}
-        fn cxx_as_{{ arm.lazy_method_name }}(self: &{{ u.lazy_name }}) -> Result<Box<{{ arm.lazy_type.as_ref().unwrap() }}>>;
+{%- if arm.is_scalar %}
+        fn {{ u.lazy_name|lower }}_as_{{ arm.lazy_method_name }}(h: &{{ u.lazy_name }}W) -> Result<{{ arm.cxx_scalar_type }}>;
+{%- else %}
+        fn {{ u.lazy_name|lower }}_as_{{ arm.lazy_method_name }}(h: &{{ u.lazy_name }}W) -> Result<Box<{{ arm.lazy_type.as_ref().unwrap() }}W>>;
+{%- endif %}
 {%- endif %}
 {%- endfor %}
 {%- when CxxBridgeDefinition::TypedefNewtype(t) %}
 
-        // {{ t.lazy_name }}
-        type {{ t.lazy_name }};
-        fn cxx_from_bytes(buf: &[u8]) -> Result<Box<{{ t.lazy_name }}>>;
+        #[cxx_name = "{{ t.lazy_name }}"]
+        type {{ t.lazy_name }}W;
+        fn new_{{ t.lazy_name|lower }}(buf: &[u8]) -> Result<Box<{{ t.lazy_name }}W>>;
+        fn {{ t.lazy_name|lower }}_xdr_bytes(h: &{{ t.lazy_name }}W) -> &[u8];
+        fn {{ t.lazy_name|lower }}_clone(h: &{{ t.lazy_name }}W) -> Box<{{ t.lazy_name }}W>;
+{%- when CxxBridgeDefinition::OpaqueOnly(o) %}
+
+        #[cxx_name = "{{ o.lazy_name }}"]
+        type {{ o.lazy_name }}W;
 {%- endmatch %}
 {%- endfor %}
     }

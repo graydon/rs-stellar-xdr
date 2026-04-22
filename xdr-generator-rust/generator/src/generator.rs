@@ -11,7 +11,7 @@ use xdr_parser::types::{is_builtin_type, is_fixed_array, is_fixed_opaque, is_var
 use crate::naming::{case_value, field_name, mod_name, source_comment, type_name};
 use crate::options::RustOptions;
 use crate::output::{
-    ConstOutput, CxxBridgeDefinition, CxxBridgeStruct, CxxBridgeStructMember,
+    ConstOutput, CxxBridgeDefinition, CxxBridgeOpaqueOnly, CxxBridgeStruct, CxxBridgeStructMember,
     CxxBridgeTemplate, CxxBridgeTypedefNewtype, CxxBridgeUnion, CxxBridgeUnionArm,
     DefinitionOutput, DefinitionTemplate, EnumOutput, EnumStructMemberOutput, GeneratedTemplate,
     LazyAccessor, LazyBaseTemplate, LazyContentValidation, LazyValidateFixedGroup,
@@ -581,21 +581,25 @@ impl RustGenerator {
                     let members = s
                         .members
                         .iter()
-                        .map(|m| {
+                        .filter_map(|m| {
                             let mname = field_name(&m.name);
                             let lazy_type = self.lazy_type_ref(&m.type_);
                             let scalar = self.is_lazy_scalar(&m.type_);
+                            // CXX does not support generic type parameters
+                            if !scalar && lazy_type.contains('<') {
+                                return None;
+                            }
                             let cxx_scalar_type = if scalar {
                                 self.cxx_scalar_type_name(&m.type_)
                             } else {
                                 String::new()
                             };
-                            CxxBridgeStructMember {
+                            Some(CxxBridgeStructMember {
                                 name: mname,
                                 lazy_type,
                                 lazy_is_scalar: scalar,
                                 cxx_scalar_type,
-                            }
+                            })
                         })
                         .collect();
                     definitions.push(CxxBridgeDefinition::Struct(CxxBridgeStruct {
@@ -627,7 +631,7 @@ impl RustGenerator {
                         .flat_map(|arm| {
                             let dt = &discriminant_type_str;
                             let dp = &discriminant_prefix;
-                            arm.cases.iter().map(move |case| {
+                            arm.cases.iter().filter_map(move |case| {
                                 let (cn, _) = case_value(
                                     dt,
                                     discriminant_is_builtin,
@@ -636,11 +640,25 @@ impl RustGenerator {
                                 );
                                 let lazy_type =
                                     arm.type_.as_ref().map(|t| self.lazy_type_ref(t));
-                                CxxBridgeUnionArm {
+                                // CXX does not support generic type parameters
+                                if let Some(ref lt) = lazy_type {
+                                    if lt.contains('<') {
+                                        return None;
+                                    }
+                                }
+                                let is_scalar = arm.type_.as_ref().map(|t| self.is_lazy_scalar(t)).unwrap_or(false);
+                                let cxx_scalar_type = if is_scalar {
+                                    arm.type_.as_ref().map(|t| self.cxx_scalar_type_name(t)).unwrap_or_default()
+                                } else {
+                                    String::new()
+                                };
+                                Some(CxxBridgeUnionArm {
                                     lazy_method_name: field_name(&cn),
                                     is_void: arm.type_.is_none(),
+                                    is_scalar,
+                                    cxx_scalar_type,
                                     lazy_type,
-                                }
+                                })
                             })
                         })
                         .collect();
@@ -660,6 +678,56 @@ impl RustGenerator {
             }
         }
 
+        // Collect all types that are already defined in the bridge.
+        let mut defined: std::collections::HashSet<String> = std::collections::HashSet::new();
+        for def in &definitions {
+            match def {
+                CxxBridgeDefinition::Struct(s) => { defined.insert(s.lazy_name.clone()); }
+                CxxBridgeDefinition::Union(u) => { defined.insert(u.lazy_name.clone()); }
+                CxxBridgeDefinition::TypedefNewtype(t) => { defined.insert(t.lazy_name.clone()); }
+                CxxBridgeDefinition::OpaqueOnly(o) => { defined.insert(o.lazy_name.clone()); }
+            }
+        }
+
+        // Collect all lazy types referenced by struct members and union arms
+        // that are not already defined, and add opaque-only declarations.
+        // Exclude primitive/builtin types that CXX knows natively.
+        let builtin_types: std::collections::HashSet<&str> = [
+            "bool", "u8", "i8", "u16", "i16", "u32", "i32", "u64", "i64",
+            "f32", "f64", "usize", "isize",
+        ].into_iter().collect();
+        let mut referenced: Vec<String> = Vec::new();
+        for def in &definitions {
+            match def {
+                CxxBridgeDefinition::Struct(s) => {
+                    for m in &s.members {
+                        if !m.lazy_is_scalar && !defined.contains(&m.lazy_type) && !builtin_types.contains(m.lazy_type.as_str()) {
+                            referenced.push(m.lazy_type.clone());
+                        }
+                    }
+                }
+                CxxBridgeDefinition::Union(u) => {
+                    for arm in &u.arms {
+                        if let Some(ref lt) = arm.lazy_type {
+                            if !defined.contains(lt) && !builtin_types.contains(lt.as_str()) {
+                                referenced.push(lt.clone());
+                            }
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+        // Deduplicate while preserving order.
+        let mut seen = std::collections::HashSet::new();
+        for name in referenced {
+            if seen.insert(name.clone()) {
+                definitions.push(CxxBridgeDefinition::OpaqueOnly(
+                    CxxBridgeOpaqueOnly { lazy_name: name },
+                ));
+            }
+        }
+
         CxxBridgeTemplate { definitions }
     }
 
@@ -675,7 +743,7 @@ impl RustGenerator {
             Type::Double => "f64".to_string(),
             Type::Bool => "bool".to_string(),
             Type::Ident(name) => {
-                if let Some(def) = self.type_info.definitions.get(name.as_str()) {
+                if let Some(def) = self.type_info.definitions.get(&type_name(name)) {
                     if let Definition::Typedef(t) = def {
                         return self.cxx_scalar_type_name(&t.type_);
                     }
