@@ -1,161 +1,166 @@
-// Auto-generated CXX bridge module for lazy XDR types.
+// Auto-generated lazy XDR type wrappers and bridge-module fragment.
 // Do not edit manually.
 //
-// This module lives inside the stellar-core crate and bridges
-// lazy XDR types from the stellar-xdr crate to C++ via CXX.
-//
-// We use #[repr(transparent)] newtype wrappers around each foreign
-// lazy type so that CXX can implement its traits on local types.
-// The #[cxx_name] attribute keeps the C++ names clean.
+// This file is split at the @@@SPLICE_DELIMITER@@@ marker during build:
+//   - Lines before the delimiter become lazy_xdr_bridge.rs (a regular Rust module
+//     with newtype wrappers, free functions, and the invoke_host_function_lazy impl).
+//   - Lines after the delimiter are spliced into bridge.rs at the
+//     LAZY-DEFINES-GO-HERE marker to form merged_bridge.rs.
 
 #![allow(clippy::boxed_local)]
 #![allow(dead_code)]
 
 extern crate alloc;
 use alloc::sync::Arc;
+use crate::lazy_xdr;
 
 // --- Newtype wrappers ---
+// These wrap the foreign lazy XDR types so CXX can implement its traits
+// on local types. They must be in scope when the merged bridge module
+// references them via `type LazyFooW;` declarations.
 {%- for def in definitions %}
 {%- match def %}
 {%- when CxxBridgeDefinition::Struct(s) %}
 
 #[repr(transparent)]
-pub struct {{ s.lazy_name }}W(stellar_xdr::{{ s.lazy_name }});
-pub struct {{ s.lazy_name }}VecW(Vec<stellar_xdr::{{ s.lazy_name }}>);
+pub(crate) struct {{ s.lazy_name }}W(pub(crate) lazy_xdr::{{ s.lazy_name }});
+pub(crate) struct {{ s.lazy_name }}VecW(pub(crate) Vec<lazy_xdr::{{ s.lazy_name }}>);
 {%- when CxxBridgeDefinition::Union(u) %}
 
 #[repr(transparent)]
-pub struct {{ u.lazy_name }}W(stellar_xdr::{{ u.lazy_name }});
-pub struct {{ u.lazy_name }}VecW(Vec<stellar_xdr::{{ u.lazy_name }}>);
+pub(crate) struct {{ u.lazy_name }}W(pub(crate) lazy_xdr::{{ u.lazy_name }});
+pub(crate) struct {{ u.lazy_name }}VecW(pub(crate) Vec<lazy_xdr::{{ u.lazy_name }}>);
 {%- when CxxBridgeDefinition::TypedefNewtype(t) %}
 
 #[repr(transparent)]
-pub struct {{ t.lazy_name }}W(stellar_xdr::{{ t.lazy_name }});
-pub struct {{ t.lazy_name }}VecW(Vec<stellar_xdr::{{ t.lazy_name }}>);
+pub(crate) struct {{ t.lazy_name }}W(pub(crate) lazy_xdr::{{ t.lazy_name }});
+pub(crate) struct {{ t.lazy_name }}VecW(pub(crate) Vec<lazy_xdr::{{ t.lazy_name }}>);
 {%- when CxxBridgeDefinition::OpaqueOnly(o) %}
 
 #[repr(transparent)]
-pub struct {{ o.lazy_name }}W(stellar_xdr::{{ o.lazy_name }});
+pub(crate) struct {{ o.lazy_name }}W(pub(crate) lazy_xdr::{{ o.lazy_name }});
 {%- endmatch %}
 {%- endfor %}
 
 // --- Free functions ---
+// These are the Rust implementations backing the extern "Rust" declarations
+// that get spliced into the bridge module.
 {%- for def in definitions %}
 {%- match def %}
 {%- when CxxBridgeDefinition::Struct(s) %}
 
-fn new_{{ s.lazy_snake_name }}(buf: &[u8]) -> Result<Box<{{ s.lazy_name }}W>, stellar_xdr::Error> {
+pub(crate) fn new_{{ s.lazy_snake_name }}(buf: &[u8]) -> Result<Box<{{ s.lazy_name }}W>, lazy_xdr::Error> {
     let arc: Arc<[u8]> = buf.into();
-    Ok(Box::new({{ s.lazy_name }}W(stellar_xdr::{{ s.lazy_name }}::try_from(arc)?)))
+    Ok(Box::new({{ s.lazy_name }}W(lazy_xdr::{{ s.lazy_name }}::try_from(arc)?)))
 }
-fn {{ s.lazy_snake_name }}_xdr_bytes(h: &{{ s.lazy_name }}W) -> &[u8] {
+pub(crate) fn {{ s.lazy_snake_name }}_xdr_bytes(h: &{{ s.lazy_name }}W) -> &[u8] {
     h.0.as_ref().as_slice()
 }
-fn {{ s.lazy_snake_name }}_clone(h: &{{ s.lazy_name }}W) -> Box<{{ s.lazy_name }}W> {
+pub(crate) fn {{ s.lazy_snake_name }}_clone(h: &{{ s.lazy_name }}W) -> Box<{{ s.lazy_name }}W> {
     Box::new({{ s.lazy_name }}W(h.0.clone()))
 }
 {%- for m in s.members %}
 {%- if m.lazy_is_scalar %}
-fn {{ s.lazy_snake_name }}_{{ m.name }}(h: &{{ s.lazy_name }}W) -> {{ m.lazy_type }} {
+pub(crate) fn {{ s.lazy_snake_name }}_{{ m.name }}(h: &{{ s.lazy_name }}W) -> {{ m.lazy_type }} {
     h.0.{{ m.name }}()
 }
 {%- else %}
-fn {{ s.lazy_snake_name }}_{{ m.name }}(h: &{{ s.lazy_name }}W) -> Box<{{ m.lazy_type }}W> {
+pub(crate) fn {{ s.lazy_snake_name }}_{{ m.name }}(h: &{{ s.lazy_name }}W) -> Box<{{ m.lazy_type }}W> {
     Box::new({{ m.lazy_type }}W(h.0.{{ m.name }}()))
 }
 {%- endif %}
 {%- endfor %}
 
-fn new_{{ s.lazy_snake_name }}_vec() -> Box<{{ s.lazy_name }}VecW> {
+pub(crate) fn new_{{ s.lazy_snake_name }}_vec() -> Box<{{ s.lazy_name }}VecW> {
     Box::new({{ s.lazy_name }}VecW(Vec::new()))
 }
 impl {{ s.lazy_name }}VecW {
-    fn push(&mut self, h: Box<{{ s.lazy_name }}W>) {
+    pub(crate) fn push(&mut self, h: Box<{{ s.lazy_name }}W>) {
         self.0.push(h.0);
     }
-    fn pop(&mut self) -> Result<Box<{{ s.lazy_name }}W>, stellar_xdr::Error> {
-        self.0.pop().map(|v| Box::new({{ s.lazy_name }}W(v))).ok_or(stellar_xdr::Error::Invalid)
+    pub(crate) fn pop(&mut self) -> Result<Box<{{ s.lazy_name }}W>, lazy_xdr::Error> {
+        self.0.pop().map(|v| Box::new({{ s.lazy_name }}W(v))).ok_or(lazy_xdr::Error::Invalid)
     }
-    fn len(&self) -> usize {
+    pub(crate) fn len(&self) -> usize {
         self.0.len()
     }
-    fn get(&self, i: usize) -> Box<{{ s.lazy_name }}W> {
+    pub(crate) fn get(&self, i: usize) -> Box<{{ s.lazy_name }}W> {
         Box::new({{ s.lazy_name }}W(self.0[i].clone()))
     }
 }
 {%- when CxxBridgeDefinition::Union(u) %}
 
-fn new_{{ u.lazy_snake_name }}(buf: &[u8]) -> Result<Box<{{ u.lazy_name }}W>, stellar_xdr::Error> {
+pub(crate) fn new_{{ u.lazy_snake_name }}(buf: &[u8]) -> Result<Box<{{ u.lazy_name }}W>, lazy_xdr::Error> {
     let arc: Arc<[u8]> = buf.into();
-    Ok(Box::new({{ u.lazy_name }}W(stellar_xdr::{{ u.lazy_name }}::try_from(arc)?)))
+    Ok(Box::new({{ u.lazy_name }}W(lazy_xdr::{{ u.lazy_name }}::try_from(arc)?)))
 }
-fn {{ u.lazy_snake_name }}_xdr_bytes(h: &{{ u.lazy_name }}W) -> &[u8] {
+pub(crate) fn {{ u.lazy_snake_name }}_xdr_bytes(h: &{{ u.lazy_name }}W) -> &[u8] {
     h.0.as_ref().as_slice()
 }
-fn {{ u.lazy_snake_name }}_clone(h: &{{ u.lazy_name }}W) -> Box<{{ u.lazy_name }}W> {
+pub(crate) fn {{ u.lazy_snake_name }}_clone(h: &{{ u.lazy_name }}W) -> Box<{{ u.lazy_name }}W> {
     Box::new({{ u.lazy_name }}W(h.0.clone()))
 }
-fn {{ u.lazy_snake_name }}_discriminant(h: &{{ u.lazy_name }}W) -> i32 {
+pub(crate) fn {{ u.lazy_snake_name }}_discriminant(h: &{{ u.lazy_name }}W) -> i32 {
     h.0.discriminant_i32()
 }
 {%- for arm in u.arms %}
 {%- if !arm.is_void %}
 {%- if arm.is_scalar %}
-fn {{ u.lazy_snake_name }}_as_{{ arm.lazy_method_name }}(h: &{{ u.lazy_name }}W) -> Result<{{ arm.lazy_type.as_ref().unwrap() }}, stellar_xdr::Error> {
-    h.0.as_{{ arm.lazy_method_name }}().ok_or(stellar_xdr::Error::Invalid)
+pub(crate) fn {{ u.lazy_snake_name }}_as_{{ arm.lazy_method_name }}(h: &{{ u.lazy_name }}W) -> Result<{{ arm.lazy_type.as_ref().unwrap() }}, lazy_xdr::Error> {
+    h.0.as_{{ arm.lazy_method_name }}().ok_or(lazy_xdr::Error::Invalid)
 }
 {%- else %}
-fn {{ u.lazy_snake_name }}_as_{{ arm.lazy_method_name }}(h: &{{ u.lazy_name }}W) -> Result<Box<{{ arm.lazy_type.as_ref().unwrap() }}W>, stellar_xdr::Error> {
-    h.0.as_{{ arm.lazy_method_name }}().map(|v| Box::new({{ arm.lazy_type.as_ref().unwrap() }}W(v))).ok_or(stellar_xdr::Error::Invalid)
+pub(crate) fn {{ u.lazy_snake_name }}_as_{{ arm.lazy_method_name }}(h: &{{ u.lazy_name }}W) -> Result<Box<{{ arm.lazy_type.as_ref().unwrap() }}W>, lazy_xdr::Error> {
+    h.0.as_{{ arm.lazy_method_name }}().map(|v| Box::new({{ arm.lazy_type.as_ref().unwrap() }}W(v))).ok_or(lazy_xdr::Error::Invalid)
 }
 {%- endif %}
 {%- endif %}
 {%- endfor %}
 
-fn new_{{ u.lazy_snake_name }}_vec() -> Box<{{ u.lazy_name }}VecW> {
+pub(crate) fn new_{{ u.lazy_snake_name }}_vec() -> Box<{{ u.lazy_name }}VecW> {
     Box::new({{ u.lazy_name }}VecW(Vec::new()))
 }
 impl {{ u.lazy_name }}VecW {
-    fn push(&mut self, h: Box<{{ u.lazy_name }}W>) {
+    pub(crate) fn push(&mut self, h: Box<{{ u.lazy_name }}W>) {
         self.0.push(h.0);
     }
-    fn pop(&mut self) -> Result<Box<{{ u.lazy_name }}W>, stellar_xdr::Error> {
-        self.0.pop().map(|v| Box::new({{ u.lazy_name }}W(v))).ok_or(stellar_xdr::Error::Invalid)
+    pub(crate) fn pop(&mut self) -> Result<Box<{{ u.lazy_name }}W>, lazy_xdr::Error> {
+        self.0.pop().map(|v| Box::new({{ u.lazy_name }}W(v))).ok_or(lazy_xdr::Error::Invalid)
     }
-    fn len(&self) -> usize {
+    pub(crate) fn len(&self) -> usize {
         self.0.len()
     }
-    fn get(&self, i: usize) -> Box<{{ u.lazy_name }}W> {
+    pub(crate) fn get(&self, i: usize) -> Box<{{ u.lazy_name }}W> {
         Box::new({{ u.lazy_name }}W(self.0[i].clone()))
     }
 }
 {%- when CxxBridgeDefinition::TypedefNewtype(t) %}
 
-fn new_{{ t.lazy_snake_name }}(buf: &[u8]) -> Result<Box<{{ t.lazy_name }}W>, stellar_xdr::Error> {
+pub(crate) fn new_{{ t.lazy_snake_name }}(buf: &[u8]) -> Result<Box<{{ t.lazy_name }}W>, lazy_xdr::Error> {
     let arc: Arc<[u8]> = buf.into();
-    Ok(Box::new({{ t.lazy_name }}W(stellar_xdr::{{ t.lazy_name }}::try_from(arc)?)))
+    Ok(Box::new({{ t.lazy_name }}W(lazy_xdr::{{ t.lazy_name }}::try_from(arc)?)))
 }
-fn {{ t.lazy_snake_name }}_xdr_bytes(h: &{{ t.lazy_name }}W) -> &[u8] {
+pub(crate) fn {{ t.lazy_snake_name }}_xdr_bytes(h: &{{ t.lazy_name }}W) -> &[u8] {
     h.0.as_ref().as_slice()
 }
-fn {{ t.lazy_snake_name }}_clone(h: &{{ t.lazy_name }}W) -> Box<{{ t.lazy_name }}W> {
+pub(crate) fn {{ t.lazy_snake_name }}_clone(h: &{{ t.lazy_name }}W) -> Box<{{ t.lazy_name }}W> {
     Box::new({{ t.lazy_name }}W(h.0.clone()))
 }
 
-fn new_{{ t.lazy_snake_name }}_vec() -> Box<{{ t.lazy_name }}VecW> {
+pub(crate) fn new_{{ t.lazy_snake_name }}_vec() -> Box<{{ t.lazy_name }}VecW> {
     Box::new({{ t.lazy_name }}VecW(Vec::new()))
 }
 impl {{ t.lazy_name }}VecW {
-    fn push(&mut self, h: Box<{{ t.lazy_name }}W>) {
+    pub(crate) fn push(&mut self, h: Box<{{ t.lazy_name }}W>) {
         self.0.push(h.0);
     }
-    fn pop(&mut self) -> Result<Box<{{ t.lazy_name }}W>, stellar_xdr::Error> {
-        self.0.pop().map(|v| Box::new({{ t.lazy_name }}W(v))).ok_or(stellar_xdr::Error::Invalid)
+    pub(crate) fn pop(&mut self) -> Result<Box<{{ t.lazy_name }}W>, lazy_xdr::Error> {
+        self.0.pop().map(|v| Box::new({{ t.lazy_name }}W(v))).ok_or(lazy_xdr::Error::Invalid)
     }
-    fn len(&self) -> usize {
+    pub(crate) fn len(&self) -> usize {
         self.0.len()
     }
-    fn get(&self, i: usize) -> Box<{{ t.lazy_name }}W> {
+    pub(crate) fn get(&self, i: usize) -> Box<{{ t.lazy_name }}W> {
         Box::new({{ t.lazy_name }}W(self.0[i].clone()))
     }
 }
@@ -164,9 +169,49 @@ impl {{ t.lazy_name }}VecW {
 {%- endmatch %}
 {%- endfor %}
 
-// --- CXX bridge declaration ---
-#[cxx::bridge(namespace = "stellar::lazy_xdr")]
-mod ffi {
+/// Lazy invocation entry point implementation.
+/// Delegates to soroban_invoke::invoke_host_function_lazy.
+pub(crate) fn invoke_host_function_lazy(
+    config_max_protocol: u32,
+    enable_diagnostics: bool,
+    instruction_limit: u32,
+    hf: &LazyHostFunctionW,
+    resources: &LazySorobanResourcesW,
+    restored_rw_entry_indices: &Vec<u32>,
+    source_account: &[u8],
+    auth_entries: &LazySorobanAuthorizationEntryVecW,
+    ledger_info: crate::rust_bridge::CxxLedgerInfoLazy,
+    ledger_entries: &LazyLedgerEntryVecW,
+    ttl_entries: &LazyTtlEntryVecW,
+    base_prng_seed: &[u8],
+    rent_fee_configuration: crate::rust_bridge::CxxRentFeeConfigurationLazy,
+    module_cache: &crate::SorobanModuleCache,
+) -> Result<crate::rust_bridge::InvokeHostFunctionOutput, Box<dyn std::error::Error>> {
+    crate::soroban_invoke::invoke_host_function_lazy(
+        config_max_protocol,
+        enable_diagnostics,
+        instruction_limit,
+        hf,
+        resources,
+        restored_rw_entry_indices,
+        source_account,
+        auth_entries,
+        ledger_info,
+        ledger_entries,
+        ttl_entries,
+        base_prng_seed,
+        rent_fee_configuration,
+        module_cache,
+    )
+}
+
+// @@@SPLICE_DELIMITER@@@
+// Everything below this line is spliced into bridge.rs at the
+// LAZY-DEFINES-GO-HERE marker to form the merged bridge module.
+
+    // --- Lazy XDR type declarations (auto-generated) ---
+
+    #[namespace = "stellar::lazy_xdr"]
     extern "Rust" {
 {%- for def in definitions %}
 {%- match def %}
@@ -238,5 +283,21 @@ mod ffi {
         type {{ o.lazy_name }}W;
 {%- endmatch %}
 {%- endfor %}
+
+        fn invoke_host_function_lazy(
+            config_max_protocol: u32,
+            enable_diagnostics: bool,
+            instruction_limit: u32,
+            hf: &LazyHostFunctionW,
+            resources: &LazySorobanResourcesW,
+            restored_rw_entry_indices: &Vec<u32>,
+            source_account: &[u8],
+            auth_entries: &LazySorobanAuthorizationEntryVecW,
+            ledger_info: CxxLedgerInfoLazy,
+            ledger_entries: &LazyLedgerEntryVecW,
+            ttl_entries: &LazyTtlEntryVecW,
+            base_prng_seed: &[u8],
+            rent_fee_configuration: CxxRentFeeConfigurationLazy,
+            module_cache: &SorobanModuleCache,
+        ) -> Result<InvokeHostFunctionOutput>;
     }
-}
