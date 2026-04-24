@@ -140,8 +140,8 @@ impl LazyXdr for LazyTimeSlicedPeerDataList {
         <LazyVecM<LazyTimeSlicedPeerData, 25> as LazyXdr>::xdr_len(buf)
     }
 
-    fn from_xdr_at(parent: &LazyHandle, offset: u32) -> Self {
-        Self(<LazyVecM<LazyTimeSlicedPeerData, 25> as LazyXdr>::from_xdr_at(parent, offset))
+    fn from_xdr_consume(parent: &LazyHandle, buf: &mut &[u8]) -> Self {
+        Self(<LazyVecM<LazyTimeSlicedPeerData, 25> as LazyXdr>::from_xdr_consume(parent, buf))
     }
 }
 #[cfg(feature = "alloc")]

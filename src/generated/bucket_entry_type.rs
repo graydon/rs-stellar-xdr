@@ -156,7 +156,8 @@ impl LazyXdr for BucketEntryType {
         if buf.len() < 4 {
             return Err(Error::Invalid);
         }
-        let v = i32::from_be_bytes([buf[0], buf[1], buf[2], buf[3]]);
+        let bytes: [u8; 4] = buf[..4].try_into().unwrap();
+        let v = i32::from_be_bytes(bytes);
         let _ = BucketEntryType::try_from(v)?;
         Ok(4)
     }
@@ -167,9 +168,10 @@ impl LazyXdr for BucketEntryType {
     }
 
     #[inline]
-    fn from_xdr_at(parent: &LazyHandle, offset: u32) -> Self {
-        let b = &parent.as_slice()[offset as usize..];
-        let v = i32::from_be_bytes([b[0], b[1], b[2], b[3]]);
+    fn from_xdr_consume(_parent: &LazyHandle, buf: &mut &[u8]) -> Self {
+        let bytes: [u8; 4] = buf[..4].try_into().unwrap();
+        *buf = &buf[4..];
+        let v = i32::from_be_bytes(bytes);
         // SAFETY: data was validated; unwrap is infallible.
         BucketEntryType::try_from(v).unwrap()
     }

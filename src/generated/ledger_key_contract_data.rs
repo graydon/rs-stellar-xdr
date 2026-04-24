@@ -109,10 +109,12 @@ impl LazyXdr for LazyLedgerKeyContractData {
         pos
     }
 
-    fn from_xdr_at(parent: &LazyHandle, offset: u32) -> Self {
-        let buf = &parent.as_slice()[offset as usize..];
+    fn from_xdr_consume(parent: &LazyHandle, buf: &mut &[u8]) -> Self {
         let len = Self::xdr_len(buf);
-        Self(parent.sub_handle(offset, len))
+        let offset = (parent.len() as usize - buf.len()) as u32;
+        let handle = parent.sub_handle(offset, len);
+        *buf = &buf[len as usize..];
+        Self(handle)
     }
 }
 #[cfg(feature = "alloc")]

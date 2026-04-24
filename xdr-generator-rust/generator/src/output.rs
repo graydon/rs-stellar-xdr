@@ -59,6 +59,7 @@ pub struct CxxBridgeTypedefNewtype {
 
 pub struct CxxBridgeOpaqueOnly {
     pub lazy_name: String,
+    #[allow(dead_code)]
     pub lazy_snake_name: String,
 }
 

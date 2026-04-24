@@ -176,7 +176,8 @@ impl LazyXdr for LazyContractExecutable {
         if buf.len() < 4 {
             return Err(Error::Invalid);
         }
-        let disc = i32::from_be_bytes([buf[0], buf[1], buf[2], buf[3]]);
+        let bytes: [u8; 4] = buf[..4].try_into().unwrap();
+        let disc = i32::from_be_bytes(bytes);
         #[allow(unused_mut)]
         let mut pos: u32 = 4;
         #[allow(clippy::match_same_arms)]
@@ -194,7 +195,8 @@ impl LazyXdr for LazyContractExecutable {
     }
 
     fn xdr_len(buf: &[u8]) -> u32 {
-        let disc = i32::from_be_bytes([buf[0], buf[1], buf[2], buf[3]]);
+        let bytes: [u8; 4] = buf[..4].try_into().unwrap();
+        let disc = i32::from_be_bytes(bytes);
         #[allow(unused_mut)]
         let mut pos: u32 = 4;
         #[allow(clippy::match_same_arms)]
@@ -210,10 +212,12 @@ impl LazyXdr for LazyContractExecutable {
         pos
     }
 
-    fn from_xdr_at(parent: &LazyHandle, offset: u32) -> Self {
-        let buf = &parent.as_slice()[offset as usize..];
+    fn from_xdr_consume(parent: &LazyHandle, buf: &mut &[u8]) -> Self {
         let len = Self::xdr_len(buf);
-        Self(parent.sub_handle(offset, len))
+        let offset = (parent.len() as usize - buf.len()) as u32;
+        let handle = parent.sub_handle(offset, len);
+        *buf = &buf[len as usize..];
+        Self(handle)
     }
 }
 #[cfg(feature = "alloc")]

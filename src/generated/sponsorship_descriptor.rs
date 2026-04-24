@@ -92,9 +92,9 @@ impl LazyXdr for LazySponsorshipDescriptor {
         <LazyOption<LazyAccountId> as LazyXdr>::xdr_len(buf)
     }
 
-    fn from_xdr_at(parent: &LazyHandle, offset: u32) -> Self {
-        Self(<LazyOption<LazyAccountId> as LazyXdr>::from_xdr_at(
-            parent, offset,
+    fn from_xdr_consume(parent: &LazyHandle, buf: &mut &[u8]) -> Self {
+        Self(<LazyOption<LazyAccountId> as LazyXdr>::from_xdr_consume(
+            parent, buf,
         ))
     }
 }

@@ -100,8 +100,8 @@ impl LazyXdr for LazyDuration {
         <u64 as LazyXdr>::xdr_len(buf)
     }
 
-    fn from_xdr_at(parent: &LazyHandle, offset: u32) -> Self {
-        Self(<u64 as LazyXdr>::from_xdr_at(parent, offset))
+    fn from_xdr_consume(parent: &LazyHandle, buf: &mut &[u8]) -> Self {
+        Self(<u64 as LazyXdr>::from_xdr_consume(parent, buf))
     }
 }
 #[cfg(feature = "alloc")]

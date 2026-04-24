@@ -139,12 +139,19 @@ pub trait LazyXdr: Sized {
     /// validated).
     fn xdr_len(buf: &[u8]) -> u32;
 
+    /// Construct a value from the front of a validated slice, advancing it.
+    ///
+    /// The slice must be a suffix of `parent.as_slice()`. This is the fast
+    /// path for sequential scans.
+    fn from_xdr_consume(parent: &LazyHandle, buf: &mut &[u8]) -> Self;
+
     /// Construct a value by reading from a validated parent handle at the
     /// given byte offset.
-    ///
-    /// For scalar types this extracts the value directly.
-    /// For handle-wrapper types this creates a sub-handle.
-    fn from_xdr_at(parent: &LazyHandle, offset: u32) -> Self;
+    #[inline]
+    fn from_xdr_at(parent: &LazyHandle, offset: u32) -> Self {
+        let mut buf = &parent.as_slice()[offset as usize..];
+        Self::from_xdr_consume(parent, &mut buf)
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -167,9 +174,10 @@ impl LazyXdr for i32 {
     }
 
     #[inline]
-    fn from_xdr_at(parent: &LazyHandle, offset: u32) -> Self {
-        let b = &parent.as_slice()[offset as usize..];
-        i32::from_be_bytes([b[0], b[1], b[2], b[3]])
+    fn from_xdr_consume(_parent: &LazyHandle, buf: &mut &[u8]) -> Self {
+        let bytes: [u8; 4] = buf[..4].try_into().unwrap();
+        *buf = &buf[4..];
+        i32::from_be_bytes(bytes)
     }
 }
 
@@ -189,9 +197,10 @@ impl LazyXdr for u32 {
     }
 
     #[inline]
-    fn from_xdr_at(parent: &LazyHandle, offset: u32) -> Self {
-        let b = &parent.as_slice()[offset as usize..];
-        u32::from_be_bytes([b[0], b[1], b[2], b[3]])
+    fn from_xdr_consume(_parent: &LazyHandle, buf: &mut &[u8]) -> Self {
+        let bytes: [u8; 4] = buf[..4].try_into().unwrap();
+        *buf = &buf[4..];
+        u32::from_be_bytes(bytes)
     }
 }
 
@@ -211,9 +220,10 @@ impl LazyXdr for i64 {
     }
 
     #[inline]
-    fn from_xdr_at(parent: &LazyHandle, offset: u32) -> Self {
-        let b = &parent.as_slice()[offset as usize..];
-        i64::from_be_bytes([b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7]])
+    fn from_xdr_consume(_parent: &LazyHandle, buf: &mut &[u8]) -> Self {
+        let bytes: [u8; 8] = buf[..8].try_into().unwrap();
+        *buf = &buf[8..];
+        i64::from_be_bytes(bytes)
     }
 }
 
@@ -233,9 +243,10 @@ impl LazyXdr for u64 {
     }
 
     #[inline]
-    fn from_xdr_at(parent: &LazyHandle, offset: u32) -> Self {
-        let b = &parent.as_slice()[offset as usize..];
-        u64::from_be_bytes([b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7]])
+    fn from_xdr_consume(_parent: &LazyHandle, buf: &mut &[u8]) -> Self {
+        let bytes: [u8; 8] = buf[..8].try_into().unwrap();
+        *buf = &buf[8..];
+        u64::from_be_bytes(bytes)
     }
 }
 
@@ -255,9 +266,10 @@ impl LazyXdr for f32 {
     }
 
     #[inline]
-    fn from_xdr_at(parent: &LazyHandle, offset: u32) -> Self {
-        let b = &parent.as_slice()[offset as usize..];
-        f32::from_be_bytes([b[0], b[1], b[2], b[3]])
+    fn from_xdr_consume(_parent: &LazyHandle, buf: &mut &[u8]) -> Self {
+        let bytes: [u8; 4] = buf[..4].try_into().unwrap();
+        *buf = &buf[4..];
+        f32::from_be_bytes(bytes)
     }
 }
 
@@ -277,9 +289,10 @@ impl LazyXdr for f64 {
     }
 
     #[inline]
-    fn from_xdr_at(parent: &LazyHandle, offset: u32) -> Self {
-        let b = &parent.as_slice()[offset as usize..];
-        f64::from_be_bytes([b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7]])
+    fn from_xdr_consume(_parent: &LazyHandle, buf: &mut &[u8]) -> Self {
+        let bytes: [u8; 8] = buf[..8].try_into().unwrap();
+        *buf = &buf[8..];
+        f64::from_be_bytes(bytes)
     }
 }
 
@@ -290,7 +303,7 @@ impl LazyXdr for bool {
         if buf.len() < 4 {
             return Err(Error::Invalid);
         }
-        let v = u32::from_be_bytes([buf[0], buf[1], buf[2], buf[3]]);
+        let v = u32::from_be_bytes(buf[0..4].try_into().unwrap());
         if v > 1 {
             return Err(Error::Invalid);
         }
@@ -303,9 +316,10 @@ impl LazyXdr for bool {
     }
 
     #[inline]
-    fn from_xdr_at(parent: &LazyHandle, offset: u32) -> Self {
-        let b = &parent.as_slice()[offset as usize..];
-        u32::from_be_bytes([b[0], b[1], b[2], b[3]]) != 0
+    fn from_xdr_consume(_parent: &LazyHandle, buf: &mut &[u8]) -> Self {
+        let bytes: [u8; 4] = buf[..4].try_into().unwrap();
+        *buf = &buf[4..];
+        u32::from_be_bytes(bytes) != 0
     }
 }
 
@@ -323,7 +337,9 @@ impl LazyXdr for () {
     }
 
     #[inline]
-    fn from_xdr_at(_parent: &LazyHandle, _offset: u32) -> Self {}
+    fn from_xdr_consume(_parent: &LazyHandle, buf: &mut &[u8]) -> Self {
+        let _ = buf;
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -357,7 +373,7 @@ impl<const MAX: u32> LazyXdr for LazyBytesM<MAX> {
         if buf.len() < 4 {
             return Err(Error::Invalid);
         }
-        let len = u32::from_be_bytes([buf[0], buf[1], buf[2], buf[3]]);
+        let len = u32::from_be_bytes(buf[0..4].try_into().unwrap());
         if len > MAX {
             return Err(Error::LengthExceedsMax);
         }
@@ -377,14 +393,17 @@ impl<const MAX: u32> LazyXdr for LazyBytesM<MAX> {
 
     #[inline]
     fn xdr_len(buf: &[u8]) -> u32 {
-        let len = u32::from_be_bytes([buf[0], buf[1], buf[2], buf[3]]);
+        let len = u32::from_be_bytes(buf[0..4].try_into().unwrap());
         4 + xdr_pad(len)
     }
 
-    fn from_xdr_at(parent: &LazyHandle, offset: u32) -> Self {
-        let buf = &parent.as_slice()[offset as usize..];
-        let len = Self::xdr_len(buf);
-        Self(parent.sub_handle(offset, len))
+    fn from_xdr_consume(parent: &LazyHandle, buf: &mut &[u8]) -> Self {
+        let len = u32::from_be_bytes(buf[0..4].try_into().unwrap());
+        let total = 4 + xdr_pad(len);
+        let offset = (parent.len() as usize - buf.len()) as u32;
+        let handle = parent.sub_handle(offset, total);
+        *buf = &buf[total as usize..];
+        Self(handle)
     }
 }
 
@@ -393,7 +412,7 @@ impl<const MAX: u32> LazyBytesM<MAX> {
     #[must_use]
     pub fn as_bytes(&self) -> &[u8] {
         let buf = self.0.as_slice();
-        let len = u32::from_be_bytes([buf[0], buf[1], buf[2], buf[3]]) as usize;
+        let len = u32::from_be_bytes(buf[0..4].try_into().unwrap()) as usize;
         &buf[4..4 + len]
     }
 
@@ -451,10 +470,13 @@ impl<const MAX: u32> LazyXdr for LazyStringM<MAX> {
         LazyBytesM::<MAX>::xdr_len(buf)
     }
 
-    fn from_xdr_at(parent: &LazyHandle, offset: u32) -> Self {
-        let buf = &parent.as_slice()[offset as usize..];
-        let len = Self::xdr_len(buf);
-        Self(parent.sub_handle(offset, len))
+    fn from_xdr_consume(parent: &LazyHandle, buf: &mut &[u8]) -> Self {
+        let len = u32::from_be_bytes(buf[0..4].try_into().unwrap());
+        let total = 4 + xdr_pad(len);
+        let offset = (parent.len() as usize - buf.len()) as u32;
+        let handle = parent.sub_handle(offset, total);
+        *buf = &buf[total as usize..];
+        Self(handle)
     }
 }
 
@@ -463,7 +485,7 @@ impl<const MAX: u32> LazyStringM<MAX> {
     #[must_use]
     pub fn as_bytes(&self) -> &[u8] {
         let buf = self.0.as_slice();
-        let len = u32::from_be_bytes([buf[0], buf[1], buf[2], buf[3]]) as usize;
+        let len = u32::from_be_bytes(buf[0..4].try_into().unwrap()) as usize;
         &buf[4..4 + len]
     }
 
@@ -506,7 +528,7 @@ impl<T: LazyXdr, const MAX: u32> LazyXdr for LazyVecM<T, MAX> {
         if buf.len() < 4 {
             return Err(Error::Invalid);
         }
-        let count = u32::from_be_bytes([buf[0], buf[1], buf[2], buf[3]]);
+        let count = u32::from_be_bytes(buf[0..4].try_into().unwrap());
         if count > MAX {
             return Err(Error::LengthExceedsMax);
         }
@@ -519,7 +541,7 @@ impl<T: LazyXdr, const MAX: u32> LazyXdr for LazyVecM<T, MAX> {
     }
 
     fn xdr_len(buf: &[u8]) -> u32 {
-        let count = u32::from_be_bytes([buf[0], buf[1], buf[2], buf[3]]);
+        let count = u32::from_be_bytes(buf[0..4].try_into().unwrap());
         if let Some(fixed) = T::FIXED_XDR_SIZE {
             4 + count * fixed
         } else {
@@ -531,10 +553,12 @@ impl<T: LazyXdr, const MAX: u32> LazyXdr for LazyVecM<T, MAX> {
         }
     }
 
-    fn from_xdr_at(parent: &LazyHandle, offset: u32) -> Self {
-        let buf = &parent.as_slice()[offset as usize..];
+    fn from_xdr_consume(parent: &LazyHandle, buf: &mut &[u8]) -> Self {
         let len = Self::xdr_len(buf);
-        Self(parent.sub_handle(offset, len), PhantomData)
+        let offset = (parent.len() as usize - buf.len()) as u32;
+        let handle = parent.sub_handle(offset, len);
+        *buf = &buf[len as usize..];
+        Self(handle, PhantomData)
     }
 }
 
@@ -573,8 +597,8 @@ impl<T: LazyXdr, const MAX: u32> LazyVecM<T, MAX> {
     pub fn iter(&self) -> LazyVecMIter<'_, T, MAX> {
         LazyVecMIter {
             handle: &self.0,
+            buf: &self.0.as_slice()[4..],
             index: 0,
-            pos: 4,
             count: self.element_count(),
             _marker: PhantomData,
         }
@@ -584,8 +608,8 @@ impl<T: LazyXdr, const MAX: u32> LazyVecM<T, MAX> {
 /// Forward-scanning iterator over [`LazyVecM`] elements.
 pub struct LazyVecMIter<'a, T: LazyXdr, const MAX: u32 = { u32::MAX }> {
     handle: &'a LazyHandle,
+    buf: &'a [u8],
     index: u32,
-    pos: u32,
     count: u32,
     _marker: PhantomData<fn() -> T>,
 }
@@ -596,13 +620,7 @@ impl<'a, T: LazyXdr, const MAX: u32> Iterator for LazyVecMIter<'a, T, MAX> {
         if self.index >= self.count {
             return None;
         }
-        let elem = T::from_xdr_at(self.handle, self.pos);
-        let buf = self.handle.as_slice();
-        if let Some(fixed) = T::FIXED_XDR_SIZE {
-            self.pos += fixed;
-        } else {
-            self.pos += T::xdr_len(&buf[self.pos as usize..]);
-        }
+        let elem = T::from_xdr_consume(self.handle, &mut self.buf);
         self.index += 1;
         Some(elem)
     }
@@ -669,10 +687,12 @@ impl<T: LazyXdr, const N: u32> LazyXdr for LazyFixedArray<T, N> {
         }
     }
 
-    fn from_xdr_at(parent: &LazyHandle, offset: u32) -> Self {
-        let buf = &parent.as_slice()[offset as usize..];
+    fn from_xdr_consume(parent: &LazyHandle, buf: &mut &[u8]) -> Self {
         let len = Self::xdr_len(buf);
-        Self(parent.sub_handle(offset, len), PhantomData)
+        let offset = (parent.len() as usize - buf.len()) as u32;
+        let handle = parent.sub_handle(offset, len);
+        *buf = &buf[len as usize..];
+        Self(handle, PhantomData)
     }
 }
 
@@ -707,8 +727,8 @@ impl<T: LazyXdr, const N: u32> LazyFixedArray<T, N> {
     pub fn iter(&self) -> LazyFixedArrayIter<'_, T, N> {
         LazyFixedArrayIter {
             handle: &self.0,
+            buf: self.0.as_slice(),
             index: 0,
-            pos: 0,
             _marker: PhantomData,
         }
     }
@@ -717,8 +737,8 @@ impl<T: LazyXdr, const N: u32> LazyFixedArray<T, N> {
 /// Forward-scanning iterator over [`LazyFixedArray`] elements.
 pub struct LazyFixedArrayIter<'a, T: LazyXdr, const N: u32> {
     handle: &'a LazyHandle,
+    buf: &'a [u8],
     index: u32,
-    pos: u32,
     _marker: PhantomData<fn() -> T>,
 }
 
@@ -728,13 +748,7 @@ impl<'a, T: LazyXdr, const N: u32> Iterator for LazyFixedArrayIter<'a, T, N> {
         if self.index >= N {
             return None;
         }
-        let elem = T::from_xdr_at(self.handle, self.pos);
-        let buf = self.handle.as_slice();
-        if let Some(fixed) = T::FIXED_XDR_SIZE {
-            self.pos += fixed;
-        } else {
-            self.pos += T::xdr_len(&buf[self.pos as usize..]);
-        }
+        let elem = T::from_xdr_consume(self.handle, &mut self.buf);
         self.index += 1;
         Some(elem)
     }
@@ -808,9 +822,12 @@ impl<const N: u32> LazyXdr for LazyOpaqueFixed<N> {
         xdr_pad(N)
     }
 
-    fn from_xdr_at(parent: &LazyHandle, offset: u32) -> Self {
+    fn from_xdr_consume(parent: &LazyHandle, buf: &mut &[u8]) -> Self {
         let len = xdr_pad(N);
-        Self(parent.sub_handle(offset, len))
+        let offset = (parent.len() as usize - buf.len()) as u32;
+        let handle = parent.sub_handle(offset, len);
+        *buf = &buf[len as usize..];
+        Self(handle)
     }
 }
 
@@ -862,7 +879,7 @@ impl<T: LazyXdr> LazyXdr for LazyOption<T> {
         if buf.len() < 4 {
             return Err(Error::Invalid);
         }
-        let disc = u32::from_be_bytes([buf[0], buf[1], buf[2], buf[3]]);
+        let disc = u32::from_be_bytes(buf[0..4].try_into().unwrap());
         match disc {
             0 => Ok(4),
             1 => {
@@ -874,7 +891,7 @@ impl<T: LazyXdr> LazyXdr for LazyOption<T> {
     }
 
     fn xdr_len(buf: &[u8]) -> u32 {
-        let disc = u32::from_be_bytes([buf[0], buf[1], buf[2], buf[3]]);
+        let disc = u32::from_be_bytes(buf[0..4].try_into().unwrap());
         if disc == 0 {
             4
         } else {
@@ -882,10 +899,12 @@ impl<T: LazyXdr> LazyXdr for LazyOption<T> {
         }
     }
 
-    fn from_xdr_at(parent: &LazyHandle, offset: u32) -> Self {
-        let buf = &parent.as_slice()[offset as usize..];
+    fn from_xdr_consume(parent: &LazyHandle, buf: &mut &[u8]) -> Self {
         let len = Self::xdr_len(buf);
-        Self(parent.sub_handle(offset, len), PhantomData)
+        let offset = (parent.len() as usize - buf.len()) as u32;
+        let handle = parent.sub_handle(offset, len);
+        *buf = &buf[len as usize..];
+        Self(handle, PhantomData)
     }
 }
 
@@ -894,7 +913,7 @@ impl<T: LazyXdr> LazyOption<T> {
     #[must_use]
     pub fn is_some(&self) -> bool {
         let buf = self.0.as_slice();
-        u32::from_be_bytes([buf[0], buf[1], buf[2], buf[3]]) != 0
+        u32::from_be_bytes(buf[0..4].try_into().unwrap()) != 0
     }
 
     /// Whether the optional value is absent.
