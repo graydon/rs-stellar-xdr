@@ -13,7 +13,7 @@ use alloc::vec::Vec;
 /// Default maximum recursion depth for XDR validation.
 pub const DEFAULT_XDR_DEPTH_LIMIT: u32 = 500;
 
-const LAZY_HANDLE_INLINE_CAPACITY: usize = 32;
+const LAZY_HANDLE_INLINE_CAPACITY: usize = 40;
 
 /// A shared-ownership handle to a validated region of an XDR buffer.
 #[derive(Clone)]
