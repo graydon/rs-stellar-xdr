@@ -4,6 +4,7 @@
 use super::*;
 extern crate alloc;
 use alloc::sync::Arc;
+use alloc::vec::Vec;
 
 // Lazy XDR types: zero-copy access to validated XDR buffers.
 //
@@ -609,6 +610,130 @@ impl<T: LazyXdr, const MAX: u32> LazyVecM<T, MAX> {
             count: self.element_count(),
             _marker: PhantomData,
         }
+    }
+
+    /// Return the byte span of an element within this lazy vector.
+    #[must_use]
+    pub fn element_span(&self, index: u32) -> Option<core::ops::Range<usize>> {
+        let buf = self.0.as_slice();
+        let count = self.element_count();
+        if index >= count {
+            return None;
+        }
+        let mut pos: u32 = 4;
+        if let Some(fixed) = T::FIXED_XDR_SIZE {
+            pos += index * fixed;
+            return Some(pos as usize..pos.saturating_add(fixed) as usize);
+        }
+        for _ in 0..index {
+            pos += T::xdr_len(&buf[pos as usize..]);
+        }
+        let end = pos + T::xdr_len(&buf[pos as usize..]);
+        Some(pos as usize..end as usize)
+    }
+
+    fn with_new_count_and_body(new_count: u32, body_len: usize) -> Result<Vec<u8>, Error> {
+        if new_count > MAX {
+            return Err(Error::LengthExceedsMax);
+        }
+        let total_len = 4usize.checked_add(body_len).ok_or(Error::LengthExceedsMax)?;
+        let mut out = Vec::with_capacity(total_len);
+        out.extend_from_slice(&new_count.to_be_bytes());
+        Ok(out)
+    }
+
+    fn from_spliced_bytes(bytes: Vec<u8>) -> Self {
+        let len = bytes.len() as u32;
+        let arc: Arc<[u8]> = bytes.into();
+        Self::from(LazyHandle::from_arc(arc, 0, len))
+    }
+
+    /// Return a new lazy vector with the element at `index` replaced by `elem`.
+    pub fn replace_element(&self, index: u32, elem: &T) -> Result<Self, Error>
+    where
+        T: AsRef<LazyHandle>,
+    {
+        let elem_bytes = elem.as_ref().as_slice();
+        let buf = self.0.as_slice();
+        let span = self.element_span(index).ok_or(Error::Invalid)?;
+        let new_body_len = buf
+            .len()
+            .checked_sub(span.len())
+            .and_then(|len| len.checked_add(elem_bytes.len()))
+            .and_then(|len| len.checked_sub(4))
+            .ok_or(Error::LengthExceedsMax)?;
+        let mut out = Self::with_new_count_and_body(self.element_count(), new_body_len)?;
+        out.extend_from_slice(&buf[4..span.start]);
+        out.extend_from_slice(elem_bytes);
+        out.extend_from_slice(&buf[span.end..]);
+        Ok(Self::from_spliced_bytes(out))
+    }
+
+    /// Return a new lazy vector with `elem` inserted at `index`.
+    pub fn insert_element(&self, index: u32, elem: &T) -> Result<Self, Error>
+    where
+        T: AsRef<LazyHandle>,
+    {
+        let count = self.element_count();
+        if index > count {
+            return Err(Error::Invalid);
+        }
+        let new_count = count.checked_add(1).ok_or(Error::LengthExceedsMax)?;
+        let elem_bytes = elem.as_ref().as_slice();
+        let buf = self.0.as_slice();
+        let insert_pos = if index == count {
+            buf.len()
+        } else {
+            self.element_span(index).ok_or(Error::Invalid)?.start
+        };
+        let new_body_len = buf
+            .len()
+            .checked_sub(4)
+            .and_then(|len| len.checked_add(elem_bytes.len()))
+            .ok_or(Error::LengthExceedsMax)?;
+        let mut out = Self::with_new_count_and_body(new_count, new_body_len)?;
+        out.extend_from_slice(&buf[4..insert_pos]);
+        out.extend_from_slice(elem_bytes);
+        out.extend_from_slice(&buf[insert_pos..]);
+        Ok(Self::from_spliced_bytes(out))
+    }
+
+    /// Return a new lazy vector with the element at `index` removed.
+    pub fn remove_element(&self, index: u32) -> Result<Self, Error> {
+        let count = self.element_count();
+        if index >= count {
+            return Err(Error::Invalid);
+        }
+        let span = self.element_span(index).ok_or(Error::Invalid)?;
+        let buf = self.0.as_slice();
+        let new_body_len = buf
+            .len()
+            .checked_sub(4)
+            .and_then(|len| len.checked_sub(span.len()))
+            .ok_or(Error::LengthExceedsMax)?;
+        let mut out = Self::with_new_count_and_body(count - 1, new_body_len)?;
+        out.extend_from_slice(&buf[4..span.start]);
+        out.extend_from_slice(&buf[span.end..]);
+        Ok(Self::from_spliced_bytes(out))
+    }
+
+    /// Return a new lazy vector with all elements from `other` appended.
+    pub fn append_elements(&self, other: &Self) -> Result<Self, Error> {
+        let new_count = self
+            .element_count()
+            .checked_add(other.element_count())
+            .ok_or(Error::LengthExceedsMax)?;
+        let left = self.0.as_slice();
+        let right = other.0.as_slice();
+        let new_body_len = left
+            .len()
+            .checked_sub(4)
+            .and_then(|len| len.checked_add(right.len().saturating_sub(4)))
+            .ok_or(Error::LengthExceedsMax)?;
+        let mut out = Self::with_new_count_and_body(new_count, new_body_len)?;
+        out.extend_from_slice(&left[4..]);
+        out.extend_from_slice(&right[4..]);
+        Ok(Self::from_spliced_bytes(out))
     }
 }
 
