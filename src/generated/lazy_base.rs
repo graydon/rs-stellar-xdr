@@ -20,12 +20,20 @@ use core::marker::PhantomData;
 /// Default maximum recursion depth for XDR validation.
 pub const DEFAULT_XDR_DEPTH_LIMIT: u32 = 500;
 
+const LAZY_HANDLE_INLINE_CAPACITY: usize = 32;
+
 /// A shared-ownership handle to a validated region of an XDR buffer.
 #[derive(Clone)]
-pub struct LazyHandle {
-    buf: Arc<[u8]>,
-    pos: u32,
-    len: u32,
+pub enum LazyHandle {
+    Shared {
+        buf: Arc<[u8]>,
+        pos: u32,
+        len: u32,
+    },
+    Inline {
+        buf: [u8; LAZY_HANDLE_INLINE_CAPACITY],
+        len: u8,
+    },
 }
 
 impl PartialEq for LazyHandle {
@@ -46,19 +54,50 @@ impl core::hash::Hash for LazyHandle {
 
 impl fmt::Debug for LazyHandle {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("LazyHandle")
-            .field("pos", &self.pos)
-            .field("len", &self.len)
-            .finish()
+        match self {
+            Self::Shared { pos, len, .. } => f
+                .debug_struct("LazyHandle::Shared")
+                .field("pos", pos)
+                .field("len", len)
+                .finish(),
+            Self::Inline { len, .. } => f
+                .debug_struct("LazyHandle::Inline")
+                .field("len", len)
+                .finish(),
+        }
     }
 }
 
 impl LazyHandle {
+    /// Create a handle by copying a small byte slice inline, or allocating for larger slices.
+    #[must_use]
+    pub fn from_slice(buf: &[u8]) -> Self {
+        if buf.len() <= LAZY_HANDLE_INLINE_CAPACITY {
+            let mut inline = [0u8; LAZY_HANDLE_INLINE_CAPACITY];
+            inline[..buf.len()].copy_from_slice(buf);
+            Self::Inline {
+                buf: inline,
+                len: buf.len() as u8,
+            }
+        } else {
+            Self::from_arc_complete(Arc::<[u8]>::from(buf))
+        }
+    }
+
     /// Create a handle covering an entire `Arc<[u8]>` buffer.
     #[must_use]
     pub fn from_arc_complete(buf: Arc<[u8]>) -> Self {
         let len = buf.len() as u32;
-        Self { buf, pos: 0, len }
+        if buf.len() <= LAZY_HANDLE_INLINE_CAPACITY {
+            let mut inline = [0u8; LAZY_HANDLE_INLINE_CAPACITY];
+            inline[..buf.len()].copy_from_slice(&buf);
+            Self::Inline {
+                buf: inline,
+                len: buf.len() as u8,
+            }
+        } else {
+            Self::Shared { buf, pos: 0, len }
+        }
     }
 
     /// Create a handle from a buffer, position, and length.
@@ -68,14 +107,28 @@ impl LazyHandle {
     #[must_use]
     pub fn from_arc(buf: Arc<[u8]>, pos: u32, len: u32) -> Self {
         assert!((pos as u64) + (len as u64) <= buf.len() as u64);
-        Self { buf, pos, len }
+        if len as usize <= LAZY_HANDLE_INLINE_CAPACITY {
+            let mut inline = [0u8; LAZY_HANDLE_INLINE_CAPACITY];
+            let start = pos as usize;
+            let end = start + len as usize;
+            inline[..len as usize].copy_from_slice(&buf[start..end]);
+            Self::Inline {
+                buf: inline,
+                len: len as u8,
+            }
+        } else {
+            Self::Shared { buf, pos, len }
+        }
     }
 
     /// Get the validated byte slice this handle refers to.
     #[inline]
     #[must_use]
     pub fn as_slice(&self) -> &[u8] {
-        &self.buf[self.pos as usize..(self.pos as usize + self.len as usize)]
+        match self {
+            Self::Shared { buf, pos, len } => &buf[*pos as usize..(*pos as usize + *len as usize)],
+            Self::Inline { buf, len } => &buf[..*len as usize],
+        }
     }
 
     /// Create a sub-handle at `offset` within this handle with length `sub_len`.
@@ -84,10 +137,19 @@ impl LazyHandle {
     #[inline]
     #[must_use]
     pub fn sub_handle(&self, offset: u32, sub_len: u32) -> Self {
-        Self {
-            buf: Arc::clone(&self.buf),
-            pos: self.pos + offset,
-            len: sub_len,
+        assert!((offset as u64) + (sub_len as u64) <= self.len() as u64);
+        if sub_len as usize <= LAZY_HANDLE_INLINE_CAPACITY {
+            let start = offset as usize;
+            let end = start + sub_len as usize;
+            return Self::from_slice(&self.as_slice()[start..end]);
+        }
+        match self {
+            Self::Shared { buf, pos, .. } => Self::Shared {
+                buf: Arc::clone(buf),
+                pos: pos + offset,
+                len: sub_len,
+            },
+            Self::Inline { .. } => unreachable!("inline handle cannot have non-inline sub-handle"),
         }
     }
 
@@ -95,21 +157,27 @@ impl LazyHandle {
     #[inline]
     #[must_use]
     pub fn len(&self) -> u32 {
-        self.len
+        match self {
+            Self::Shared { len, .. } => *len,
+            Self::Inline { len, .. } => *len as u32,
+        }
     }
 
     /// Whether this handle covers zero bytes.
     #[inline]
     #[must_use]
     pub fn is_empty(&self) -> bool {
-        self.len == 0
+        self.len() == 0
     }
 
     /// Get the underlying `Arc<[u8]>`.
     #[inline]
     #[must_use]
     pub fn into_arc(self) -> Arc<[u8]> {
-        self.buf
+        match self {
+            Self::Shared { buf, .. } => buf,
+            Self::Inline { buf, len } => Arc::<[u8]>::from(&buf[..len as usize]),
+        }
     }
 }
 
@@ -636,7 +704,9 @@ impl<T: LazyXdr, const MAX: u32> LazyVecM<T, MAX> {
         if new_count > MAX {
             return Err(Error::LengthExceedsMax);
         }
-        let total_len = 4usize.checked_add(body_len).ok_or(Error::LengthExceedsMax)?;
+        let total_len = 4usize
+            .checked_add(body_len)
+            .ok_or(Error::LengthExceedsMax)?;
         let mut out = Vec::with_capacity(total_len);
         out.extend_from_slice(&new_count.to_be_bytes());
         Ok(out)
